@@ -9,9 +9,9 @@
 - [ ] 環境起動と動作確認 (Jupyter Lab, DB接続)
 
 ## Phase 1: データ収集基盤 (Data Pipeline)
-- [ ] スクレイピングモジュール基盤実装 (netkeiba.com)
-- [ ] HTMLパーサー実装 (HTML -> DataFrame)
-- [ ] DBローダー実装 (DataFrame -> PostgreSQL)
+- [x] スクレイピングモジュール基盤実装 (netkeiba.com)
+- [x] HTMLパーサー実装 (HTML -> DataFrame)
+- [x] DBローダー実装 (DataFrame -> PostgreSQL)
 - [ ] 過去データ取得ジョブの実行 (過去10年分)
 
 ## Phase 2: 前処理 & 特徴量エンジニアリング
