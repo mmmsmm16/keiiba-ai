@@ -23,6 +23,25 @@ class DataLoader:
 
         self.engine = create_engine(connection_str)
 
+    def check_race_exists(self, race_id: str) -> bool:
+        """
+        指定されたレースIDのデータが既に存在するか確認します。
+
+        Args:
+            race_id (str): レースID。
+
+        Returns:
+            bool: 存在する場合はTrue。
+        """
+        query = text("SELECT 1 FROM races WHERE race_id = :race_id")
+        try:
+            with self.engine.connect() as conn:
+                result = conn.execute(query, {"race_id": race_id}).fetchone()
+                return result is not None
+        except Exception as e:
+            logger.error(f"存在確認中にエラー発生: {e}")
+            return False
+
     def save_race_data(self, data: Dict[str, pd.DataFrame]):
         """
         レースデータをデータベースに保存します。

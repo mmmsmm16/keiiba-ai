@@ -28,11 +28,6 @@ def scrape_year(year: int, loader: DataLoader, scraper: NetkeibaScraper):
     指定された年の全レースをスクレイピングします。
     最適化: 存在しない回(Kai)/日(Day)の組み合わせはスキップします。
     """
-    # 開催場所: 01 〜 10
-    # 回: 01 〜 06 (推定最大値)
-    # 日: 01 〜 12 (推定最大値)
-    # レース: 01 〜 12
-
     total_races = 0
     consecutive_fatal_errors = 0
 
@@ -40,16 +35,15 @@ def scrape_year(year: int, loader: DataLoader, scraper: NetkeibaScraper):
         venue_id = f"{venue:02d}"
         logger.info(f"{year}年 開催場所 {venue_id} のスクレイピングを開始...")
 
-        for kai in range(1, 13): # 念のため12まで許可
+        for kai in range(1, 13):
             kai_id = f"{kai:02d}"
 
             # 1日目第1レースを試して、この「回」が存在するか確認
             check_id = f"{year}{venue_id}{kai_id}0101"
 
             try:
-                if not _check_race_exists(scraper, check_id):
+                if not _check_race_exists(scraper, check_id, loader):
                     if kai == 1:
-                        # 第1回が存在しない場合
                         pass
                     else:
                         break
@@ -63,18 +57,16 @@ def scrape_year(year: int, loader: DataLoader, scraper: NetkeibaScraper):
                 if consecutive_fatal_errors >= 5:
                     logger.critical("連続エラー過多のため停止します。")
                     sys.exit(1)
-                continue # 次のKaiへ
+                continue
 
-
-            # 「回」が存在する場合、日ごとのループ
             for day in range(1, 13):
                 day_id = f"{day:02d}"
 
                 # 第1レースを試して、この「日」が存在するか確認
                 check_day_id = f"{year}{venue_id}{kai_id}{day_id}01"
                 try:
-                    if not _check_race_exists(scraper, check_day_id):
-                        break # この回にはこれ以上の日程はないと仮定
+                    if not _check_race_exists(scraper, check_day_id, loader):
+                        break
                     consecutive_fatal_errors = 0
                 except FatalScrapingError:
                     consecutive_fatal_errors += 1
@@ -83,10 +75,15 @@ def scrape_year(year: int, loader: DataLoader, scraper: NetkeibaScraper):
                         sys.exit(1)
                     continue
 
-                # 「日」が存在する場合、レースごとのループ
                 for race in range(1, 13):
                     race_num = f"{race:02d}"
                     race_id = f"{year}{venue_id}{kai_id}{day_id}{race_num}"
+
+                    # 既にDBにあるかチェック
+                    if loader and hasattr(loader, 'check_race_exists') and loader.check_race_exists(race_id):
+                        logger.info(f"スキップ: {race_id} (DBに存在)")
+                        consecutive_fatal_errors = 0
+                        continue
 
                     try:
                         html = scraper.get_race_page(race_id)
@@ -99,7 +96,6 @@ def scrape_year(year: int, loader: DataLoader, scraper: NetkeibaScraper):
                             if total_races % 10 == 0:
                                 logger.info(f"{total_races} レース保存完了 (最新: {race_id})")
                         else:
-                            # レースが存在しない (404)
                             pass
                     except FatalScrapingError:
                         consecutive_fatal_errors += 1
@@ -112,10 +108,14 @@ def scrape_year(year: int, loader: DataLoader, scraper: NetkeibaScraper):
 
     logger.info(f"{year}年のスクレイピング完了。合計レース数: {total_races}")
 
-def _check_race_exists(scraper: NetkeibaScraper, race_id: str) -> bool:
+def _check_race_exists(scraper: NetkeibaScraper, race_id: str, loader: DataLoader = None) -> bool:
     """
-    レースが存在するかどうかをフェッチして確認します。
+    レースが存在するかどうかを確認します。DB優先、なければスクレイピング。
     """
+    if loader and hasattr(loader, 'check_race_exists') and loader.check_race_exists(race_id):
+        return True
+
+    # get_race_page は 404 なら None を返す。FatalScrapingError なら送出する。
     html = scraper.get_race_page(race_id)
     return html is not None and len(html) > 0
 
@@ -131,19 +131,18 @@ def main():
 
     loader = None
     if not args.dry_run:
-        # Loaderの初期化 (DBがない場合は失敗するためハンドリング)
         try:
             loader = DataLoader()
         except Exception as e:
             logger.error(f"DBへの接続に失敗しました: {e}")
-            logger.error("docker-composeが起動しているか確認するか、--dry_runを使用してください。")
             return
     else:
         logger.info("DRY RUNモードで実行中。データは保存されません。")
-        # ダミーのLoaderを作成
         class DummyLoader:
             def save_race_data(self, data):
                 pass
+            def check_race_exists(self, race_id):
+                return False
         loader = DummyLoader()
 
     for year in range(args.year_start, args.year_end + 1):
