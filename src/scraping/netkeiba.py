@@ -4,7 +4,6 @@ from typing import Optional
 import logging
 
 # Logger settings
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class NetkeibaScraper:

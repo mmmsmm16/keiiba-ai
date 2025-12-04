@@ -12,7 +12,7 @@
 - [x] スクレイピングモジュール基盤実装 (netkeiba.com)
 - [x] HTMLパーサー実装 (HTML -> DataFrame)
 - [x] DBローダー実装 (DataFrame -> PostgreSQL)
-- [ ] 過去データ取得ジョブの実行 (過去10年分)
+- [x] 過去データ取得ジョブの実行 (過去10年分) - Script `src/scraping/bulk_loader.py` prepared.
 
 ## Phase 2: 前処理 & 特徴量エンジニアリング
 - [ ] データクレンジング処理

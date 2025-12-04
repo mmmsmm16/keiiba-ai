@@ -9,6 +9,7 @@
 1. **Scraper:** HTML取得担当。リトライ処理や待機処理を含む。
 2. **Parser:** HTML解析担当。`BeautifulSoup` を使用。
 3. **Loader:** DB保存担当。`SQLAlchemy` を使用。
+4. **Bulk Loader:** 過去データの大量取得担当。ID生成とループ処理。
 
 ## 変更履歴
 - **[2024-05-21]**: 開発開始。
@@ -17,6 +18,7 @@
     - 払い戻しテーブルのクラス名が `pay_block` ではなく `pay_table_01` であったため修正。
 - **[2024-05-21]**: `src/scraping/loader.py` 実装完了。データの冪等性を担保するため、保存前に当該レースの既存データを削除するロジックを採用。
 - **[2024-05-21]**: `src/scraping/run_sample.py` による結合テスト（スクレイピング→パース）成功。
+- **[2024-05-21]**: `src/scraping/bulk_loader.py` 実装完了。`--dry_run` オプションを追加し、単体テスト (`src/scraping/test_bulk_loader.py`) にてロジックを検証済み。
 
 ## 次のステップ
-- 過去10年分のレースIDリストを作成し、バッチ処理で取得するスクリプト (`src/scraping/bulk_loader.py` 等) の作成。
+- Phase 2: データ前処理の実装へ移行。
