@@ -1,12 +1,13 @@
 # Project Strongest ユーザーマニュアル
 
-このドキュメントでは、競馬予測AI開発環境のセットアップからデータ収集、前処理までの手順を解説します。
+このドキュメントでは、競馬予測AI開発環境のセットアップからデータ収集、前処理、モデリングまでの手順を解説します。
 
 ## 1. 概要
-本プロジェクトは以下の3つのフェーズで構成されています。
+本プロジェクトは以下のフェーズで構成されています。
 *   **Phase 0:** 開発環境構築 (Docker + Python + PostgreSQL)
 *   **Phase 1:** データ収集 (スクレイピング)
 *   **Phase 2:** 前処理 & 特徴量エンジニアリング
+*   **Phase 3:** モデリング & シミュレーション
 
 ## 2. 環境構築 (Setup)
 まず、Dockerコンテナを起動して開発環境を立ち上げます。
@@ -65,6 +66,30 @@ python src/preprocessing/run_preprocessing.py
     *   `data/processed/preprocessed_data.parquet` (全データ)
     *   `data/processed/lgbm_datasets.pkl` (学習用分割データ)
 
-## 5. 次のステップ (Modeling)
-作成された `lgbm_datasets.pkl` をロードして、LightGBMなどで学習を行います。
-(Phase 3 にて実装予定)
+## 5. モデル学習 & シミュレーション (Modeling)
+作成したデータセットを使ってモデルを学習し、シミュレーションを行います。
+
+### モデル学習
+```bash
+# コンテナ内で実行
+python src/model/train.py
+```
+*   **出力:**
+    *   `models/lgbm_model.pkl`: 学習済みモデル
+    *   `models/importance.png`: 特徴量重要度のプロット
+
+### 評価 & シミュレーション
+2024年のテストデータに対して予測を行い、単勝1点買い（スコア1位の馬を購入）の回収率を計算します。
+
+```bash
+# コンテナ内で実行
+python src/model/evaluate.py
+```
+*   **出力例:**
+    ```
+    対象レース数: 3450
+    的中率: 25.4%
+    総投資額: 345000円
+    総回収額: 280000円
+    回収率: 81.2%
+    ```

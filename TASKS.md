@@ -25,9 +25,9 @@
 - [x] 学習用データセット作成 (時系列Split, Query ID生成)
 
 ## Phase 3: モデリング (Modeling MVP)
-- [ ] LightGBM (Ranking) モデル実装
-- [ ] 学習実行 & 評価 (Accuracy, NDCG)
-- [ ] 回収率シミュレーション実装
+- [x] LightGBM (Ranking) モデル実装 (`src/model/lgbm.py`)
+- [x] 学習実行 & 評価 (`src/model/train.py`)
+- [x] 回収率シミュレーション実装 (`src/model/evaluate.py`)
 
 ## Phase 4: 高度化 (Advanced)
 - [ ] Deep Learning モデル検討
