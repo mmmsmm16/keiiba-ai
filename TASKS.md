@@ -19,10 +19,10 @@
 - [x] データクレンジング (型変換, 異常値除去, 欠損値処理) - Added Age fix.
 - [x] 基本特徴量生成 (日付, 天候, コース条件の数値化)
 - [x] 馬の過去走特徴量生成 (着順, タイム差, 上がり3Fの移動平均など)
-- [ ] 集計特徴量生成 (騎手・調教師・種牡馬の過去勝率など ※リーク厳禁)
-- [ ] カテゴリ変数処理 (Target Encoding / Embedding)
-- [ ] 中間データ保存機構 (Parquet形式での保存・読み込み)
-- [ ] 学習用データセット作成 (時系列Split, Query ID生成)
+- [x] 集計特徴量生成 (騎手・調教師・種牡馬の過去勝率など ※リーク厳禁)
+- [x] カテゴリ変数処理 (Target Encoding / Embedding) - Implemented as CategoryAggregator.
+- [x] 中間データ保存機構 (Parquet形式での保存・読み込み)
+- [x] 学習用データセット作成 (時系列Split, Query ID生成)
 
 ## Phase 3: モデリング (Modeling MVP)
 - [ ] LightGBM (Ranking) モデル実装
