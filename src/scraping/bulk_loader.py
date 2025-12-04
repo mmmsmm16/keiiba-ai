@@ -8,7 +8,7 @@ import os
 # srcディレクトリをパスに追加
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-from scraping.netkeiba import NetkeibaScraper
+from scraping.netkeiba import NetkeibaScraper, FatalScrapingError
 from scraping.parser import NetkeibaParser
 from scraping.loader import DataLoader
 
@@ -34,6 +34,7 @@ def scrape_year(year: int, loader: DataLoader, scraper: NetkeibaScraper):
     # レース: 01 〜 12
 
     total_races = 0
+    consecutive_fatal_errors = 0
 
     for venue in range(1, 11): # 01 〜 10
         venue_id = f"{venue:02d}"
@@ -44,18 +45,26 @@ def scrape_year(year: int, loader: DataLoader, scraper: NetkeibaScraper):
 
             # 1日目第1レースを試して、この「回」が存在するか確認
             check_id = f"{year}{venue_id}{kai_id}0101"
-            if not _check_race_exists(scraper, check_id):
-                if kai == 1:
-                    # 第1回が存在しない場合、この場所での開催なしか、何かおかしい可能性がある。
-                    # しかし、安全のためスキップする。
-                    pass
-                else:
-                    # 第X回が存在しなければ、それ以降の回も存在しないと仮定してループを抜ける
-                    break
 
-                # 第1回が失敗した場合もループを抜ける
-                if kai == 1:
-                     break
+            try:
+                if not _check_race_exists(scraper, check_id):
+                    if kai == 1:
+                        # 第1回が存在しない場合
+                        pass
+                    else:
+                        break
+
+                    if kai == 1:
+                         break
+                consecutive_fatal_errors = 0 # 成功
+            except FatalScrapingError:
+                consecutive_fatal_errors += 1
+                logger.error(f"開催存在確認で致命的なエラー (連続: {consecutive_fatal_errors}): {check_id}")
+                if consecutive_fatal_errors >= 5:
+                    logger.critical("連続エラー過多のため停止します。")
+                    sys.exit(1)
+                continue # 次のKaiへ
+
 
             # 「回」が存在する場合、日ごとのループ
             for day in range(1, 13):
@@ -63,8 +72,16 @@ def scrape_year(year: int, loader: DataLoader, scraper: NetkeibaScraper):
 
                 # 第1レースを試して、この「日」が存在するか確認
                 check_day_id = f"{year}{venue_id}{kai_id}{day_id}01"
-                if not _check_race_exists(scraper, check_day_id):
-                    break # この回にはこれ以上の日程はないと仮定
+                try:
+                    if not _check_race_exists(scraper, check_day_id):
+                        break # この回にはこれ以上の日程はないと仮定
+                    consecutive_fatal_errors = 0
+                except FatalScrapingError:
+                    consecutive_fatal_errors += 1
+                    logger.error(f"日次存在確認で致命的なエラー (連続: {consecutive_fatal_errors}): {check_day_id}")
+                    if consecutive_fatal_errors >= 5:
+                        sys.exit(1)
+                    continue
 
                 # 「日」が存在する場合、レースごとのループ
                 for race in range(1, 13):
@@ -73,6 +90,8 @@ def scrape_year(year: int, loader: DataLoader, scraper: NetkeibaScraper):
 
                     try:
                         html = scraper.get_race_page(race_id)
+                        consecutive_fatal_errors = 0 # 成功
+
                         if html:
                             data = NetkeibaParser.parse_race_page(html, race_id)
                             loader.save_race_data(data)
@@ -80,17 +99,22 @@ def scrape_year(year: int, loader: DataLoader, scraper: NetkeibaScraper):
                             if total_races % 10 == 0:
                                 logger.info(f"{total_races} レース保存完了 (最新: {race_id})")
                         else:
-                            # レースが存在しない (例: 11レースまでしかない場合)
+                            # レースが存在しない (404)
                             pass
+                    except FatalScrapingError:
+                        consecutive_fatal_errors += 1
+                        logger.error(f"レース取得で致命的なエラー (連続: {consecutive_fatal_errors}): {race_id}")
+                        if consecutive_fatal_errors >= 5:
+                            logger.critical("連続エラー過多のため停止します。")
+                            sys.exit(1)
                     except Exception as e:
-                        logger.error(f"{race_id} の処理中にエラーが発生しました: {e}")
+                        logger.error(f"{race_id} の処理中に予期せぬエラー: {e}")
 
     logger.info(f"{year}年のスクレイピング完了。合計レース数: {total_races}")
 
 def _check_race_exists(scraper: NetkeibaScraper, race_id: str) -> bool:
     """
     レースが存在するかどうかをフェッチして確認します。
-    リクエストと待機時間を消費します。
     """
     html = scraper.get_race_page(race_id)
     return html is not None and len(html) > 0
