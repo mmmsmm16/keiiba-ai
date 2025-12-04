@@ -29,7 +29,12 @@
 - [x] 学習実行 & 評価 (`src/model/train.py`)
 - [x] 回収率シミュレーション実装 (`src/model/evaluate.py`)
 
-## Phase 4: 高度化 (Advanced)
-- [ ] Deep Learning モデル検討
-- [ ] アンサンブル実装
-- [ ] 自動運用パイプライン構築
+## Phase 4: 高度化 (Advanced Modeling)
+- [x] 高度な特徴量生成 (Advanced Feature Engineering)
+    - [x] 展開予測特徴量 (逃げ馬比率、メンバー構成によるペース予測)
+    - [ ] 血統・コース適性の深化 (距離別・競馬場別の種牡馬成績)
+- [x] アンサンブル学習 (Ensemble)
+    - [x] CatBoost モデルの実装 (`src/model/catboost_model.py`)
+    - [x] Stacking / Blending の実装 (`src/model/ensemble.py`)
+- [ ] 自動運用パイプライン構築 (MLOps)
+    - [ ] 定期実行スクリプトの整備

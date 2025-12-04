@@ -12,6 +12,7 @@ from preprocessing.feature_engineering import FeatureEngineer
 from preprocessing.aggregators import HistoryAggregator
 from preprocessing.category_aggregators import CategoryAggregator
 from preprocessing.dataset import DatasetSplitter
+from preprocessing.advanced_features import AdvancedFeatureEngineer
 
 # ロガー設定
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -44,23 +45,29 @@ def main():
         cat_aggregator = CategoryAggregator()
         df = cat_aggregator.aggregate(df)
 
-        # 6. データの保存 (全データ)
+        # 6. 高度特徴量生成 (展開予測など)
+        logger.info("Step 6: 高度特徴量生成")
+        adv_engineer = AdvancedFeatureEngineer()
+        df = adv_engineer.add_features(df)
+
+        # 7. データの保存 (全データ)
+        # 7. データの保存 (全データ)
         output_dir = os.path.join(os.path.dirname(__file__), '../../data/processed')
         os.makedirs(output_dir, exist_ok=True)
         output_path = os.path.join(output_dir, 'preprocessed_data.parquet')
 
-        logger.info(f"Step 6: 中間データの保存 ({output_path})")
+        logger.info(f"Step 7: 中間データの保存 ({output_path})")
         df.to_parquet(output_path, index=False)
 
-        # 7. データセット分割 (Train/Valid/Test)
-        logger.info("Step 7: データセット分割と作成")
+        # 8. データセット分割 (Train/Valid/Test)
+        logger.info("Step 8: データセット分割と作成")
         splitter = DatasetSplitter()
         datasets = splitter.split_and_create_dataset(df)
 
-        # 8. データセットの保存 (Pickle)
+        # 9. データセットの保存 (Pickle)
         # 辞書形式 (X, y, group) を保存
         dataset_path = os.path.join(output_dir, 'lgbm_datasets.pkl')
-        logger.info(f"Step 8: 学習用データセットの保存 ({dataset_path})")
+        logger.info(f"Step 9: 学習用データセットの保存 ({dataset_path})")
         pd.to_pickle(datasets, dataset_path)
 
         logger.info("前処理パイプラインが正常に完了しました。")
