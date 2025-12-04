@@ -4,6 +4,7 @@ import pickle
 import pandas as pd
 import numpy as np
 import logging
+from scipy.special import softmax
 
 # srcディレクトリをパスに追加
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
@@ -37,7 +38,6 @@ def main():
     model.load_model(model_path)
 
     # 3. 予測
-    # 学習時と同じ特徴量を選択する
     dataset_path = os.path.join(os.path.dirname(__file__), '../../data/processed/lgbm_datasets.pkl')
     with open(dataset_path, 'rb') as f:
         datasets = pickle.load(f)
@@ -47,35 +47,48 @@ def main():
         return
 
     feature_cols = datasets['train']['X'].columns.tolist()
-
-    # テストデータから特徴量を抽出
-    # 欠損カラムがある場合はエラーになるので注意 (通常は同じパイプラインを通るので一致する)
     X_test = test_df[feature_cols]
 
     logger.info("予測を実行中...")
     scores = model.predict(X_test)
     test_df['score'] = scores
 
-    # 4. シミュレーション (単勝)
-    logger.info("回収率シミュレーション (予測スコア1位の単勝を購入)...")
+    # 確率と期待値の計算
+    logger.info("勝率と期待値を計算中...")
+    # レースごとにSoftmaxをかけて確率(勝率の近似)に変換
+    test_df['prob'] = test_df.groupby('race_id')['score'].transform(lambda x: softmax(x))
+    # 期待値 = 確率 * オッズ (払い戻し期待値)
+    # oddsが欠損している場合は期待値0とする
+    test_df['expected_value'] = test_df['prob'] * test_df['odds'].fillna(0)
 
+    # 4. シミュレーション
+    strategies = {
+        '最大スコア (勝率重視)': 'score',
+        '最大期待値 (回収率重視)': 'expected_value'
+    }
+
+    for name, target_col in strategies.items():
+        logger.info(f"--- シミュレーション: {name} ---")
+        run_simulation(test_df, target_col)
+
+def run_simulation(df, target_col):
     results = []
 
-    # レースごとにグループ化
-    for race_id, group in test_df.groupby('race_id'):
-        # スコア最大の馬を選択
-        best_horse_idx = group['score'].idxmax()
+    for race_id, group in df.groupby('race_id'):
+        # ターゲット値が最大の馬を選択
+        if group[target_col].isnull().all():
+            continue # データがない場合はスキップ
+
+        best_horse_idx = group[target_col].idxmax()
         best_horse = group.loc[best_horse_idx]
 
-        # 実際の結果
         actual_rank = best_horse['rank']
         odds = best_horse['odds']
 
-        # 賭け金
         bet = 100
         return_amount = 0
 
-        # 1着なら払い戻し (オッズ × 100)
+        # 1着なら払い戻し
         if actual_rank == 1:
             return_amount = odds * 100
 
