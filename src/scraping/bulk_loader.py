@@ -5,14 +5,14 @@ from tqdm import tqdm
 import sys
 import os
 
-# Add src to path
+# srcディレクトリをパスに追加
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from scraping.netkeiba import NetkeibaScraper
 from scraping.parser import NetkeibaParser
 from scraping.loader import DataLoader
 
-# Configure logging
+# ロガー設定
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -25,52 +25,48 @@ logger = logging.getLogger(__name__)
 
 def scrape_year(year: int, loader: DataLoader, scraper: NetkeibaScraper):
     """
-    Scrapes all races for a given year.
-    Optimization: Skips invalid Kai/Day combinations.
+    指定された年の全レースをスクレイピングします。
+    最適化: 存在しない回(Kai)/日(Day)の組み合わせはスキップします。
     """
-    # Venues: 01 to 10
-    # Kai: 01 to 06 (Estimated max)
-    # Day: 01 to 12 (Estimated max)
-    # Race: 01 to 12
+    # 開催場所: 01 〜 10
+    # 回: 01 〜 06 (推定最大値)
+    # 日: 01 〜 12 (推定最大値)
+    # レース: 01 〜 12
 
     total_races = 0
 
-    for venue in range(1, 11): # 01 to 10
+    for venue in range(1, 11): # 01 〜 10
         venue_id = f"{venue:02d}"
-        logger.info(f"Scraping Venue {venue_id} for Year {year}...")
+        logger.info(f"{year}年 開催場所 {venue_id} のスクレイピングを開始...")
 
-        for kai in range(1, 13): # Allow up to 12 just in case
+        for kai in range(1, 13): # 念のため12まで許可
             kai_id = f"{kai:02d}"
 
-            # Check if this Kai exists by trying Day 1 Race 1
+            # 1日目第1レースを試して、この「回」が存在するか確認
             check_id = f"{year}{venue_id}{kai_id}0101"
             if not _check_race_exists(scraper, check_id):
                 if kai == 1:
-                    # If Kai 01 doesn't exist, this venue might not have races this year?
-                    # Or maybe we just continue? Usually Kai starts at 01.
-                    # But to be safe, we break if Kai=1 fails?
-                    # Wait, some venues might not hold races every year?
-                    # But if Kai 1 fails, Kai 2 unlikely exists.
+                    # 第1回が存在しない場合、この場所での開催なしか、何かおかしい可能性がある。
+                    # しかし、安全のためスキップする。
                     pass
                 else:
-                    # If Kai X fails, assume no more Kai for this venue
+                    # 第X回が存在しなければ、それ以降の回も存在しないと仮定してループを抜ける
                     break
-                # If Kai 1 failed, we break too (optimization)
+
+                # 第1回が失敗した場合もループを抜ける
                 if kai == 1:
-                     # However, Sapporo might start later? No, Kai is just a counter.
-                     # If check fails, we assume Kai doesn't exist.
                      break
 
-            # If Kai exists, loop Days
+            # 「回」が存在する場合、日ごとのループ
             for day in range(1, 13):
                 day_id = f"{day:02d}"
 
-                # Check if Day exists by trying Race 1
+                # 第1レースを試して、この「日」が存在するか確認
                 check_day_id = f"{year}{venue_id}{kai_id}{day_id}01"
                 if not _check_race_exists(scraper, check_day_id):
-                    break # Assume no more days in this Kai
+                    break # この回にはこれ以上の日程はないと仮定
 
-                # If Day exists, loop Races
+                # 「日」が存在する場合、レースごとのループ
                 for race in range(1, 13):
                     race_num = f"{race:02d}"
                     race_id = f"{year}{venue_id}{kai_id}{day_id}{race_num}"
@@ -82,28 +78,28 @@ def scrape_year(year: int, loader: DataLoader, scraper: NetkeibaScraper):
                             loader.save_race_data(data)
                             total_races += 1
                             if total_races % 10 == 0:
-                                logger.info(f"Saved {total_races} races (Latest: {race_id})")
+                                logger.info(f"{total_races} レース保存完了 (最新: {race_id})")
                         else:
-                            # Race doesn't exist (e.g. only 11 races)
+                            # レースが存在しない (例: 11レースまでしかない場合)
                             pass
                     except Exception as e:
-                        logger.error(f"Error processing {race_id}: {e}")
+                        logger.error(f"{race_id} の処理中にエラーが発生しました: {e}")
 
-    logger.info(f"Finished scraping Year {year}. Total races: {total_races}")
+    logger.info(f"{year}年のスクレイピング完了。合計レース数: {total_races}")
 
 def _check_race_exists(scraper: NetkeibaScraper, race_id: str) -> bool:
     """
-    Checks if a race exists by fetching it.
-    This consumes a request and time.
+    レースが存在するかどうかをフェッチして確認します。
+    リクエストと待機時間を消費します。
     """
     html = scraper.get_race_page(race_id)
     return html is not None and len(html) > 0
 
 def main():
-    parser = argparse.ArgumentParser(description="Bulk scrape netkeiba data.")
-    parser.add_argument("--year_start", type=int, required=True, help="Start year (e.g., 2014)")
-    parser.add_argument("--year_end", type=int, required=True, help="End year (e.g., 2023)")
-    parser.add_argument("--dry_run", action="store_true", help="Run without saving to DB")
+    parser = argparse.ArgumentParser(description="netkeibaデータのスクレイピングを一括実行します。")
+    parser.add_argument("--year_start", type=int, required=True, help="開始年 (例: 2014)")
+    parser.add_argument("--year_end", type=int, required=True, help="終了年 (例: 2023)")
+    parser.add_argument("--dry_run", action="store_true", help="DBへの保存を行わずに実行")
 
     args = parser.parse_args()
 
@@ -111,16 +107,16 @@ def main():
 
     loader = None
     if not args.dry_run:
-        # Initialize Loader (will fail if no DB, so we handle that)
+        # Loaderの初期化 (DBがない場合は失敗するためハンドリング)
         try:
             loader = DataLoader()
         except Exception as e:
-            logger.error(f"Failed to connect to DB: {e}")
-            logger.error("Please ensure docker-compose is running or use --dry_run.")
+            logger.error(f"DBへの接続に失敗しました: {e}")
+            logger.error("docker-composeが起動しているか確認するか、--dry_runを使用してください。")
             return
     else:
-        logger.info("Running in DRY RUN mode. Data will not be saved.")
-        # Create a dummy loader
+        logger.info("DRY RUNモードで実行中。データは保存されません。")
+        # ダミーのLoaderを作成
         class DummyLoader:
             def save_race_data(self, data):
                 pass

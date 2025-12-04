@@ -5,33 +5,33 @@ from typing import Dict, List, Optional, Tuple
 
 class NetkeibaParser:
     """
-    Parses HTML content from netkeiba.com race pages.
+    netkeiba.com のレースページHTMLをパースするクラス。
     """
 
     @staticmethod
     def parse_race_page(html: bytes, race_id: str) -> Dict[str, pd.DataFrame]:
         """
-        Parses the race page HTML and returns DataFrames for races, results, and payouts.
+        レースページのHTMLをパースし、レース情報、結果、払い戻し情報のDataFrameを返します。
 
         Args:
-            html (bytes): HTML content.
-            race_id (str): Race ID.
+            html (bytes): HTMLコンテンツ。
+            race_id (str): レースID。
 
         Returns:
-            Dict[str, pd.DataFrame]: Dictionary containing 'races', 'results', 'payouts', 'horses' DataFrames.
+            Dict[str, pd.DataFrame]: 'races', 'results', 'payouts', 'horses' のDataFrameを含む辞書。
         """
         soup = BeautifulSoup(html, 'html.parser')
 
-        # 1. Parse Race Info
+        # 1. レース情報のパース
         race_info = NetkeibaParser._parse_race_info(soup, race_id)
         df_races = pd.DataFrame([race_info])
 
-        # 2. Parse Results
+        # 2. 結果情報のパース
         results, horses = NetkeibaParser._parse_results(soup, race_id)
         df_results = pd.DataFrame(results)
         df_horses = pd.DataFrame(horses).drop_duplicates(subset=['horse_id'])
 
-        # 3. Parse Payouts
+        # 3. 払い戻し情報のパース
         payouts = NetkeibaParser._parse_payouts(soup, race_id)
         df_payouts = pd.DataFrame(payouts)
 
@@ -44,25 +44,25 @@ class NetkeibaParser:
 
     @staticmethod
     def _parse_race_info(soup: BeautifulSoup, race_id: str) -> Dict:
-        """Parses race metadata."""
-        # This selector is based on standard netkeiba layout
-        # The title is usually in .racedata h1
+        """レースのメタデータをパースします。"""
+        # 標準的なnetkeibaのレイアウトに基づくセレクタ
+        # タイトルは通常 .racedata h1 にある
         title = soup.select_one('.racedata h1')
         title_text = title.text.strip() if title else ""
 
-        # Race details (Distance, Surface, Weather, etc.)
-        # Usually in .racedata p span
+        # レース詳細 (距離, 馬場, 天候など)
+        # 通常 .racedata p span にある
         racedata_text = soup.select_one('.racedata p').text if soup.select_one('.racedata p') else ""
 
-        # Example: "芝右2500m / 天候 : 晴 / 芝 : 良 / 発走 : 15:25"
-        # Parse using regex
+        # 例: "芝右2500m / 天候 : 晴 / 芝 : 良 / 発走 : 15:25"
+        # 正規表現を使用してパース
         surface = "Unknown"
         distance = 0
         weather = "Unknown"
         state = "Unknown"
         date_val = None
 
-        # Surface & Distance
+        # 馬場と距離
         if "芝" in racedata_text:
             surface = "芝"
         elif "ダ" in racedata_text:
@@ -74,7 +74,7 @@ class NetkeibaParser:
         if dist_match:
             distance = int(dist_match.group(1))
 
-        # Weather
+        # 天候
         if "天候 : 晴" in racedata_text:
             weather = "晴"
         elif "天候 : 曇" in racedata_text:
@@ -86,7 +86,7 @@ class NetkeibaParser:
         elif "天候 : 雪" in racedata_text:
             weather = "雪"
 
-        # State (Going)
+        # 馬場状態
         if "良" in racedata_text:
             state = "良"
         elif "稍重" in racedata_text:
@@ -96,16 +96,16 @@ class NetkeibaParser:
         elif "不良" in racedata_text:
             state = "不良"
 
-        # Date is usually in .smalltxt (e.g., 2022年12月25日)
+        # 日付は通常 .smalltxt にある (例: 2022年12月25日)
         smalltxt = soup.select_one('.smalltxt')
         if smalltxt:
-            date_text = smalltxt.text.split()[0] # Take first part
-            # Convert "2022年12月25日" to "2022-12-25"
+            date_text = smalltxt.text.split()[0] # 最初の部分を取得
+            # "2022年12月25日" を "2022-12-25" に変換
             date_text = date_text.replace('年', '-').replace('月', '-').replace('日', '')
             date_val = date_text
 
-        # Race number
-        # Often in .racedata .data_intro dl dt (e.g., 11 R)
+        # レース番号
+        # 多くの場合 .racedata .data_intro dl dt (例: 11 R)
         race_number = 0
         r_num_elem = soup.select_one('.racedata dt')
         if r_num_elem:
@@ -115,13 +115,12 @@ class NetkeibaParser:
                 race_number = int(r_num_match.group(1))
 
         venue = ""
-        # Venue extraction is tricky from just text without mapping codes.
-        # But usually "5回中山8日目" part exists.
+        # 開催場所の抽出はテキストだけからは難しいが、通常 "5回中山8日目" という部分がある
         if smalltxt:
              parts = smalltxt.text.split()
              if len(parts) > 1:
                  venue_part = parts[1]
-                 # Extract "中山" from "5回中山8日目"
+                 # "5回中山8日目" から "中山" を抽出
                  venue_match = re.search(r'回(.*)\d+日目', venue_part)
                  if venue_match:
                      venue = venue_match.group(1)
@@ -140,7 +139,7 @@ class NetkeibaParser:
 
     @staticmethod
     def _parse_results(soup: BeautifulSoup, race_id: str) -> Tuple[List[Dict], List[Dict]]:
-        """Parses the results table."""
+        """結果テーブルをパースします。"""
         results = []
         horses = []
 
@@ -149,7 +148,7 @@ class NetkeibaParser:
             return [], []
 
         rows = table.find_all('tr')
-        # Skip header
+        # ヘッダーをスキップ
         for row in rows[1:]:
             cols = row.find_all('td')
             if len(cols) < 10:
@@ -160,13 +159,13 @@ class NetkeibaParser:
                 try:
                     rank = int(rank_text)
                 except ValueError:
-                    # Handle "取消", "中止", "失格" etc.
+                    # "取消", "中止", "失格" などの処理
                     rank = None
 
                 frame_number = int(cols[1].text.strip())
                 horse_number = int(cols[2].text.strip())
 
-                # Horse info
+                # 馬情報
                 horse_a = cols[3].find('a')
                 horse_name = horse_a.text.strip()
                 horse_id = ""
@@ -174,21 +173,21 @@ class NetkeibaParser:
                     # /horse/2019105219/
                     horse_id = horse_a['href'].split('/')[-2]
 
-                # Sex & Age (e.g., 牡3)
+                # 性別と年齢 (例: 牡3)
                 sex_age = cols[4].text.strip()
                 sex = sex_age[0]
-                # age = int(sex_age[1:]) # Not storing age directly in results, implicitly in date - birthday
+                # age = int(sex_age[1:]) # 年齢は結果に直接保存せず、日付 - 誕生日から計算するためここでは省略
 
-                # Weight (Jockey)
+                # 斤量
                 weight_val = float(cols[5].text.strip())
 
-                # Jockey
+                # 騎手
                 jockey_a = cols[6].find('a')
                 jockey_id = ""
                 if jockey_a and 'href' in jockey_a.attrs:
                     jockey_id = jockey_a['href'].split('/')[-2]
 
-                # Time
+                # タイム
                 time_str = cols[7].text.strip()
                 time_sec = 0.0
                 if time_str:
@@ -202,24 +201,10 @@ class NetkeibaParser:
                          except:
                             time_sec = None
 
-                # Passing rank
-                # Sometimes in col 10 or somewhere?
-                # Headers: 着順, 枠, 馬, 馬名, 性齢, 斤量, 騎手, タイム, 着差, 人気, 単勝オッズ, 後3F, コナー通過, 厩舎, ...
-                # Wait, the column indices depend on the table layout.
-                # Standard layout:
-                # 0: rank, 1: frame, 2: horse_num, 3: name, 4: sex_age, 5: weight, 6: jockey, 7: time, 8: margin,
-                # 9: popularity (sometimes), 10: odds (sometimes), ...
-                # Actually, let's look at the text output from before to guess.
-                # "タイム 着差 ﾀｲﾑ指数 通過 上り 単勝 人気 馬体重"
-                # So:
-                # 7: Time
-                # 8: Margin
-                # 9: Time Index (often empty or **)
-                # 10: Passing (通過)
-                # 11: Last 3F (上り)
-                # 12: Odds (単勝)
-                # 13: Popularity (人気)
-                # 14: Horse Weight (馬体重)
+                # 通過順位など
+                # カラムインデックスはテーブルレイアウトに依存します。
+                # 標準的なレイアウト:
+                # 7: タイム, 8: 着差, 9: 指数, 10: 通過, 11: 上り, 12: 単勝, 13: 人気, 14: 体重
 
                 passing_rank = cols[10].text.strip()
                 last_3f_text = cols[11].text.strip()
@@ -244,9 +229,9 @@ class NetkeibaParser:
                     except ValueError:
                         weight_diff = 0
 
-                # Trainer
-                trainer_a = cols[18].find('a') # Approx index
-                # Let's search for trainer link
+                # 調教師
+                trainer_a = cols[18].find('a') # およそのインデックス
+                # 調教師リンクを検索
                 trainer_id = ""
                 for col in cols[15:]:
                     t_link = col.find('a')
@@ -275,7 +260,7 @@ class NetkeibaParser:
                     'horse_id': horse_id,
                     'name': horse_name,
                     'sex': sex,
-                    'birthday': None, # Need horse page for this
+                    'birthday': None, # 馬ページが必要
                     'sire_id': None,
                     'mare_id': None
                 })
@@ -288,11 +273,10 @@ class NetkeibaParser:
 
     @staticmethod
     def _parse_payouts(soup: BeautifulSoup, race_id: str) -> List[Dict]:
-        """Parses payout information."""
+        """払い戻し情報をパースします。"""
         payouts = []
 
-        # Payouts are usually in tables with class 'pay_block' or 'pay_table_01'
-        # There might be multiple tables (tan/fuku, waku, uma, wide, etc.)
+        # 払い戻しは通常 'pay_block' または 'pay_table_01' クラスのテーブルにあります
         tables = soup.select('table.pay_block, table.pay_table_01')
 
         for table in tables:
@@ -302,29 +286,16 @@ class NetkeibaParser:
                 if not th: continue
                 ticket_type = th.text.strip() # 単勝, 複勝, etc.
 
-                # There can be multiple winning numbers/payouts in one row (e.g. Fukusho)
-                # Structure is tricky. Usually:
-                # <th>TicketType</th> <td>Numbers</td> <td>Payout</td> <td>Popularity</td>
-                # But if multiple, they are separated by <br> or in separate tds?
-                # netkeiba uses <br> usually inside the td.
+                # 1つの行に複数の当選番号/払い戻しがある場合があります（例: 複勝）
+                # netkeibaでは通常 <br> で区切られています。
 
                 cols = row.find_all('td')
                 if len(cols) < 2: continue
 
-                numbers_html = str(cols[0])
-                payouts_html = str(cols[1])
-
-                # Split by <br>
-                nums = [n.strip() for n in numbers_html.replace('<td>', '').replace('</td>', '').split('<br/>') if n.strip()]
-                pays = [p.strip().replace(',', '') for p in payouts_html.replace('<td>', '').replace('</td>', '').split('<br/>') if p.strip()]
-
-                # Sometimes <br> is rendered as \n in text?
-                # Let's use BeautifulSoup on the cell
-
                 nums_cell = cols[0]
                 pays_cell = cols[1]
 
-                # Function to extract text lines
+                # テキスト行を抽出する関数
                 def get_lines(cell):
                     return [text for text in cell.stripped_strings]
 

@@ -2,51 +2,51 @@ import sys
 import os
 import logging
 
-# Add src to path
+# srcディレクトリをパスに追加
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from scraping.netkeiba import NetkeibaScraper
 from scraping.parser import NetkeibaParser
 from scraping.loader import DataLoader
 
-# Configure logging
+# ロガー設定
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 def main():
-    # Example: Hopeful Stakes 2023
+    # 例: 2023年 ホープフルステークス
     race_id = "202306050911"
 
-    logger.info("Initializing Scraper...")
+    logger.info("スクレイパーを初期化中...")
     scraper = NetkeibaScraper(sleep_time=1.0)
 
-    logger.info(f"Fetching race {race_id}...")
+    logger.info(f"レース {race_id} を取得中...")
     html = scraper.get_race_page(race_id)
 
     if not html:
-        logger.error("Failed to fetch HTML")
+        logger.error("HTMLの取得に失敗しました")
         return
 
-    logger.info("Parsing HTML...")
+    logger.info("HTMLをパース中...")
     data = NetkeibaParser.parse_race_page(html, race_id)
 
-    logger.info("Parsed Data Summary:")
+    logger.info("パースデータ概要:")
     for key, df in data.items():
         logger.info(f"--- {key} ---")
-        logger.info(f"Shape: {df.shape}")
+        logger.info(f"形状: {df.shape}")
         if not df.empty:
             logger.info(f"\n{df.head()}")
         else:
-            logger.warning(f"DataFrame {key} is empty.")
+            logger.warning(f"データフレーム {key} は空です。")
 
-    # Try to load to DB
+    # DBへの保存を試行
     try:
-        logger.info("Initializing Loader...")
+        logger.info("Loaderを初期化中...")
         loader = DataLoader()
         loader.save_race_data(data)
-        logger.info("Data saved to DB successfully (if DB is running).")
+        logger.info("データがDBに正常に保存されました（DBが稼働している場合）。")
     except Exception as e:
-        logger.info(f"Skipping DB save (DB likely not running in this environment): {e}")
+        logger.info(f"DBへの保存をスキップしました（この環境ではDBが稼働していない可能性があります）: {e}")
 
 if __name__ == "__main__":
     main()

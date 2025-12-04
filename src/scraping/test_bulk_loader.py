@@ -4,38 +4,38 @@ from scraping.bulk_loader import scrape_year
 
 class TestBulkLoader(unittest.TestCase):
     def test_scrape_year(self):
-        # Mock loader
+        # Loaderのモック化
         loader = MagicMock()
 
-        # Mock scraper
+        # Scraperのモック化
         scraper = MagicMock()
 
-        # Scenario:
-        # Venue 01, Kai 01, Day 01 exists (returns HTML)
-        # Venue 01, Kai 01, Day 02 does not exist (returns None)
-        # Venue 01, Kai 02 does not exist (returns None)
-        # Venue 02... does not exist
+        # シナリオ:
+        # 場所 01, 回 01, 日 01 は存在する (HTMLを返す)
+        # 場所 01, 回 01, 日 02 は存在しない (Noneを返す)
+        # 場所 01, 回 02 は存在しない (Noneを返す)
+        # 場所 02... は存在しない
 
         def side_effect(race_id):
-            # 202301010101 -> exists
+            # 202301010101 -> 存在する
             if race_id == "202301010101":
                 return b"<html>...</html>"
-            # 202301010102...0112 -> exists (loop race)
+            # 202301010102...0112 -> 存在する (レースループ)
             if race_id.startswith("2023010101") and int(race_id[-2:]) <= 12:
                 return b"<html>...</html>"
 
-            # Check for Day 1 existence (check_day_id uses race 01)
-            # 202301010101 (Day 1 Race 1) -> handled above
+            # 2日目の存在チェック (check_day_id は第1レースを使用)
+            # 202301010101 (1日目 第1レース) -> 上記で処理済み
 
-            # Check for Day 2 existence: 202301010201
+            # 2日目の存在チェック: 202301010201
             if race_id == "202301010201":
                 return None
 
-            # Check for Kai 2 existence: 202301020101
+            # 2回目の存在チェック: 202301020101
             if race_id == "202301020101":
                 return None
 
-            # Check for Venue 2 Kai 1 Day 1 Race 1: 202302010101
+            # 場所2 回1 日1 第1レースのチェック: 202302010101
             if race_id == "202302010101":
                 return None
 
@@ -43,16 +43,16 @@ class TestBulkLoader(unittest.TestCase):
 
         scraper.get_race_page.side_effect = side_effect
 
-        # Run scrape_year for 2023
-        # We expect it to process Venue 1, Kai 1, Day 1 (12 races).
-        # Then check Day 2 (fail), check Kai 2 (fail).
-        # Then check Venue 2...10 (fail).
+        # 2023年のスクレイピングを実行
+        # 場所1, 回1, 日1 (12レース) が処理されることを期待
+        # その後、日2 (失敗), 回2 (失敗) を確認
+        # その後、場所2...10 (失敗) を確認
 
         scrape_year(2023, loader, scraper)
 
-        # Verify loader.save_race_data was called 12 times
+        # loader.save_race_data が12回呼び出されたか検証
         self.assertEqual(loader.save_race_data.call_count, 12)
-        print("Bulk loader logic verified: Processed 12 races as expected.")
+        print("Bulk loader ロジック検証完了: 期待通り12レースが処理されました。")
 
 if __name__ == '__main__':
     unittest.main()
