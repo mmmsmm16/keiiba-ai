@@ -1,0 +1,29 @@
+services:
+  app:
+    build:
+      context: ./docker/python
+    volumes:
+      - .:/workspace
+    ports:
+      - "8888:8888"
+    depends_on:
+      - db
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=keiba
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+    tty: true
+
+  db:
+    image: postgres:15
+    volumes:
+      - ./db/data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=keiba
+    ports:
+      - "5432:5432"
