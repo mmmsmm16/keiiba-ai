@@ -50,6 +50,7 @@ class RawDataLoader:
             res.popularity,
             res.weight,
             res.weight_diff,
+            res.age,
             h.sex,
             h.name as horse_name,
             h.sire_id,

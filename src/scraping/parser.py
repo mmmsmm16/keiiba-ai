@@ -176,7 +176,10 @@ class NetkeibaParser:
                 # 性別と年齢 (例: 牡3)
                 sex_age = cols[4].text.strip()
                 sex = sex_age[0]
-                # age = int(sex_age[1:]) # 年齢は結果に直接保存せず、日付 - 誕生日から計算するためここでは省略
+                try:
+                    age = int(sex_age[1:])
+                except ValueError:
+                    age = None
 
                 # 斤量
                 weight_val = float(cols[5].text.strip())
@@ -202,10 +205,6 @@ class NetkeibaParser:
                             time_sec = None
 
                 # 通過順位など
-                # カラムインデックスはテーブルレイアウトに依存します。
-                # 標準的なレイアウト:
-                # 7: タイム, 8: 着差, 9: 指数, 10: 通過, 11: 上り, 12: 単勝, 13: 人気, 14: 体重
-
                 passing_rank = cols[10].text.strip()
                 last_3f_text = cols[11].text.strip()
                 last_3f = float(last_3f_text) if last_3f_text and last_3f_text.replace('.', '', 1).isdigit() else None
@@ -217,7 +216,6 @@ class NetkeibaParser:
                 popularity = int(pop_text) if pop_text and pop_text.isdigit() else None
 
                 weight_text = cols[14].text.strip()
-                # 492(+4) -> 492, +4
                 horse_weight = None
                 weight_diff = None
                 match = re.match(r'(\d+)\((.*)\)', weight_text)
@@ -231,7 +229,6 @@ class NetkeibaParser:
 
                 # 調教師
                 trainer_a = cols[18].find('a') # およそのインデックス
-                # 調教師リンクを検索
                 trainer_id = ""
                 for col in cols[15:]:
                     t_link = col.find('a')
@@ -253,7 +250,8 @@ class NetkeibaParser:
                     'odds': odds,
                     'popularity': popularity,
                     'weight': horse_weight,
-                    'weight_diff': weight_diff
+                    'weight_diff': weight_diff,
+                    'age': age
                 })
 
                 horses.append({

@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS results (
     popularity INTEGER, -- 人気
     weight INTEGER, -- 馬体重
     weight_diff INTEGER, -- 体重増減
+    age INTEGER, -- 年齢
     PRIMARY KEY (race_id, horse_id),
     FOREIGN KEY (race_id) REFERENCES races(race_id),
     FOREIGN KEY (horse_id) REFERENCES horses(horse_id)
