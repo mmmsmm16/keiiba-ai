@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 from sqlalchemy import create_engine
+from sqlalchemy.exc import ProgrammingError
 import logging
 
 logger = logging.getLogger(__name__)
@@ -188,6 +189,13 @@ class JraVanDataLoader:
             logger.info(f"ロード完了: {len(df)} 件")
             return df
 
+        except ProgrammingError as e:
+            logger.error("データロード中にエラーが発生しました: テーブルが見つかりません。")
+            logger.error(f"詳細: {e}")
+            logger.error("ヒント: PC-KEIBA Database を使用して JRA-VAN データをインポートしましたか？")
+            logger.error("テーブル名が異なる可能性があります (例: 'jvd_race_shosai' ではなく 'race_shosai')。")
+            logger.error("src/tools/diagnose_db.py を実行して、データベース内のテーブルを確認してください。")
+            raise e
         except Exception as e:
             logger.error(f"データロード中にエラーが発生しました: {e}")
             raise e
