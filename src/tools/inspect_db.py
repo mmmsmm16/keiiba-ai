@@ -6,55 +6,65 @@ import logging
 # srcディレクトリをパスに追加
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-logging.basicConfig(level=logging.INFO, format='%(message)s') # 見やすいようにメッセージのみ出力
+logging.basicConfig(level=logging.INFO, format='%(message)s')
 logger = logging.getLogger(__name__)
 
 def inspect_db():
     """
-    データベース内のテーブル定義（スキーマ）を出力するツール。
-    PC-KEIBA等で作成されたテーブル構造を確認するために使用します。
+    全データベースとテーブル定義を出力するツール。
+    PC-KEIBAがどこにデータを作成したか特定するために使用します。
     """
     user = os.environ.get('POSTGRES_USER', 'user')
     password = os.environ.get('POSTGRES_PASSWORD', 'password')
     host = os.environ.get('POSTGRES_HOST', 'db')
-    port = os.environ.get('POSTGRES_PORT', '5432')
-    dbname = os.environ.get('POSTGRES_DB', 'keiba')
-    connection_str = f"postgresql://{user}:{password}@{host}:{port}/{dbname}"
+    port = os.environ.get('POSTGRES_PORT', '5432') # 内部ポートは固定
+
+    # まずデフォルトの postgres DB に接続してDB一覧を取得
+    root_conn_str = f"postgresql://{user}:{password}@{host}:{port}/postgres"
 
     try:
-        engine = create_engine(connection_str)
+        engine = create_engine(root_conn_str)
         with engine.connect() as conn:
-            # テーブル一覧を取得
-            logger.info("========== データベース スキーマ情報 ==========")
-            query = text("""
-                SELECT table_name
-                FROM information_schema.tables
-                WHERE table_schema = 'public'
-                ORDER BY table_name
-            """)
-            tables = [row[0] for row in conn.execute(query)]
+            logger.info("========== データベース一覧 ==========")
+            query = text("SELECT datname FROM pg_database WHERE datistemplate = false")
+            dbs = [row[0] for row in conn.execute(query)]
+            for db in dbs:
+                logger.info(f"- {db}")
 
-            if not tables:
-                logger.warning("テーブルが見つかりません。データインポートが完了していない可能性があります。")
-                return
+        # 各データベースの中身を確認
+        for db_name in dbs:
+            logger.info(f"\n========== データベース: {db_name} のテーブル ==========")
+            db_conn_str = f"postgresql://{user}:{password}@{host}:{port}/{db_name}"
+            try:
+                db_engine = create_engine(db_conn_str)
+                with db_engine.connect() as db_conn:
+                    query = text("""
+                        SELECT table_name
+                        FROM information_schema.tables
+                        WHERE table_schema = 'public'
+                        ORDER BY table_name
+                    """)
+                    tables = [row[0] for row in db_conn.execute(query)]
 
-            logger.info(f"検出されたテーブル数: {len(tables)}")
+                    if not tables:
+                        logger.info("(テーブルなし)")
+                        continue
 
-            for table in tables:
-                logger.info(f"\n[Table: {table}]")
-                # カラム情報を取得
-                col_query = text("""
-                    SELECT column_name, data_type
-                    FROM information_schema.columns
-                    WHERE table_name = :table AND table_schema = 'public'
-                    ORDER BY ordinal_position
-                """)
-                cols = conn.execute(col_query, {"table": table})
-                for col in cols:
-                    logger.info(f"  - {col[0]}: {col[1]}")
+                    for table in tables:
+                        logger.info(f"[Table: {table}]")
+                        # カラム情報を取得 (最初の3つだけ表示して省略)
+                        col_query = text("""
+                            SELECT column_name, data_type
+                            FROM information_schema.columns
+                            WHERE table_name = :table AND table_schema = 'public'
+                            ORDER BY ordinal_position
+                        """)
+                        cols = db_conn.execute(col_query, {"table": table}).fetchall()
+                        for col in cols:
+                            logger.info(f"  - {col[0]}: {col[1]}")
 
-            logger.info("\n=============================================")
-            logger.info("この出力を開発者(AI)に共有してください。")
+            except Exception as e:
+                logger.error(f"  アクセスエラー: {e}")
 
     except Exception as e:
         logger.error(f"DB接続エラー: {e}")
