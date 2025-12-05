@@ -36,16 +36,6 @@
 - [x] 高度な特徴量生成 (展開予測)
 - [x] アンサンブル学習 (CatBoost + Stacking)
 - [ ] ハイパーパラメータチューニング
-- [x] 高度な特徴量生成 (Advanced Feature Engineering)
-    - [x] 展開予測特徴量 (逃げ馬比率、メンバー構成によるペース予測)
-    - [ ] 血統・コース適性の深化 (距離別・競馬場別の種牡馬成績)
-- [x] アンサンブル学習 (Ensemble)
-    - [x] CatBoost モデルの実装 (`src/model/catboost_model.py`)
-    - [x] Stacking / Blending の実装 (`src/model/ensemble.py`)
-- [ ] 自動運用パイプライン構築 (MLOps)
-    - [ ] 定期実行スクリプトの整備
-- [x] データベース定義 (`00_init.sql`) の作成 (Note: JRA-VAN migration will overwrite this)
-- [ ] 環境起動と動作確認 (Jupyter Lab, DB接続)
 
 ## Phase 5: リアルタイム予測 & 運用 (Real-time Pipeline)
 - [ ] リアルタイムデータ取得構成 (PC-KEIBA連携)

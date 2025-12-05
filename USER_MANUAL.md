@@ -18,7 +18,7 @@ docker-compose up -d
 ```
 
 *   **Jupyter Lab:** `http://localhost:8888` (トークンなし)
-*   **PostgreSQL:** `localhost:5432` (User: user, Pass: password, DB: keiba)
+*   **PostgreSQL:** `localhost:5433` (User: postgres, Pass: password, DB: pckeiba)
 
 ## 3. データ収集 (Data Collection)
 `netkeiba.com` から過去のレースデータを取得します。

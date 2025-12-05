@@ -10,10 +10,10 @@ services:
       - db
     environment:
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_PASSWORD=password
       - POSTGRES_DB=pckeiba
       - POSTGRES_HOST=db
-      - POSTGRES_PORT=5433
+      - POSTGRES_PORT=5432
     tty: true
 
   db:
@@ -23,7 +23,7 @@ services:
       - ./db/init:/docker-entrypoint-initdb.d
     environment:
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_PASSWORD=password
       - POSTGRES_DB=pckeiba
     ports:
-      - "5433:5433"
+      - "5433:5432"
