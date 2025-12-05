@@ -8,11 +8,14 @@
 - [x] データベース定義 (`00_init.sql`) の作成
 - [ ] 環境起動と動作確認 (Jupyter Lab, DB接続)
 
-## Phase 1: データ収集基盤 (Data Pipeline)
-- [x] スクレイピングモジュール基盤実装 (netkeiba.com)
-- [x] HTMLパーサー実装 (HTML -> DataFrame)
-- [x] DBローダー実装 (DataFrame -> PostgreSQL)
-- [x] 過去データ取得ジョブの実行 (過去10年分) - Script `src/scraping/bulk_loader.py` prepared.
+## Phase 1: データ収集基盤 (Data Collection)
+- [x] スクレイピングモジュール基盤実装 (Depreciated)
+- [x] HTMLパーサー実装 (Depreciated)
+- [x] DBローダー実装 (Depreciated)
+- [x] 過去データ取得ジョブの実行 (Depreciated)
+- [ ] **JRA-VANデータ導入 (New Strategy)**
+    - [ ] PC-KEIBA Database 導入サポート (マニュアル作成)
+    - [ ] DBスキーマの確認と対応
 
 ## Phase 2: 前処理 & 特徴量エンジニアリング (Preprocessing)
 - [x] データローダー実装 (SQL -> DataFrame, テーブル結合)
@@ -38,3 +41,10 @@
     - [x] Stacking / Blending の実装 (`src/model/ensemble.py`)
 - [ ] 自動運用パイプライン構築 (MLOps)
     - [ ] 定期実行スクリプトの整備
+- [x] データベース定義 (`00_init.sql`) の作成 (Note: JRA-VAN migration will overwrite this)
+- [ ] 環境起動と動作確認 (Jupyter Lab, DB接続)
+
+## Phase 5: リアルタイム予測 & 運用 (Real-time Pipeline)
+- [ ] リアルタイムデータ取得構成 (PC-KEIBA連携)
+- [ ] 推論用パイプライン構築 (Preprocessing -> Inference)
+- [ ] 自動購入連携 (Optional)
