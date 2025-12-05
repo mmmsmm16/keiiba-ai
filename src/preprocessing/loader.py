@@ -72,3 +72,26 @@ class RawDataLoader:
         except Exception as e:
             logger.error(f"データのロードに失敗しました: {e}")
             raise e
+
+class JraVanDataLoader:
+    """
+    PC-KEIBA Database (JRA-VAN) のスキーマに対応したデータローダー。
+    ※PC-KEIBAのテーブル定義（jvd_race_shosai等）に合わせてSQLを実装する必要があります。
+    """
+    def __init__(self):
+        user = os.environ.get('POSTGRES_USER', 'user')
+        password = os.environ.get('POSTGRES_PASSWORD', 'password')
+        host = os.environ.get('POSTGRES_HOST', 'db')
+        port = os.environ.get('POSTGRES_PORT', '5432')
+        dbname = os.environ.get('POSTGRES_DB', 'keiba')
+        connection_str = f"postgresql://{user}:{password}@{host}:{port}/{dbname}"
+        self.engine = create_engine(connection_str)
+
+    def load(self, limit: int = None) -> pd.DataFrame:
+        """
+        JRA-VANデータをロードして、本プロジェクトの標準フォーマットに変換して返します。
+        """
+        # TODO: PC-KEIBAのテーブル名・カラム名を確認後、実装する
+        # 例: SELECT * FROM jvd_race_shosai ...
+        logger.warning("JraVanDataLoader はまだ実装されていません。スキーマ確認後にSQLを記述してください。")
+        return pd.DataFrame()
