@@ -9,7 +9,7 @@ from scipy.special import softmax
 # srcディレクトリをパスに追加
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-from model.lgbm import KeibaLGBM
+from model.ensemble import EnsembleModel
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -29,12 +29,12 @@ def main():
         return
 
     # 2. モデルのロード
-    model_path = os.path.join(os.path.dirname(__file__), '../../models/lgbm_model.pkl')
+    model_path = os.path.join(os.path.dirname(__file__), '../../models/ensemble_model.pkl')
     if not os.path.exists(model_path):
         logger.error("モデルファイルがありません")
         return
 
-    model = KeibaLGBM()
+    model = EnsembleModel()
     model.load_model(model_path)
 
     # 3. 予測

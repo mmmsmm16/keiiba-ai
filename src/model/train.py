@@ -7,7 +7,7 @@ import logging
 # srcディレクトリをパスに追加
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-from model.lgbm import KeibaLGBM
+from model.ensemble import EnsembleModel
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -31,17 +31,13 @@ def main():
         logger.error("学習データが空です。")
         return
 
-    # モデル学習
-    model = KeibaLGBM()
+    # アンサンブルモデル学習 (LightGBM + CatBoost)
+    model = EnsembleModel()
     model.train(train_set, valid_set)
 
     # モデル保存
-    model_path = os.path.join(os.path.dirname(__file__), '../../models/lgbm_model.pkl')
+    model_path = os.path.join(os.path.dirname(__file__), '../../models/ensemble_model.pkl')
     model.save_model(model_path)
-
-    # 特徴量重要度のプロット
-    imp_path = os.path.join(os.path.dirname(__file__), '../../models/importance.png')
-    model.plot_importance(imp_path)
 
 if __name__ == "__main__":
     main()
