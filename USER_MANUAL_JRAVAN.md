@@ -21,7 +21,7 @@ PC-KEIBA Database から、Dockerで起動している PostgreSQL に接続し�
 2.  PC-KEIBA Database の「環境設定」→「データベース設定」を開きます。
 3.  以下の通り設定します（`docker-compose.yml` の設定値）。
     *   **接続先 (Host):** `localhost` (または `127.0.0.1`)
-    *   **ポート (Port):** `5432`
+    *   **ポート (Port):** `5433`
     *   **ユーザー (User):** `user`
     *   **パスワード (Pass):** `password`
     *   **データベース名 (DB Name):** `keiba`
