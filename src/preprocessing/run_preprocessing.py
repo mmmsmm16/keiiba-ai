@@ -6,7 +6,7 @@ import pandas as pd
 # srcディレクトリをパスに追加
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-from preprocessing.loader import RawDataLoader
+from preprocessing.loader import JraVanDataLoader
 from preprocessing.cleansing import DataCleanser
 from preprocessing.feature_engineering import FeatureEngineer
 from preprocessing.aggregators import HistoryAggregator
@@ -21,8 +21,8 @@ logger = logging.getLogger(__name__)
 def main():
     try:
         # 1. データのロード
-        logger.info("Step 1: データのロード")
-        loader = RawDataLoader()
+        logger.info("Step 1: データのロード (JRA-VAN)")
+        loader = JraVanDataLoader()
         df = loader.load() # 全データをロード
 
         # 2. データクレンジング
