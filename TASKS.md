@@ -44,7 +44,7 @@
 
 ## Phase 5: リアルタイム予測 & 運用 (Real-time Pipeline)
 - [x] 推論用データローダー実装 (`src/inference/loader.py`)
-    - [x] JRA-VAN DBから開催予定データ(出馬表)を取得 - Implemented joining with jvd_uma_race.
+    - [x] JRA-VAN DBから開催予定データ(出馬表)を取得
 - [x] 推論用前処理パイプライン実装 (`src/inference/preprocessor.py`)
     - [x] 過去データと結合しての特徴量生成 (MVP戦略)
 - [x] 予測実行スクリプト実装 (`src/inference/predict.py`)
@@ -53,3 +53,13 @@
 - [x] 予測閲覧簡易ビューア (`src/inference/viewer.py`)
     - [x] CLIまたはシンプルなWebUIでの結果表示
 - [ ] 自動購入連携 (Optional)
+
+## Phase 6: 分析・可視化 (Analysis & Visualization)
+- [ ] 実験結果出力の強化 (`src/model/evaluate.py`)
+    - [ ] 回収率シミュレーションの詳細データをファイル保存 (JSON/CSV)
+- [ ] ダッシュボードアプリ実装 (`src/dashboard/app.py`)
+    - [ ] **Streamlit** 導入
+    - [ ] 実験履歴 (`experiments/history.csv`) の一覧表示とフィルタリング
+    - [ ] 学習曲線の可視化 (もしログがあれば)
+    - [ ] 特徴量重要度の可視化
+    - [ ] 回収率シミュレーション結果 (ROIカーブ) の可視化

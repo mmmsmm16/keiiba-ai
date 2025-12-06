@@ -6,6 +6,7 @@ services:
       - .:/workspace
     ports:
       - "8888:8888"
+      - "8501:8501"
     depends_on:
       - db
     environment:
@@ -21,7 +22,7 @@ services:
           devices:
             - driver: nvidia
               count: all
-              capabilities: [gpu]
+              capabilities: [ gpu ]
 
   db:
     image: postgres:15
