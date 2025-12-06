@@ -69,6 +69,10 @@ class JraVanDataLoader:
         # スキーマ判定: PC-KEIBAの短縮名テーブル (jvd_ra 等) の場合はカラム名が異なる
         is_pckeiba_short = (tbl_race == 'jvd_ra' or tbl_race == 'ra')
 
+        # 通過順 (Passing Rank) 用のカラム定義 (Schema agnostic approach if names match?)
+        # PC-KEIBA typically uses corner_1, corner_2... similar to JRA-VAN Spec
+        col_pass = ["res.corner_1", "res.corner_2", "res.corner_3", "res.corner_4"]
+
         if is_pckeiba_short:
             logger.info("PC-KEIBA短縮名スキーマ (jvd_ra) を検出しました。")
             col_title = "r.kyosomei_hondai"
@@ -138,7 +142,13 @@ class JraVanDataLoader:
             {col_horse_name} AS horse_name,
             {col_sex} AS sex,
             {col_sire} AS sire_id,
-            {col_mare} AS mare_id
+            {col_mare} AS mare_id,
+
+            -- Passing Rank Columns
+            {col_pass[0]} AS pass_1,
+            {col_pass[1]} AS pass_2,
+            {col_pass[2]} AS pass_3,
+            {col_pass[3]} AS pass_4
 
         FROM {tbl_race} r
         JOIN {tbl_seiseki} res
@@ -159,6 +169,11 @@ class JraVanDataLoader:
         logger.info("JRA-VANデータをロード中...")
         try:
             df = pd.read_sql(query, self.engine)
+            logger.info(f"ロード件数: {len(df)} 件")
+
+            if len(df) == 0:
+                logger.warning("注意: 取得データが0件です。データベースが空か、結合条件に一致するデータがありません。")
+                logger.warning("src/tools/diagnose_db.py を実行してテーブルの行数を確認してください。")
 
             # --- Python側での前処理 ---
             df['rank'] = pd.to_numeric(df['rank_str'], errors='coerce')
@@ -185,8 +200,21 @@ class JraVanDataLoader:
                     return 0
             df['weight_diff'] = df.apply(convert_weight_diff, axis=1)
 
+            # Passing Rank生成 ("1-1-1-1")
+            pass_cols = ['pass_1', 'pass_2', 'pass_3', 'pass_4']
+            def make_passing_rank(row):
+                # 数値または文字列のコーナー順位を結合
+                vals = []
+                for c in pass_cols:
+                    v = row.get(c)
+                    if pd.notnull(v) and v != 0 and v != '0':
+                        vals.append(str(v).replace('.0', '')) # 1.0 -> 1
+                if not vals:
+                    return None
+                return "-".join(vals)
+            df['passing_rank'] = df.apply(make_passing_rank, axis=1)
+
             # 性別マッピング
-            # JVDコード: 1:牡, 2:牝, 3:セン
             sex_map = {1: '牡', 2: '牝', 3: 'セ'}
             df['sex'] = pd.to_numeric(df['sex'], errors='coerce').map(sex_map).fillna('Unknown')
 
@@ -210,7 +238,7 @@ class JraVanDataLoader:
             state_map = {1: '良', 2: '稍重', 3: '重', 4: '不良'}
             df['state'] = pd.to_numeric(df['state'], errors='coerce').map(state_map).fillna('Unknown')
 
-            logger.info(f"ロード完了: {len(df)} 件")
+            logger.info(f"前処理完了: {len(df)} 件")
             return df
 
         except ProgrammingError as e:

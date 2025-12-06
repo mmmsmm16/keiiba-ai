@@ -27,17 +27,13 @@ def diagnose_db():
         with engine.connect() as conn:
             logger.info("Connection successful!")
 
-            # Check for JRA-VAN tables (Long and Short names)
+            # Check for JRA-VAN tables
             expected_tables = [
                 'jvd_race_shosai',
                 'jvd_seiseki',
                 'jvd_uma_master',
                 'jvd_haraimodoshi',
-                'jvd_ra', # Short name Race
-                'jvd_se', # Short name Seiseki
-                'jvd_um', # Short name Uma
-                'jvd_hr', # Short name Haraimodoshi
-                'race_shosai',
+                'race_shosai', # standard name without prefix check
                 'seiseki'
             ]
 
