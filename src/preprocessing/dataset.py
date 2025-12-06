@@ -30,7 +30,6 @@ class DatasetSplitter:
         # Train: 2015-2022
         # Valid: 2023
         # Test: 2024
-        # (日付型であることを前提。feature_engineeringでyearを作成済み)
         train_df = df[df['year'].between(2015, 2022)].copy()
         valid_df = df[df['year'] == 2023].copy()
         test_df = df[df['year'] == 2024].copy()
@@ -51,34 +50,36 @@ class DatasetSplitter:
             return {'X': pd.DataFrame(), 'y': pd.Series(), 'group': np.array([])}
 
         # LambdaRankのためには、クエリ（レースID）ごとにデータがまとまっている必要がある
-        # race_id でソート
         df = df.sort_values('race_id')
 
-        # グループ情報 (各レースの出走馬数)
+        # グループ情報
         group = df.groupby('race_id').size().to_numpy()
 
         # 特徴量 (X) と ターゲット (y) の分離
-        # AGENTS.md の規定により、未来情報（レース結果のオッズ、体重など）は削除する
-        # id系や日付、レース名なども削除
+        # 【重要】未来情報（レース結果）を含むカラムは全て削除する
         drop_cols = [
             # ID・メタデータ
             'race_id', 'date', 'title', 'horse_id', 'horse_name',
             'jockey_id', 'trainer_id', 'sire_id', 'mare_id',
-            # 目的変数そのもの
-            'rank', 'target',
+            # 目的変数
+            'rank', 'target', 'rank_str',
             # 未来情報 (Result)
-            'time', 'passing_rank', 'last_3f',
-            'odds', 'popularity', # 確定オッズ・人気は禁止
-            'weight', 'weight_diff', # 当日馬体重も禁止 (AGENTS.md準拠)
-            'winning_numbers', 'payout', 'ticket_type' # 払い戻し情報
+            'time', 'raw_time',       # ← raw_time (1355など) が残っていると即リーク
+            'passing_rank',           # 通過順
+            'last_3f',                # 上がり3F
+            'odds', 'popularity',     # オッズ・人気
+            'weight', 'weight_diff',  # 当日馬体重
+            'weight_diff_val', 'weight_diff_sign', # ← これらも削除
+            'winning_numbers', 'payout', 'ticket_type', # 払い戻し
+            # PC-KEIBA特有のカラム（もしあれば）
+            'pass_1', 'pass_2', 'pass_3', 'pass_4'
         ]
 
         # 存在しないカラムをdropしようとしてもエラーにならないように errors='ignore'
         X = df.drop(columns=drop_cols, errors='ignore')
 
-        # カテゴリ変数がobject型のままだとLightGBMで扱いにくい場合があるが、
-        # 基本的にはfeature_engineeringで数値化済み (sex_num, weather_num...)
-        # 残っているobject型があれば除外するかcategory型にする
+        # カテゴリ変数がobject型のままだとLightGBMで扱いにくい場合があるため数値型のみ選択
+        # (feature_engineeringで数値化済み前提)
         X = X.select_dtypes(exclude=['object'])
 
         y = df['target']
