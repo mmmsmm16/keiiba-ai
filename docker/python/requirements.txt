@@ -15,4 +15,3 @@ pyarrow>=12.0.0
 scipy
 catboost
 pytorch-tabnet>=4.1.0
-numpy<2.0

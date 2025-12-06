@@ -45,7 +45,7 @@ class KeibaTabNet:
         self.fit_params = {
             'max_epochs': self.params.pop('max_epochs', 100),
             'patience': self.params.pop('patience', 20),
-            'batch_size': self.params.pop('batch_size', 1024),
+            'batch_size': self.params.pop('batch_size', 512),
             'virtual_batch_size': self.params.pop('virtual_batch_size', 128),
             'num_workers': self.params.pop('num_workers', 0),
             'drop_last': self.params.pop('drop_last', False)
@@ -84,6 +84,8 @@ class KeibaTabNet:
         TabNetはPandas DataFrameではなくNumPy arrayを期待します。
         """
         logger.info(f"TabNetの学習を開始します... Device: {self.params.get('device_name')}")
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
         X_train = train_set['X'].values
         y_train_raw = train_set['y']

@@ -66,21 +66,43 @@ docker-compose exec app python src/preprocessing/run_preprocessing.py
 
 ### ステップ 2: モデル学習と実験 (Training & Experiment)
 
-アンサンブルモデル (LightGBM + CatBoost + TabNet) を学習します。
+メモリ競合を防ぎ、各モデルを個別に評価するため、学習プロセスは4段階に分かれています。以下の順序で実行してください。
 Phase 4より、**実験管理機能**が追加されました。
 
-**基本コマンド:**
+**1. LightGBM の学習**
 ```bash
-docker-compose exec app python src/model/train.py
+docker-compose exec app python src/model/train.py --model lgbm
 ```
+*   **出力:** `models/lgbm.pkl`
 
-**実験名やメモを指定して実行:**
+**2. CatBoost の学習**
+GPUリソースをTabNet用に確保するため、CPUモードで実行されます。
 ```bash
-docker-compose exec app python src/model/train.py --experiment_name "exp001_tabnet_tuning" --note "TabNetのパラメータ調整"
+docker-compose exec app python src/model/train.py --model catboost
 ```
+*   **出力:** `models/catboost.pkl`
 
-*   **出力:** `models/ensemble_model.pkl` (学習済みモデル)
-*   **実験ログ:** `experiments/history.csv` (実験履歴一覧), `experiments/<exp_name>_detail.json` (詳細パラメータと結果)
+**3. TabNet の学習 (Deep Learning)**
+GPU (CUDA) を使用して学習します。
+```bash
+docker-compose exec app python src/model/train.py --model tabnet
+```
+*   **出力:** `models/tabnet.pkl`
+
+**4. アンサンブル学習 (Meta-Model)**
+上記3つのモデルをロードし、最終的な予測モデルを作成します。
+```bash
+docker-compose exec app python src/model/train.py --model ensemble
+```
+*   **出力:** `models/ensemble_model.pkl`
+*   **実験ログ:** `experiments/history.csv`, `experiments/<exp_name>_detail.json`
+
+**オプション (実験名指定など):**
+各コマンドに `--experiment_name "名前"` や `--note "メモ"` を付与できます。
+例:
+```bash
+docker-compose exec app python src/model/train.py --model tabnet --note "バッチサイズ調整"
+```
 
 ### ステップ 3: 評価 (Evaluation)
 

@@ -21,7 +21,8 @@ class KeibaCatBoost:
             'random_seed': 42,
             'verbose': 100,
             'early_stopping_rounds': 50,
-            'allow_writing_files': False # 不要なログファイルの生成を防ぐ
+            'allow_writing_files': False, # 不要なログファイルの生成を防ぐ
+            'task_type': 'CPU' # GPUリソース競合を避けるためCPUで実行
         }
         self.model = None
 
