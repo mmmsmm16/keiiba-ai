@@ -115,7 +115,58 @@ docker-compose exec app python src/model/evaluate.py
 
 ---
 
-## 4. プロジェクト構成
+## 4. 推論の実行 (Inference)
+
+Phase 5より、学習済みモデルを使用して実際に開催されるレースの予想を行うことができます。
+
+### 準備
+
+1.  **データの更新:**
+    PC-KEIBA Database を使用して、最新の「出馬表データ (Entry)」を取得・登録してください。
+    *   `JV-Link` -> `データ登録` -> `通常（セットアップ以外）` を実行
+    *   必要なテーブル: `jvd_race_shosai`, `jvd_uma_race`
+
+2.  **学習済みモデルの確認:**
+    `models/` ディレクトリに学習済みモデル (`lgbm.pkl`, `catboost.pkl`, `tabnet.zip`, `ensemble_model.pkl`) が存在することを確認してください。
+
+### 実行方法
+
+指定した日付（YYYYMMDD）のレースを予想します。
+
+```bash
+docker-compose exec app python src/inference/predict.py --date 20241201
+```
+
+**オプション:**
+
+*   **`--model`**: 予測に使用するモデルを指定します。（デフォルト: `ensemble`）
+    *   `ensemble`: 3つのモデルの統合予測（推奨）
+    *   `lgbm`: LightGBMのみ
+    *   `catboost`: CatBoostのみ
+    *   `tabnet`: TabNetのみ
+
+    ```bash
+    # 例: LightGBMのみで予測
+    docker-compose exec app python src/inference/predict.py --date 20241201 --model lgbm
+    ```
+
+*   **`--race_ids`**: 特定のレースIDのみを予測する場合。
+    ```bash
+    docker-compose exec app python src/inference/predict.py --race_ids 202406010101
+    ```
+
+### 結果の確認
+
+予測結果は `data/predictions/` ディレクトリに CSV ファイルとして保存されます。
+簡易ビューアを使用して、ターミナルで結果を確認できます。
+
+```bash
+docker-compose exec app python src/inference/viewer.py data/predictions/20241201.csv
+```
+
+---
+
+## 5. プロジェクト構成
 
 *   `src/preprocessing/`: データ前処理用コード
     *   `bloodline_features.py`: **[New]** 血統特徴量 (Sire/Mare) の生成
@@ -129,7 +180,7 @@ docker-compose exec app python src/model/evaluate.py
 *   `docker-compose.yml`: Docker構成定義 (GPU対応)
 *   `experiments/`: **[New]** 実験結果ログディレクトリ
 
-## 5. トラブルシューティング
+## 6. トラブルシューティング
 
 *   **GPUが認識されない:** `nvidia-smi` コマンドがコンテナ内で実行できるか確認してください。実行できない場合、Docker DesktopのGPU設定やNVIDIA Driverを確認してください。
 *   **TabNetの学習が遅い:** GPUが有効でない場合、CPUで学習が行われます。データ量が多い場合は時間がかかります。

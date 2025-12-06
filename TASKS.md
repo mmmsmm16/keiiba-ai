@@ -43,6 +43,13 @@
     - [ ] 定期実行スクリプトの整備
 
 ## Phase 5: リアルタイム予測 & 運用 (Real-time Pipeline)
-- [ ] リアルタイムデータ取得構成 (PC-KEIBA連携)
-- [ ] 推論用パイプライン構築 (Preprocessing -> Inference)
+- [x] 推論用データローダー実装 (`src/inference/loader.py`)
+    - [x] JRA-VAN DBから開催予定データ(出馬表)を取得 - Implemented joining with jvd_uma_race.
+- [x] 推論用前処理パイプライン実装 (`src/inference/preprocessor.py`)
+    - [x] 過去データと結合しての特徴量生成 (MVP戦略)
+- [x] 予測実行スクリプト実装 (`src/inference/predict.py`)
+    - [x] モデルロード (LGBM, CatBoost, TabNet, Ensemble)
+    - [x] スコア算出とランク付け
+- [x] 予測閲覧簡易ビューア (`src/inference/viewer.py`)
+    - [x] CLIまたはシンプルなWebUIでの結果表示
 - [ ] 自動購入連携 (Optional)
