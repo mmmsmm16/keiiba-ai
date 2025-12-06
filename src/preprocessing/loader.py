@@ -176,7 +176,13 @@ class JraVanDataLoader:
                 logger.warning("src/tools/diagnose_db.py を実行してテーブルの行数を確認してください。")
 
             # --- Python側での前処理 ---
+            # 基本的な型変換
             df['rank'] = pd.to_numeric(df['rank_str'], errors='coerce')
+            
+            # 【追加】オッズ等の数値カラムを明示的に変換 (文字列 '---' 等対策)
+            df['odds'] = pd.to_numeric(df['odds'], errors='coerce')
+            df['popularity'] = pd.to_numeric(df['popularity'], errors='coerce')
+            df['weight'] = pd.to_numeric(df['weight'], errors='coerce')
 
             def convert_time(t):
                 if pd.isna(t): return None
