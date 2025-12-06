@@ -26,6 +26,9 @@ wheels/
 
 # Docker
 db/data/
+data/
+experiments/
+models/
 .env
 
 # OS
