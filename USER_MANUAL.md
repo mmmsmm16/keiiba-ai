@@ -40,7 +40,7 @@ Deep Learning (TabNet) を有効活用するため、Docker環境はGPUパスス
     *   **ポート:** `5433` (Dockerの外部公開ポート)
     *   **データベース名:** `pckeiba`
     *   **ユーザー:** `postgres`
-    *   **パスワード:** `password`
+    *   **パスワード:** `postgres`
     *   **文字コード:** `UTF-8`
 
 3.  **データのインポート**
