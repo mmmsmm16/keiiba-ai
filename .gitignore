@@ -26,8 +26,12 @@ wheels/
 
 # Docker
 db/data/
+data/
 .env
 
 # OS
 .DS_Store
 Thumbs.db
+
+#model 
+models/
