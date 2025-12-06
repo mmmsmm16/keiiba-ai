@@ -1,4 +1,4 @@
-# Use user-verified base image for RTX 50 series support
+# Use user-verified base image for RTX 50 series support (provides CUDA libs etc.)
 FROM nvcr.io/nvidia/pytorch:24.06-py3
 
 # Avoid prompts from apt
@@ -21,16 +21,18 @@ COPY requirements.txt /tmp/requirements.txt
 # Upgrade pip
 RUN pip install --no-cache-dir --upgrade pip
 
-# Install requirements, EXCLUDING torch to avoid overwriting the base image's version.
-# The base image (nvcr.io/nvidia/pytorch:24.06-py3) comes with a pre-installed, optimized PyTorch.
-# We must ensure we don't accidentally downgrade it with a standard pip install.
+# Install requirements, EXCLUDING torch.
+# We will install the specific Nightly version of torch later.
 RUN grep -v "^torch" /tmp/requirements.txt > /tmp/requirements_no_torch.txt && \
     pip install --no-cache-dir -r /tmp/requirements_no_torch.txt
 
-# Explicitly ensure pytorch-tabnet is installed.
-# We install it separately to ensure it doesn't trigger a torch reinstall if possible,
-# though pip usually respects installed versions.
+# Explicitly ensure pytorch-tabnet is installed
 RUN pip install --no-cache-dir pytorch-tabnet>=4.1.0
+
+# FORCE install PyTorch Nightly with CUDA 12.6 support for RTX 50 series (sm_120)
+# This overwrites the PyTorch version that came with the base image or was pulled by dependencies.
+# We use --force-reinstall to be absolutely sure.
+RUN pip install --no-cache-dir --pre --force-reinstall torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu126
 
 # Set locale
 ENV LC_ALL=C.UTF-8
