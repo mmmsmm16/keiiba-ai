@@ -1,27 +1,16 @@
-# Use newer NVIDIA CUDA base image for RTX 50 series support
-# CUDA 12.4+ is likely required for sm_120
-FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
+# Use user-verified base image for RTX 50 series support
+FROM nvcr.io/nvidia/pytorch:24.06-py3
 
 # Avoid prompts from apt
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install Python 3.10 and system dependencies
+# Install system dependencies
+# libpq-dev is required for psycopg2
 RUN apt-get update && apt-get install -y \
-    python3.10 \
-    python3.10-dev \
-    python3-pip \
-    build-essential \
     libpq-dev \
     curl \
     git \
     && rm -rf /var/lib/apt/lists/*
-
-# Set python3.10 as default python
-RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.10 1 \
-    && update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1
-
-# Upgrade pip
-RUN pip install --no-cache-dir --upgrade pip
 
 # Set working directory
 WORKDIR /workspace
@@ -29,19 +18,18 @@ WORKDIR /workspace
 # Install Python dependencies
 COPY requirements.txt /tmp/requirements.txt
 
-# Install PyTorch Nightly with CUDA 12.6 support (or latest stable compatible with new GPUs)
-# RTX 50 series (sm_120) needs very recent CUDA support.
-# We use the nightly build to ensure compatibility.
-RUN pip install --no-cache-dir --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu126
+# Upgrade pip
+RUN pip install --no-cache-dir --upgrade pip
 
-# Install other requirements
-# Exclude torch package itself from requirements.txt to avoid overwriting the nightly version
-# Note: 'pytorch-tabnet' contains 'torch' string, so simply grepping 'torch' would remove it.
-# We use a stricter pattern or explicitly install tabnet.
-RUN grep -v "^torch>=" /tmp/requirements.txt > /tmp/requirements_no_torch.txt
-RUN pip install --no-cache-dir -r /tmp/requirements_no_torch.txt
+# Install requirements, EXCLUDING torch to avoid overwriting the base image's version.
+# The base image (nvcr.io/nvidia/pytorch:24.06-py3) comes with a pre-installed, optimized PyTorch.
+# We must ensure we don't accidentally downgrade it with a standard pip install.
+RUN grep -v "^torch" /tmp/requirements.txt > /tmp/requirements_no_torch.txt && \
+    pip install --no-cache-dir -r /tmp/requirements_no_torch.txt
 
-# Explicitly ensure pytorch-tabnet is installed (in case regex missed it or order matters)
+# Explicitly ensure pytorch-tabnet is installed.
+# We install it separately to ensure it doesn't trigger a torch reinstall if possible,
+# though pip usually respects installed versions.
 RUN pip install --no-cache-dir pytorch-tabnet>=4.1.0
 
 # Set locale
