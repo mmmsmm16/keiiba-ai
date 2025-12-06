@@ -257,8 +257,9 @@ class InferencePreprocessor:
             'is_nige_temp'
         ]
 
-        # ID情報は返却用に確保
-        id_cols = ['race_id', 'date', 'venue', 'race_number', 'horse_number', 'horse_name', 'jockey_id', 'odds', 'popularity']
+        # ID情報は返却用に確保（レース情報も含める）
+        id_cols = ['race_id', 'date', 'venue', 'race_number', 'horse_number', 'horse_name', 
+                   'jockey_id', 'odds', 'popularity', 'title', 'distance', 'surface', 'state', 'weather']
         ids = inference_df[id_cols].copy()
 
         # X の作成

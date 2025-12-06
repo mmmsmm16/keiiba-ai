@@ -109,6 +109,37 @@ with tab3:
             st.dataframe(df_curve)
         else:
             st.warning("カーブデータが見つかりません。")
+
+        # 3. Complex Betting
+        st.subheader("複合馬券シミュレーション (Box 5)")
+        st.markdown("スコア上位5頭をBOX買いした場合の回収率シミュレーション")
+        
+        strategies = sim_data.get('strategies', {})
+        complex_keys = ['umaren_box5', 'sanrenpuku_box5', 'sanrentan_box5']
+        
+        complex_data = []
+        names = {
+            'umaren_box5': '馬連 Box5 (10点)', 
+            'sanrenpuku_box5': '3連複 Box5 (10点)', 
+            'sanrentan_box5': '3連単 Box5 (60点)'
+        }
+        
+        for k in complex_keys:
+            if k in strategies:
+                d = strategies[k]
+                complex_data.append({
+                    '券種 (Strategy)': names.get(k, k),
+                    '回収率 (ROI)': f"{d['roi']:.2f}%",
+                    '的中率 (Hit Rate)': f"{d['accuracy']*100:.2f}%",
+                    '総投資額': f"{d['bet']:,}円",
+                    '払戻総額': f"{d['return']:,}円",
+                    '対象レース数': d['races']
+                })
+        
+        if complex_data:
+            st.table(pd.DataFrame(complex_data))
+        else:
+            st.info("複合馬券のシミュレーション結果がありません。")
     else:
         st.warning("シミュレーション結果が見つかりません。先に 'src/model/evaluate.py' を実行してください。")
 
@@ -164,7 +195,13 @@ with tab4:
     # UI Inputs
     col_in1, col_in2, col_in3 = st.columns(3)
     with col_in1:
-        target_date = st.text_input("開催日 (YYYYMMDD)", value=pd.Timestamp.now().strftime('%Y%m%d'))
+        selected_date = st.date_input(
+            "開催日",
+            value=pd.Timestamp.now(),
+            min_value=pd.Timestamp('2020-01-01'),
+            max_value=pd.Timestamp.now() + pd.Timedelta(days=30)
+        )
+        target_date = selected_date.strftime('%Y%m%d')
     with col_in2:
         venue_map = {
             '01': '札幌', '02': '函館', '03': '福島', '04': '新潟', '05': '東京', 
@@ -224,6 +261,33 @@ with tab4:
                         if X.empty:
                             st.error("前処理後の特徴量が生成できませんでした。")
                         else:
+                            # レース情報カードの表示
+                            race_info = new_df.iloc[0]
+                            
+                            # マッピング辞書
+                            surface_map = {'10': '芝', '11': '芝・直線', '20': 'ダート', '21': 'ダート・直線', '30': '障害・芝', '31': '障害・芝直線'}
+                            state_map = {'1': '良', '2': '稍重', '3': '重', '4': '不良'}
+                            weather_map = {'1': '晴', '2': '曇', '3': '雨', '4': '小雨', '5': '小雪', '6': '雪'}
+                            
+                            st.markdown("---")
+                            st.subheader(f"📋 レース情報")
+                            
+                            info_col1, info_col2, info_col3 = st.columns(3)
+                            with info_col1:
+                                st.metric("レース名", race_info.get('title', 'N/A'))
+                                st.metric("距離", f"{race_info.get('distance', 'N/A')}m")
+                            with info_col2:
+                                surf = surface_map.get(str(race_info.get('surface', '')), 'N/A')
+                                st.metric("馬場", surf)
+                                state = state_map.get(str(race_info.get('state', '')), 'N/A')
+                                st.metric("馬場状態", state)
+                            with info_col3:
+                                weather = weather_map.get(str(race_info.get('weather', '')), 'N/A')
+                                st.metric("天候", weather)
+                                st.metric("出走頭数", f"{len(new_df)}頭")
+                            
+                            st.markdown("---")
+                            
                             # 3. 予測
                             preds = model.predict(X)
                             
@@ -232,12 +296,15 @@ with tab4:
                             results['score'] = preds
                             results['prob'] = results.groupby('race_id')['score'].transform(lambda x: softmax(x))
                             
+                            # 期待値計算
+                            results['expected_value'] = results['prob'] * results['odds']
+                            results['recommended'] = results['expected_value'] > 1.0
+                            
                             # 表示用カラム
                             results['pred_rank'] = results.groupby('race_id')['score'].rank(ascending=False, method='min')
-                            # results['horse_name'] は ids に含まれているため上書き不要 (index不一致でNaNになるのを防ぐ)
                             
                             # 詳細情報を表示
-                            display_cols = ['pred_rank', 'horse_number', 'horse_name', 'score', 'prob', 'odds', 'popularity']
+                            display_cols = ['pred_rank', 'horse_number', 'horse_name', 'score', 'prob', 'odds', 'popularity', 'expected_value']
                             display_df = results.sort_values('pred_rank')[display_cols]
                             
                             # カラム名日本語化
@@ -248,26 +315,44 @@ with tab4:
                                 'score': '予測スコア',
                                 'prob': 'AI勝率',
                                 'odds': '単勝オッズ',
-                                'popularity': '人気'
+                                'popularity': '人気',
+                                'expected_value': '期待値'
                             }
                             display_df = display_df.rename(columns=rename_map)
                             
-                            # 色付け
-                            st.subheader(f"予測結果: {venue_map.get(venue_code, venue_code)} {race_no}R")
+                            # 色付けとハイライト
+                            st.subheader(f"🎯 予測結果: {venue_map.get(venue_code, venue_code)} {race_no}R")
                             
-                            def highlight_top(s):
-                                # s is a row (Series)
-                                # s['予想順位'] を参照する
+                            # おすすめ馬の数を表示
+                            rec_count = results['recommended'].sum()
+                            if rec_count > 0:
+                                st.info(f"💡 期待値が1.0を超える「おすすめ馬」が {rec_count} 頭います（黄色・赤色でハイライト）")
+                            
+                            def highlight_rows(s):
                                 rank = s['予想順位']
-                                if rank == 1:
-                                    return ['background-color: #ffcccc; color: black'] * len(s)
+                                exp_val = s.get('期待値', 0)
+                                is_rec = exp_val > 1.0
+                                
+                                # より淡い色で見やすく
+                                if is_rec and rank == 1:
+                                    return ['background-color: #ffb3ba; color: black'] * len(s)  # ライトピンク
+                                elif is_rec:
+                                    return ['background-color: #ffffba; color: black'] * len(s)  # ライトイエロー
+                                elif rank == 1:
+                                    return ['background-color: #ffe6e6; color: black'] * len(s)  # 極薄ピンク
                                 elif rank <= 3:
-                                    return ['background-color: #ffffcc; color: black'] * len(s)
+                                    return ['background-color: #f5f5f5; color: black'] * len(s)  # 薄グレー
                                 else:
                                     return [''] * len(s)
 
                             # style.apply は axis=1 で行ごとに適用
-                            st.dataframe(display_df.style.apply(highlight_top, axis=1).format({'予測スコア': '{:.4f}', 'AI勝率': '{:.2%}'}))
+                            st.dataframe(
+                                display_df.style.apply(highlight_rows, axis=1).format({
+                                    '予測スコア': '{:.4f}', 
+                                    'AI勝率': '{:.2%}',
+                                    '期待値': '{:.2f}'
+                                })
+                            )
 
                     except Exception as e:
                         st.error(f"予測実行中にエラーが発生しました: {e}")

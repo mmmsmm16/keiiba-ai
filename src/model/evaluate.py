@@ -8,6 +8,8 @@ import json
 from datetime import datetime
 from scipy.special import softmax
 
+from sqlalchemy import create_engine, text
+
 # srcディレクトリをパスに追加
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
@@ -15,6 +17,37 @@ from model.ensemble import EnsembleModel
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+def get_db_engine():
+    user = os.environ.get('POSTGRES_USER', 'postgres')
+    password = os.environ.get('POSTGRES_PASSWORD', 'postgres')
+    host = os.environ.get('POSTGRES_HOST', 'db')
+    port = os.environ.get('POSTGRES_PORT', '5432')
+    dbname = os.environ.get('POSTGRES_DB', 'pckeiba')
+    return create_engine(f"postgresql://{user}:{password}@{host}:{port}/{dbname}")
+
+def load_payout_data(year=2024):
+    logger.info(f"払戻データ(jvd_hr)をロード中... Year={year}")
+    engine = get_db_engine()
+    query = text(f"SELECT * FROM jvd_hr WHERE kaisai_nen = '{year}'")
+    try:
+        df = pd.read_sql(query, engine)
+        
+        # race_id の構築 (jvd_raと同じロジック: YYYY+Place+Kai+Day+Race)
+        # jvd_hr columns: kaisai_nen, keibajo_code, kaisai_kai, kaisai_nichime, race_bango
+        # values are usually strings like '2024', '05', '01', '01', '01'
+        df['race_id'] = (
+            df['kaisai_nen'].astype(str) +
+            df['keibajo_code'].astype(str) +
+            df['kaisai_kai'].astype(str) +
+            df['kaisai_nichime'].astype(str) +
+            df['race_bango'].astype(str)
+        )
+        logger.info(f"払戻データロード完了: {len(df)} 件")
+        return df
+    except Exception as e:
+        logger.error(f"払戻データロードエラー: {e}")
+        return pd.DataFrame()
 
 class NpEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -111,6 +144,15 @@ def main():
     curve_data = simulate_threshold_curve(test_df)
     simulation_results['roi_curve'] = curve_data
 
+    # Strategy 4: 複合馬券シミュレーション (Box 5)
+    # n_races が多いので少し時間がかかる可能性あり
+    payout_df = load_payout_data(year=2024)
+    if not payout_df.empty:
+        sim_complex = simulate_complex_betting(test_df, payout_df)
+        simulation_results['strategies'].update(sim_complex)
+    else:
+        logger.warning("払戻データがロードできなかったため、複合馬券シミュレーションをスキップします。")
+
     # Save to JSON
     json_path = os.path.join(output_dir, 'latest_simulation.json')
     with open(json_path, 'w') as f:
@@ -187,6 +229,159 @@ def simulate_threshold_curve(df):
         })
         
     return curve_data
+
+def simulate_complex_betting(df, payout_df):
+    from itertools import combinations, permutations
+    
+    logger.info("--- Simulation: Complex Betting (Box 5) ---")
+    
+    # Payoutデータを検索しやすいように辞書化
+    # race_id -> { 'umaren': {comb: pay, ...}, 'sanrenpuku': ..., 'sanrentan': ... }
+    payout_map = {}
+    
+    # 必要な列だけ抽出して反復
+    # haraimodoshi_umaren_1a, 1b, 2a, 2b, 3a, 3b... max usually 3?
+    # JRA-VAN doc says up to 3 entries for simple bets usually.
+    # We will check 1 to 3.
+    
+    for _, row in payout_df.iterrows():
+        rid = row['race_id']
+        payout_map[rid] = {'umaren': {}, 'sanrenpuku': {}, 'sanrentan': {}}
+        
+        # Umaren (1-3)
+        for i in range(1, 4):
+            k_comb = f'haraimodoshi_umaren_{i}a'
+            k_pay = f'haraimodoshi_umaren_{i}b'
+            if k_comb in row and row[k_comb] and str(row[k_comb]).strip():
+                try:
+                    pay = int(row[k_pay])
+                    payout_map[rid]['umaren'][str(row[k_comb])] = pay
+                except: pass
+
+        # Sanrenpuku (1-3)
+        for i in range(1, 4):
+            k_comb = f'haraimodoshi_sanrenpuku_{i}a'
+            k_pay = f'haraimodoshi_sanrenpuku_{i}b'
+            if k_comb in row and row[k_comb] and str(row[k_comb]).strip():
+                try:
+                    pay = int(row[k_pay])
+                    payout_map[rid]['sanrenpuku'][str(row[k_comb])] = pay
+                except: pass
+
+        # Sanrentan (1-6? usually 3, but up to 6 in huge dead heat)
+        for i in range(1, 7):
+            k_comb = f'haraimodoshi_sanrentan_{i}a'
+            k_pay = f'haraimodoshi_sanrentan_{i}b'
+            if k_comb in row and row[k_comb] and str(row[k_comb]).strip():
+                try:
+                    pay = int(row[k_pay])
+                    payout_map[rid]['sanrentan'][str(row[k_comb])] = pay
+                except: pass
+
+    # Strategies
+    stats = {
+        'umaren_box5': {'bet': 0, 'return': 0, 'hit': 0, 'races': 0},
+        'sanrenpuku_box5': {'bet': 0, 'return': 0, 'hit': 0, 'races': 0},
+        'sanrentan_box5': {'bet': 0, 'return': 0, 'hit': 0, 'races': 0}
+    }
+    
+    # 予測データでループ
+    race_groups = df.groupby('race_id')
+    for race_id, group in race_groups:
+        if race_id not in payout_map:
+            continue
+            
+        # Top 5 horses by score
+        top5 = group.sort_values('score', ascending=False).head(5)
+        if len(top5) < 2:
+            continue
+            
+        horse_nums = top5['horse_number'].astype(int).tolist() # [1, 5, 2, ...]
+        
+        # --- Umaren Box 5 (10点) ---
+        # 組み合わせ (順序なし) -> 小さい順に並べて文字列化 (0102)
+        bet_count = 0
+        return_amount = 0
+        hit = 0
+        
+        if len(horse_nums) >= 2:
+            combos = list(combinations(horse_nums, 2)) # (1, 5), (1, 2)...
+            bet_count = len(combos) # 10 if 5 horses
+            
+            for c in combos:
+                # ソートして文字列化 (0205)
+                c_sorted = sorted(c)
+                comb_str = f"{c_sorted[0]:02}{c_sorted[1]:02}"
+                
+                if comb_str in payout_map[race_id]['umaren']:
+                    return_amount += payout_map[race_id]['umaren'][comb_str]
+                    hit = 1
+            
+            stats['umaren_box5']['bet'] += bet_count * 100
+            stats['umaren_box5']['return'] += return_amount
+            stats['umaren_box5']['hit'] += hit
+            stats['umaren_box5']['races'] += 1
+
+        # --- Sanrenpuku Box 5 (10点) ---
+        bet_count = 0
+        return_amount = 0
+        hit = 0
+        
+        if len(horse_nums) >= 3:
+            combos = list(combinations(horse_nums, 3))
+            bet_count = len(combos) # 10
+            
+            for c in combos:
+                c_sorted = sorted(c)
+                comb_str = f"{c_sorted[0]:02}{c_sorted[1]:02}{c_sorted[2]:02}"
+                
+                if comb_str in payout_map[race_id]['sanrenpuku']:
+                    return_amount += payout_map[race_id]['sanrenpuku'][comb_str]
+                    hit = 1
+                    
+            stats['sanrenpuku_box5']['bet'] += bet_count * 100
+            stats['sanrenpuku_box5']['return'] += return_amount
+            stats['sanrenpuku_box5']['hit'] += hit
+            stats['sanrenpuku_box5']['races'] += 1
+
+        # --- Sanrentan Box 5 (60点) ---
+        bet_count = 0
+        return_amount = 0
+        hit = 0
+        
+        if len(horse_nums) >= 3: # 3連単も3頭以上必要
+            # Boxなので順列 (Permutations)
+            perms = list(permutations(horse_nums, 3))
+            bet_count = len(perms) # 60
+            
+            for p in perms:
+                # 順序通り文字列化
+                perm_str = f"{p[0]:02}{p[1]:02}{p[2]:02}"
+                
+                if perm_str in payout_map[race_id]['sanrentan']:
+                    return_amount += payout_map[race_id]['sanrentan'][perm_str]
+                    hit = 1
+            
+            stats['sanrentan_box5']['bet'] += bet_count * 100
+            stats['sanrentan_box5']['return'] += return_amount
+            stats['sanrentan_box5']['hit'] += hit
+            stats['sanrentan_box5']['races'] += 1
+
+    # 集計結果作成
+    final_results = {}
+    for k, v in stats.items():
+        roi = v['return'] / v['bet'] * 100 if v['bet'] > 0 else 0
+        accuracy = v['hit'] / v['races'] if v['races'] > 0 else 0
+        final_results[k] = {
+            'roi': roi, 
+            'accuracy': accuracy, 
+            'bet': v['bet'], 
+            'return': v['return'],
+            'races': v['races']
+        }
+        logger.info(f"{k} - ROI: {roi:.2f}%, Hit: {accuracy:.2%} ({v['races']} races)")
+        
+    return final_results
 
 if __name__ == "__main__":
     main()
