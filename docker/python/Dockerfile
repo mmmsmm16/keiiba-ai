@@ -34,6 +34,11 @@ RUN pip install --no-cache-dir pytorch-tabnet>=4.1.0
 # We use --force-reinstall to be absolutely sure.
 RUN pip install --no-cache-dir --pre --force-reinstall torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu126
 
+# FORCE downgrade NumPy to <2.0 to ensure compatibility with Pandas/PyArrow
+# This is necessary because the PyTorch Nightly install above pulls in NumPy 2.x,
+# which breaks other libraries compiled for NumPy 1.x.
+RUN pip install --no-cache-dir "numpy<2.0"
+
 # Set locale
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
