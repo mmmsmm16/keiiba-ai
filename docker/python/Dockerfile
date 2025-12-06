@@ -27,8 +27,7 @@ WORKDIR /workspace
 
 # Install Python dependencies
 COPY requirements.txt /tmp/requirements.txt
-# Install torch with CUDA support explicitly if needed, but standard pip install torch usually fetches cuda version if environment is right or by default.
-# However, to be safe and ensure CUDA 12.1 support:
+# Install torch with CUDA support explicitly if needed
 RUN pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 

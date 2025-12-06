@@ -96,9 +96,6 @@ class KeibaTabNet:
         y_valid = self._preprocess_target(y_valid_raw).reshape(-1, 1)
 
         # 特徴量のスケーリング (TabNetはNNなのでスケール感重要)
-        # 欠損値補完はTabNetがある程度やるが、事前に0埋め等が望ましい。
-        # ここでは簡易的にSimpleImputer的なことをせず、呼び出し元で処理されていることを期待するが、
-        # StandardScalerはNaNがあってもエラーになる場合があるので、fillnaする。
         X_train = np.nan_to_num(X_train, nan=0.0)
         X_valid = np.nan_to_num(X_valid, nan=0.0)
 
@@ -141,9 +138,6 @@ class KeibaTabNet:
         """モデルとスケーラーを保存します。"""
         os.makedirs(os.path.dirname(path), exist_ok=True)
 
-        # TabNetのsave_modelはzipファイルを作成するが、ここではpickleでラップするか、
-        # 専用のsaveメソッドを使う。TabNetのsave_modelは拡張子なしのパスを要求し、.zipをつける。
-
         # モデル本体
         model_path = path.replace('.pkl', '')
         self.model.save_model(model_path) # saves as model_path.zip
@@ -174,19 +168,14 @@ class KeibaTabNet:
 
     def plot_importance(self, output_path: str):
         """特徴量重要度をプロットして保存します。"""
-        # TabNetはfeature_importances_を持つ
         try:
             feat_importances = self.model.feature_importances_
             indices = np.argsort(feat_importances)[::-1]
-
-            # トップ20
             indices = indices[:20]
 
             plt.figure(figsize=(10, 6))
             plt.title("Feature Importances (TabNet)")
             plt.bar(range(len(indices)), feat_importances[indices], align="center")
-            # 特徴量名があればラベル付けしたいが、Xのみ渡されているため不明な場合が多い。
-            # 呼び出し元で管理する必要がある。ここではインデックスのみ。
             plt.xticks(range(len(indices)), indices)
             plt.tight_layout()
             plt.savefig(output_path)

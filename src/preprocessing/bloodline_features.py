@@ -75,9 +75,6 @@ class BloodlineFeatureEngineer:
         df = df.merge(self.bloodline_map, on='horse_id', how='left')
 
         # 2. ターゲットエンコーディング的な集計 (リーク防止のため時系列shiftが必要)
-        # ここでは単純なIDの付与にとどめ、集計は CategoryAggregator に任せるか、
-        # あるいはここで独自の集計を行うか。
-        # 今回の計画では「Advanced Feature Engineering」として集計まで行う。
 
         # 集計対象: rank (着順), win_flag (1着かどうか), top3_flag (3着以内)
         # rankはNaN（未来のレース）の場合があるため除外して計算する必要がある
@@ -87,17 +84,13 @@ class BloodlineFeatureEngineer:
         # そのため、CategoryAggregatorと同様のロジック（shift -> expanding -> mean）を
         # sire_id, bms_id に対して適用する。
 
-        # 処理効率のため、CategoryAggregatorのロジックを再利用したいが、
-        # ここでは明示的に実装する。
-
         # 必要なカラムがあるか確認
         required_cols = ['date', 'rank']
         if not all(col in df.columns for col in required_cols):
              logger.warning(f"必要なカラム {required_cols} が不足しているため、集計特徴量はスキップします。")
              return df
 
-        # 着順の数値化（除外などで数値以外が入っている場合のクリーニングは済んでいる前提だが念のため）
-        # rankがNaNの場合は計算対象外
+        # 着順の数値化
         df['rank_numeric'] = pd.to_numeric(df['rank'], errors='coerce')
         df['is_win'] = (df['rank_numeric'] == 1).astype(int)
         df['is_top3'] = (df['rank_numeric'] <= 3).astype(int)
@@ -108,7 +101,6 @@ class BloodlineFeatureEngineer:
         # 集計関数
         def calculate_expanding_stats(group_col, prefix):
             # shift(1)して、その行以前（その行は含まない）の累積平均を計算
-            # これにより未来のレース結果を含まないようにする
 
             # 平均着順
             df[f'{prefix}_avg_rank'] = df.groupby(group_col)['rank_numeric'].transform(
@@ -121,7 +113,7 @@ class BloodlineFeatureEngineer:
             )
 
             # 複勝率
-            df[f'{prefix}_roi_rate'] = df.groupby(group_col)['is_top3'].transform( # roi_rateという名前は不適切かもだがTop3率とする
+            df[f'{prefix}_roi_rate'] = df.groupby(group_col)['is_top3'].transform(
                 lambda x: x.shift(1).expanding().mean()
             )
 
@@ -138,15 +130,10 @@ class BloodlineFeatureEngineer:
         logger.info("母父(BMS)別の集計特徴量を生成中...")
         calculate_expanding_stats('bms_id', 'bms')
 
-        # 繁殖牝馬(Mare)はサンプル数が少ないため、過学習リスクがあるが、一応計算してみる？
-        # 一般的に繁殖牝馬の成績は重要だが、expanding windowだと初期は不安定。
-        # 今回はSireとBMSに絞る。
-
         # 一時カラムの削除
         df.drop(columns=['rank_numeric', 'is_win', 'is_top3'], inplace=True)
 
-        # 欠損値埋め: 初出走の種牡馬などはNaNになる -> 平均値や0で埋める
-        # ここでは一旦0で埋める（特徴量としての意味: 実績なし）
+        # 欠損値埋め: 初出走の種牡馬などはNaNになる -> 0で埋める
         cols_to_fill = [c for c in df.columns if c.startswith('sire_') or c.startswith('bms_')]
         df[cols_to_fill] = df[cols_to_fill].fillna(0)
 

@@ -75,10 +75,6 @@ class EnsembleModel:
     def save_model(self, path: str):
         # EnsembleModel自体をpickleするが、TabNetは別ファイル管理が必要なため、
         # TabNet以外の部分と、TabNetのパス管理を行う必要がある。
-        # または、TabNetのsave/loadロジックをここで呼び出す。
-
-        # 簡易的な実装として、TabNet以外のオブジェクトをPickleし、
-        # TabNetは自身のメソッドで同じディレクトリに保存させる。
 
         os.makedirs(os.path.dirname(path), exist_ok=True)
 
