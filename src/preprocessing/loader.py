@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.exc import ProgrammingError
 import logging
 
@@ -41,11 +41,11 @@ class JraVanDataLoader:
         """
         JRA-VANデータをロードし、学習用フォーマットに変換します。
         """
-        # PC-KEIBAの標準的なカラム名 (snake_case) を想定
+        # PC-KEIBA (Short Table Names) 対応
+        # jvd_ra: Race Info, jvd_se: Seiseki, jvd_um: Uma Master
         query = """
         SELECT
             -- ID Construction (Netkeiba Format: YYYYJJMMDDRR)
-            -- 各コードは文字列型と想定
             CONCAT(
                 r.kaisai_nen,
                 r.keibajo_code,
@@ -63,8 +63,12 @@ class JraVanDataLoader:
             r.kyori::integer AS distance,
             r.track_code AS surface,
             r.tenko_code AS weather,
-            r.baba_jotai_code AS state,
-            r.race_mei_honbun AS title,
+            -- Baba State: Prioritize Shiba if Track is Turf (10-22), else Dirt
+            CASE
+                WHEN CAST(r.track_code AS INTEGER) BETWEEN 10 AND 22 THEN r.babajotai_code_shiba
+                ELSE r.babajotai_code_dirt
+            END AS state,
+            r.kyosomei_hondai AS title,
 
             -- Results
             res.ketto_toroku_bango AS horse_id,
@@ -73,37 +77,36 @@ class JraVanDataLoader:
             res.wakuban::integer AS frame_number,
             res.umaban::integer AS horse_number,
 
-            -- Rank (数字以外が入る場合を考慮して抽出するか、Pythonで処理)
-            -- '1 ', '2 ' のようにスペースが入る可能性あり
-            TRIM(res.kakutei_chakusun) AS rank_str,
+            -- Rank
+            TRIM(res.kakutei_chakujun) AS rank_str,
 
             -- Time (1:35.5 -> 1355 or 955)
             res.soha_time AS raw_time,
 
             -- Other Results
-            res.agari_3f AS last_3f,
+            res.kohan_3f AS last_3f,
             res.tansho_odds AS odds,
-            res.ninki AS popularity,
+            res.tansho_ninkijun AS popularity,
             res.bataiju AS weight,
-            res.zogen_sa AS weight_diff_val, -- 増減差
-            res.zogen_fugo AS weight_diff_sign, -- +/-
+            res.zogen_sa AS weight_diff_val,
+            res.zogen_fugo AS weight_diff_sign,
 
             res.barei AS age,
 
             -- Horse Info
-            uma.bamei AS horse_name,
-            uma.seibetsu_code AS sex,
+            res.bamei AS horse_name,
+            res.seibetsu_code AS sex,
             uma.fushu_ketto_toroku_bango AS sire_id,
             uma.boshu_ketto_toroku_bango AS mare_id
 
-        FROM jvd_race_shosai r
-        JOIN jvd_seiseki res
+        FROM jvd_ra r
+        JOIN jvd_se res
             ON r.kaisai_nen = res.kaisai_nen
             AND r.keibajo_code = res.keibajo_code
             AND r.kaisai_kai = res.kaisai_kai
             AND r.kaisai_nichime = res.kaisai_nichime
             AND r.race_bango = res.race_bango
-        LEFT JOIN jvd_uma_master uma
+        LEFT JOIN jvd_um uma
             ON res.ketto_toroku_bango = uma.ketto_toroku_bango
 
         -- 障害レースを除外する場合: WHERE r.track_code NOT IN ('...')
@@ -123,9 +126,6 @@ class JraVanDataLoader:
             df['rank'] = pd.to_numeric(df['rank_str'], errors='coerce')
 
             # Time: '1355' (1分35秒5) -> 95.5秒
-            # 文字列か数値か不明だが、数値と仮定
-            # 形式: mmss0 (0.1秒単位) ? JVDは通常 1/10秒単位。
-            # 例: 1355 -> 1分35秒5
             def convert_time(t):
                 if pd.isna(t): return None
                 try:
@@ -151,20 +151,11 @@ class JraVanDataLoader:
                     return 0
             df['weight_diff'] = df.apply(convert_weight_diff, axis=1)
 
-            # Sex: Code mapping (1:牡, 2:牝, 3:セン) -> JVD codes are consistent with logic
+            # Sex: Code mapping
             # JVD: 1=Male, 2=Female, 3=Gelding.
-            # Convert to '牡', '牝', 'セ' for compatibility with existing FeatureEngineer?
-            # Existing FeatureEngineer expects strings '牡'.
-            # Map back or update FeatureEngineer.
-            # Mapping: 1->牡, 2->牝, 3->セ
             sex_map = {1: '牡', 2: '牝', 3: 'セ'}
-            # JVD sex codes might be integers in DB or strings '1'.
-            # Assuming int/str conversion handled.
             df['sex'] = pd.to_numeric(df['sex'], errors='coerce').map(sex_map).fillna('Unknown')
 
-            # Venue, Weather, Surface Codes -> Strings?
-            # FeatureEngineer expects strings ('晴', '芝').
-            # JVD codes:
             # Weather: 1:晴, 2:曇, 3:雨, 4:小雨, 5:雪, 6:小雪
             weather_map = {1: '晴', 2: '曇', 3: '雨', 4: '小雨', 5: '雪', 6: '雪'}
             df['weather'] = pd.to_numeric(df['weather'], errors='coerce').map(weather_map).fillna('Unknown')
@@ -190,11 +181,10 @@ class JraVanDataLoader:
             return df
 
         except ProgrammingError as e:
-            logger.error("データロード中にエラーが発生しました: テーブルが見つかりません。")
+            logger.error("データロード中にエラーが発生しました: テーブルまたはカラムが見つかりません。")
             logger.error(f"詳細: {e}")
-            logger.error("ヒント: PC-KEIBA Database を使用して JRA-VAN データをインポートしましたか？")
-            logger.error("テーブル名が異なる可能性があります (例: 'jvd_race_shosai' ではなく 'race_shosai')。")
-            logger.error("src/tools/diagnose_db.py を実行して、データベース内のテーブルを確認してください。")
+            logger.error("ヒント: PC-KEIBA Database の設定を確認してください。")
+            logger.error("想定しているテーブル名: jvd_ra, jvd_se, jvd_um")
             raise e
         except Exception as e:
             logger.error(f"データロード中にエラーが発生しました: {e}")
