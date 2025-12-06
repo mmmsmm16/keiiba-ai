@@ -15,13 +15,6 @@ services:
       - POSTGRES_HOST=db
       - POSTGRES_PORT=5432
     tty: true
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
 
   db:
     image: postgres:15
