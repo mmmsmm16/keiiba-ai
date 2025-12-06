@@ -35,9 +35,14 @@ COPY requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu126
 
 # Install other requirements
-# Exclude torch from requirements.txt to avoid overwriting
-RUN grep -v "torch" /tmp/requirements.txt > /tmp/requirements_no_torch.txt
+# Exclude torch package itself from requirements.txt to avoid overwriting the nightly version
+# Note: 'pytorch-tabnet' contains 'torch' string, so simply grepping 'torch' would remove it.
+# We use a stricter pattern or explicitly install tabnet.
+RUN grep -v "^torch>=" /tmp/requirements.txt > /tmp/requirements_no_torch.txt
 RUN pip install --no-cache-dir -r /tmp/requirements_no_torch.txt
+
+# Explicitly ensure pytorch-tabnet is installed (in case regex missed it or order matters)
+RUN pip install --no-cache-dir pytorch-tabnet>=4.1.0
 
 # Set locale
 ENV LC_ALL=C.UTF-8
