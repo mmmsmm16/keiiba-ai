@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, inspect
 from sqlalchemy.exc import ProgrammingError
 import logging
 
@@ -37,15 +37,68 @@ class JraVanDataLoader:
         connection_str = f"postgresql://{user}:{password}@{host}:{port}/{dbname}"
         self.engine = create_engine(connection_str)
 
+    def _get_table_name(self, candidates: list[str]) -> str:
+        """
+        候補リストの中から、データベースに実際に存在するテーブル名を返します。
+        見つからない場合はリストの先頭を返します。
+        """
+        try:
+            inspector = inspect(self.engine)
+            existing_tables = set(inspector.get_table_names(schema='public'))
+
+            for cand in candidates:
+                if cand in existing_tables:
+                    logger.info(f"テーブル検出: {cand}")
+                    return cand
+
+            logger.warning(f"推奨テーブルが見つかりません: {candidates}. デフォルトの {candidates[0]} を使用します。")
+            return candidates[0]
+        except Exception as e:
+            logger.warning(f"テーブル存在確認中にエラーが発生しました: {e}. デフォルトの {candidates[0]} を使用します。")
+            return candidates[0]
+
     def load(self, limit: int = None) -> pd.DataFrame:
         """
         JRA-VANデータをロードし、学習用フォーマットに変換します。
         """
-        # PC-KEIBA (Short Table Names) 対応
-        # jvd_ra: Race Info, jvd_se: Seiseki, jvd_um: Uma Master
-        query = """
+        # テーブル名の解決 (jvd_プレフィックスの有無、短縮名に対応)
+        tbl_race = self._get_table_name(['jvd_race_shosai', 'race_shosai', 'jvd_ra'])
+        tbl_seiseki = self._get_table_name(['jvd_seiseki', 'seiseki', 'jvd_se'])
+        tbl_uma = self._get_table_name(['jvd_uma_master', 'uma_master', 'jvd_um'])
+
+        # スキーマ判定: PC-KEIBAの短縮名テーブル (jvd_ra 等) の場合はカラム名が異なる
+        is_pckeiba_short = (tbl_race == 'jvd_ra' or tbl_race == 'ra')
+
+        if is_pckeiba_short:
+            logger.info("PC-KEIBA短縮名スキーマ (jvd_ra) を検出しました。")
+            col_title = "r.kyosomei_hondai"
+            # 馬場状態: 芝(10-22)ならshiba, それ以外(ダート)ならdirtを優先
+            col_state = """CASE
+                WHEN CAST(r.track_code AS INTEGER) BETWEEN 10 AND 22 THEN r.babajotai_code_shiba
+                ELSE r.babajotai_code_dirt
+            END"""
+            col_rank = "TRIM(res.kakutei_chakujun)"
+            col_last3f = "res.kohan_3f"
+            col_pop = "res.tansho_ninkijun"
+            col_horse_name = "res.bamei" # 成績テーブルに馬名がある
+            col_sex = "res.seibetsu_code" # 成績テーブルに性別がある
+            col_sire = "uma.ketto_joho_01a"
+            col_mare = "uma.ketto_joho_02a"
+        else:
+            logger.info("標準スキーマ (jvd_race_shosai) を使用します。")
+            col_title = "r.race_mei_honbun"
+            col_state = "r.baba_jotai_code"
+            col_rank = "TRIM(res.kakutei_chakusun)"
+            col_last3f = "res.agari_3f"
+            col_pop = "res.ninki"
+            col_horse_name = "uma.bamei"
+            col_sex = "uma.seibetsu_code"
+            # 標準カラム (存在しない場合はエラーになるため、必要に応じて ketto_joho に変更検討)
+            col_sire = "uma.fushu_ketto_toroku_bango"
+            col_mare = "uma.boshu_ketto_toroku_bango"
+
+        query = f"""
         SELECT
-            -- ID Construction (Netkeiba Format: YYYYJJMMDDRR)
             CONCAT(
                 r.kaisai_nen,
                 r.keibajo_code,
@@ -54,62 +107,49 @@ class JraVanDataLoader:
                 r.race_bango
             ) AS race_id,
 
-            -- Date
             TO_DATE(r.kaisai_nen || r.kaisai_tsukihi, 'YYYYMMDD') AS date,
 
-            -- Race Info
             r.keibajo_code AS venue,
             r.race_bango::integer AS race_number,
             r.kyori::integer AS distance,
             r.track_code AS surface,
             r.tenko_code AS weather,
-            -- Baba State: Prioritize Shiba if Track is Turf (10-22), else Dirt
-            CASE
-                WHEN CAST(r.track_code AS INTEGER) BETWEEN 10 AND 22 THEN r.babajotai_code_shiba
-                ELSE r.babajotai_code_dirt
-            END AS state,
-            r.kyosomei_hondai AS title,
+            {col_state} AS state,
+            {col_title} AS title,
 
-            -- Results
             res.ketto_toroku_bango AS horse_id,
             res.kishu_code AS jockey_id,
             res.chokyoshi_code AS trainer_id,
             res.wakuban::integer AS frame_number,
             res.umaban::integer AS horse_number,
 
-            -- Rank
-            TRIM(res.kakutei_chakujun) AS rank_str,
-
-            -- Time (1:35.5 -> 1355 or 955)
+            {col_rank} AS rank_str,
             res.soha_time AS raw_time,
 
-            -- Other Results
-            res.kohan_3f AS last_3f,
+            {col_last3f} AS last_3f,
             res.tansho_odds AS odds,
-            res.tansho_ninkijun AS popularity,
+            {col_pop} AS popularity,
             res.bataiju AS weight,
             res.zogen_sa AS weight_diff_val,
             res.zogen_fugo AS weight_diff_sign,
 
             res.barei AS age,
 
-            -- Horse Info
-            res.bamei AS horse_name,
-            res.seibetsu_code AS sex,
-            uma.fushu_ketto_toroku_bango AS sire_id,
-            uma.boshu_ketto_toroku_bango AS mare_id
+            {col_horse_name} AS horse_name,
+            {col_sex} AS sex,
+            {col_sire} AS sire_id,
+            {col_mare} AS mare_id
 
-        FROM jvd_ra r
-        JOIN jvd_se res
+        FROM {tbl_race} r
+        JOIN {tbl_seiseki} res
             ON r.kaisai_nen = res.kaisai_nen
             AND r.keibajo_code = res.keibajo_code
             AND r.kaisai_kai = res.kaisai_kai
             AND r.kaisai_nichime = res.kaisai_nichime
             AND r.race_bango = res.race_bango
-        LEFT JOIN jvd_um uma
+        LEFT JOIN {tbl_uma} uma
             ON res.ketto_toroku_bango = uma.ketto_toroku_bango
 
-        -- 障害レースを除外する場合: WHERE r.track_code NOT IN ('...')
         ORDER BY date, race_id
         """
 
@@ -121,26 +161,20 @@ class JraVanDataLoader:
             df = pd.read_sql(query, self.engine)
 
             # --- Python側での前処理 ---
-
-            # Rank: '1' -> 1, '中止' -> NaN
             df['rank'] = pd.to_numeric(df['rank_str'], errors='coerce')
 
-            # Time: '1355' (1分35秒5) -> 95.5秒
             def convert_time(t):
                 if pd.isna(t): return None
                 try:
-                    t_str = str(int(t)).zfill(4) # 1355
+                    t_str = str(int(t)).zfill(4)
                     minutes = int(t_str[:-3])
                     seconds = int(t_str[-3:-1])
                     dec = int(t_str[-1])
                     return minutes * 60 + seconds + dec * 0.1
                 except:
                     return None
-
             df['time'] = df['raw_time'].apply(convert_time)
 
-            # Weight Diff: sign (+/-) + val
-            # sign: '+' or '-' or ' '
             def convert_weight_diff(row):
                 try:
                     val = int(row['weight_diff_val'])
@@ -151,17 +185,16 @@ class JraVanDataLoader:
                     return 0
             df['weight_diff'] = df.apply(convert_weight_diff, axis=1)
 
-            # Sex: Code mapping
-            # JVD: 1=Male, 2=Female, 3=Gelding.
+            # 性別マッピング
+            # JVDコード: 1:牡, 2:牝, 3:セン
             sex_map = {1: '牡', 2: '牝', 3: 'セ'}
             df['sex'] = pd.to_numeric(df['sex'], errors='coerce').map(sex_map).fillna('Unknown')
 
-            # Weather: 1:晴, 2:曇, 3:雨, 4:小雨, 5:雪, 6:小雪
+            # 天候マッピング
             weather_map = {1: '晴', 2: '曇', 3: '雨', 4: '小雨', 5: '雪', 6: '雪'}
             df['weather'] = pd.to_numeric(df['weather'], errors='coerce').map(weather_map).fillna('Unknown')
 
-            # Surface (Track):
-            # 10-22: 芝, 23-29: ダート, 51-59: 障害
+            # トラックコードマッピング
             def map_surface(code):
                 try:
                     c = int(code)
@@ -173,7 +206,7 @@ class JraVanDataLoader:
                     return 'Unknown'
             df['surface'] = df['surface'].apply(map_surface)
 
-            # State (Baba): 1:良, 2:稍重, 3:重, 4:不良
+            # 馬場状態マッピング
             state_map = {1: '良', 2: '稍重', 3: '重', 4: '不良'}
             df['state'] = pd.to_numeric(df['state'], errors='coerce').map(state_map).fillna('Unknown')
 
@@ -183,8 +216,8 @@ class JraVanDataLoader:
         except ProgrammingError as e:
             logger.error("データロード中にエラーが発生しました: テーブルまたはカラムが見つかりません。")
             logger.error(f"詳細: {e}")
-            logger.error("ヒント: PC-KEIBA Database の設定を確認してください。")
-            logger.error("想定しているテーブル名: jvd_ra, jvd_se, jvd_um")
+            logger.error(f"判定スキーマ: {'PC-KEIBA Short' if is_pckeiba_short else 'Standard'}")
+            logger.error(f"試行したテーブル名: {tbl_race}, {tbl_seiseki}, {tbl_uma}")
             raise e
         except Exception as e:
             logger.error(f"データロード中にエラーが発生しました: {e}")
