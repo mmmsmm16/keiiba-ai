@@ -34,8 +34,16 @@ class AdvancedFeatureEngineer:
             except:
                 return 0
 
-        # 一時的なカラムとして作成
-        df['is_nige_temp'] = df['passing_rank'].apply(is_nige)
+        # passing_rankカラムが存在し、有効なデータがあるかチェック
+        # 推論時はpassing_rankがNULLなので、その場合は0で初期化
+        if 'passing_rank' in df.columns and df['passing_rank'].notna().any():
+            # 一時的なカラムとして作成
+            df['is_nige_temp'] = df['passing_rank'].apply(is_nige)
+        else:
+            # passing_rankがない場合（推論時など）は0で初期化
+            logger.info("passing_rankが利用できないため、is_nige_tempを0で初期化します")
+            df['is_nige_temp'] = 0
+
 
         # 2. 馬ごとの過去の逃げ率 (Nige Rate)
         # 時系列順にソートして集計

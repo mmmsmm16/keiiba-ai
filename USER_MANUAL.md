@@ -166,7 +166,42 @@ docker-compose exec app python src/inference/viewer.py data/predictions/20241201
 
 ---
 
-## 5. プロジェクト構成
+## 5. 分析・可視化 (Dashboard)
+
+Phase 6より、実験結果や回収率シミュレーションを可視化するWebベースのダッシュボードが利用可能です。
+
+### 利用方法
+
+Streamlitを使用するため、ブラウザからアクセスします。
+
+**1. ダッシュボードの起動**
+```bash
+docker-compose exec app streamlit run src/dashboard/app.py
+```
+
+**2. ブラウザでアクセス**
+以下のURLを開いてください。
+`http://localhost:8501`
+
+**画面構成と機能:**
+
+1.  **概要 (Overview)**
+    *   **実験履歴 (Experiment History):** 過去に行った学習実験の一覧（タイムスタンプ、モデル名、RMSE、NDCGなど）を表示します。
+    *   **精度メトリクスの推移:** 実験ごとの精度の変化を折れ線グラフで確認できます。ドロップダウンで「RMSE」「NDCG@k」「MAP@k」を切り替え可能です。
+
+2.  **特徴量重要度 (Feature Importance)**
+    *   TabNetやLightGBMなどのモデルが「どのデータを重視して予測したか」を表示します。
+    *   モデルの挙動を理解し、不要な特徴量の削減や新しい特徴量のアイデア出しに活用してください。
+
+3.  **回収率シミュレーション (ROI Simulation)**
+    *   `src/model/evaluate.py` で計算されたシミュレーション結果を表示します。
+    *   **戦略別サマリ:** 「最大期待値買い」「最大スコア買い」など、単純な戦略での回収率と的中率を表示します。
+    *   **回収率カーブ (ROI Curve):** 「期待値がX以上の馬を全て買う」という閾値戦略における、**回収率**（青線）と**購入件数**（橙棒）の推移をグラフ化します。
+    *   **活用法:** 青線が赤の点線（100%ライン）を超えている箇所を探し、その時の閾値を実際の運用ルールとして採用します。
+
+---
+
+## 6. プロジェクト構成
 
 *   `src/preprocessing/`: データ前処理用コード
     *   `bloodline_features.py`: **[New]** 血統特徴量 (Sire/Mare) の生成
@@ -180,7 +215,7 @@ docker-compose exec app python src/inference/viewer.py data/predictions/20241201
 *   `docker-compose.yml`: Docker構成定義 (GPU対応)
 *   `experiments/`: **[New]** 実験結果ログディレクトリ
 
-## 6. トラブルシューティング
+## 7. トラブルシューティング
 
 *   **GPUが認識されない:** `nvidia-smi` コマンドがコンテナ内で実行できるか確認してください。実行できない場合、Docker DesktopのGPU設定やNVIDIA Driverを確認してください。
 *   **TabNetの学習が遅い:** GPUが有効でない場合、CPUで学習が行われます。データ量が多い場合は時間がかかります。

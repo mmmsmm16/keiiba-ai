@@ -158,13 +158,22 @@ class KeibaTabNet:
         self.model.load_model(model_path)
 
         # スケーラー
+        # 1. path + .scaler
         scaler_path = path + '.scaler'
+        # 2. path + .pkl.scaler (saved by train.py using default path convention)
+        if not os.path.exists(scaler_path):
+             scaler_path = path + '.pkl.scaler'
+
         if os.path.exists(scaler_path):
             with open(scaler_path, 'rb') as f:
                 self.scaler = pickle.load(f)
             self.fitted_scaler = True
+            logger.info(f"スケーラーをロードしました: {scaler_path}")
         else:
-            logger.warning("スケーラーファイルが見つかりません。推論時にスケール変換が行われません。")
+            logger.warning(f"スケーラーファイルが見つかりません: {scaler_path}")
+            # TabNetはスケール変換必須のため、ここでWarning出すだけだと後でエラーになるが、
+            # 訓練済みモデルがないケースもありうるのでExceptionにはしないでおく
+            # ただし predict 時にはチェックされる
 
         logger.info(f"TabNetモデルをロードしました: {model_path}")
 

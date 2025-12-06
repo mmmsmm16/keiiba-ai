@@ -51,10 +51,13 @@ class InferenceDataLoader:
             pd.DataFrame: 推論用データフレーム (結果系カラムはNaN/Noneで埋められます)
         """
         # テーブル名の解決
+
         # 出馬表データは jvd_uma_race (または uma_race, jvd_ur) に格納されていると想定
+        # jvd_se (成績) も候補に追加 (過去レースの推論や、スキーマによってはエントリ含むため)
         tbl_race = self._get_table_name(['jvd_race_shosai', 'race_shosai', 'jvd_ra'])
-        tbl_entry = self._get_table_name(['jvd_uma_race', 'uma_race', 'jvd_ur'])
+        tbl_entry = self._get_table_name(['jvd_uma_race', 'uma_race', 'jvd_ur', 'jvd_se'])
         tbl_uma = self._get_table_name(['jvd_uma_master', 'uma_master', 'jvd_um'])
+
 
         # スキーマ判定 (PC-KEIBAの短縮名対応)
         is_pckeiba_short = (tbl_race == 'jvd_ra' or tbl_race == 'ra')
@@ -121,8 +124,8 @@ class InferenceDataLoader:
             NULL AS rank_str,
             NULL AS raw_time,
             NULL AS last_3f,
-            NULL AS odds,
-            NULL AS popularity,
+            ur.tansho_odds AS odds,
+            ur.tansho_ninkijun AS popularity,
 
             -- Weight (Bataiju) might be available if executed just before race
             -- If not, ur.bataiju might be NULL. 
@@ -159,7 +162,10 @@ class InferenceDataLoader:
 
         # フィルタリング条件
         if target_date:
-            query += f" AND (r.kaisai_nen || r.kaisai_tsukihi) = '{target_date}'"
+            # target_date might be YYYY-MM-DD matches typical string input. 
+            # DB stores nen/tsukihi as strings without hyphens.
+            flat_date = target_date.replace('-', '')
+            query += f" AND (r.kaisai_nen || r.kaisai_tsukihi) = '{flat_date}'"
         
         if race_ids:
             # race_ids list format: ['202401010101', ...]
@@ -194,10 +200,14 @@ class InferenceDataLoader:
             # --- Python側での前処理 (Loader共通処理) ---
             
             # 型変換 (NULL許容)
+            # tansho_ninkijun (人気順) は整数なのでそのまま変換
             df['popularity'] = pd.to_numeric(df['popularity'], errors='coerce')
             df['weight'] = pd.to_numeric(df['weight'], errors='coerce')
 
-            # OddsなどはNULLのまま
+            # Odds を数値に変換（PC-KEIBAフォーマット対応）
+            # tansho_odds は '0037' = 3.7倍 のように10倍されているので10で割る
+            # lag1_odds 生成のため、数値型である必要がある
+            df['odds'] = pd.to_numeric(df['odds'], errors='coerce') / 10.0
 
             def convert_weight_diff(row):
                 try:

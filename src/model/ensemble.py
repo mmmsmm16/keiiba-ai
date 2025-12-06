@@ -18,7 +18,8 @@ class EnsembleModel:
     def __init__(self):
         self.lgbm = KeibaLGBM()
         self.catboost = KeibaCatBoost()
-        self.tabnet = KeibaTabNet()
+        # GPU競合 (CUBLAS Error) を避けるため、アンサンブル時のTabNetはCPUで実行する
+        self.tabnet = KeibaTabNet(params={'device_name': 'cpu'})
         self.meta_model = LinearRegression() # シンプルな線形回帰で重み付け
 
     def load_base_models(self, model_dir: str):
@@ -128,8 +129,8 @@ class EnsembleModel:
         self.catboost = loaded.catboost
         self.meta_model = loaded.meta_model
 
-        # TabNetのロード
-        self.tabnet = KeibaTabNet()
+        # TabNetのロード (CPU強制)
+        self.tabnet = KeibaTabNet(params={'device_name': 'cpu'})
         tabnet_path = path.replace('.pkl', '_tabnet.pkl')
         if os.path.exists(tabnet_path.replace('.pkl', '.zip')): # TabNet saves as zip
              self.tabnet.load_model(tabnet_path)

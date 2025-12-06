@@ -55,11 +55,12 @@
 - [ ] 自動購入連携 (Optional)
 
 ## Phase 6: 分析・可視化 (Analysis & Visualization)
-- [ ] 実験結果出力の強化 (`src/model/evaluate.py`)
-    - [ ] 回収率シミュレーションの詳細データをファイル保存 (JSON/CSV)
-- [ ] ダッシュボードアプリ実装 (`src/dashboard/app.py`)
-    - [ ] **Streamlit** 導入
-    - [ ] 実験履歴 (`experiments/history.csv`) の一覧表示とフィルタリング
-    - [ ] 学習曲線の可視化 (もしログがあれば)
-    - [ ] 特徴量重要度の可視化
-    - [ ] 回収率シミュレーション結果 (ROIカーブ) の可視化
+- [x] 実験結果出力の強化 (`src/model/evaluate.py`)
+    - [x] 回収率シミュレーションの詳細データをファイル保存 (JSON/CSV)
+- [x] ダッシュボードアプリ実装 (`src/dashboard/app.py`)
+    - [x] **Streamlit** 導入
+    - [x] 実験履歴 (`experiments/history.csv`) の一覧表示とフィルタリング
+    - [x] 学習曲線の可視化 (もしログがあれば)
+    - [x] 特徴量重要度の可視化
+    - [x] 回収率シミュレーション結果 (ROIカーブ) の可視化
+    - [x] リアルタイム予測実行タブの実装
