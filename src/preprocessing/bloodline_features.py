@@ -34,14 +34,15 @@ class BloodlineFeatureEngineer:
         # ketto_joho_03a: 母父馬コード (Broodmare Sire ID)
         query = """
         SELECT
-            ketto_touroku_bango AS horse_id,
+            ketto_toroku_bango AS horse_id,
             ketto_joho_01a AS sire_id,
             ketto_joho_02a AS mare_id,
             ketto_joho_03a AS bms_id
         FROM jvd_um
         """
         try:
-            df_um = self.loader.load_data(query)
+            # Load data using engine directly since there is no generic load_data method
+            df_um = pd.read_sql(query, self.loader.engine)
             # 重複排除（念のため）
             df_um = df_um.drop_duplicates(subset=['horse_id'])
 

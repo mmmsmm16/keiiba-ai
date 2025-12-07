@@ -8,6 +8,8 @@ from sklearn.preprocessing import StandardScaler
 import pickle
 import matplotlib.pyplot as plt
 
+import json
+
 logger = logging.getLogger(__name__)
 
 class KeibaTabNet:
@@ -60,6 +62,7 @@ class KeibaTabNet:
         self.model = TabNetRegressor(**self.params)
         self.scaler = StandardScaler()
         self.fitted_scaler = False
+        self.feature_names = None
 
     def _preprocess_target(self, y):
         """
@@ -86,6 +89,10 @@ class KeibaTabNet:
         logger.info(f"TabNetの学習を開始します... Device: {self.params.get('device_name')}")
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
+
+        # 特徴量名を保持
+        if isinstance(train_set['X'], pd.DataFrame):
+            self.feature_names = train_set['X'].columns.tolist()
 
         X_train = train_set['X'].values
         y_train_raw = train_set['y']
@@ -128,6 +135,23 @@ class KeibaTabNet:
         if not self.fitted_scaler:
              raise ValueError("モデル（スケーラー）が学習されていません。")
 
+        # 特徴量数の整合性チェックとフィルタリング
+        if hasattr(self.scaler, 'n_features_in_'):
+            expected_features = self.scaler.n_features_in_
+            if X.shape[1] != expected_features:
+                if self.feature_names and len(self.feature_names) == expected_features:
+                    # 特徴量名が保存されている場合は名前でフィルタリング
+                    missing = set(self.feature_names) - set(X.columns)
+                    if not missing:
+                        X = X[self.feature_names]
+                elif X.shape[1] > expected_features:
+                    # 名前がない場合（旧モデル）は、先頭から必要数だけスライスする（ヒューリスティック）
+                    # 新しい特徴量は末尾に追加される傾向があるため
+                    logger.warning(f"Feature count mismatch (Expected: {expected_features}, Got: {X.shape[1]}). Slicing first {expected_features} columns.")
+                    X = X.iloc[:, :expected_features]
+                else:
+                    raise ValueError(f"Feature count mismatch (Expected: {expected_features}, Got: {X.shape[1]}) and simpler slicing impossible.")
+
         X_values = X.values
         X_values = np.nan_to_num(X_values, nan=0.0)
         X_scaled = self.scaler.transform(X_values)
@@ -148,6 +172,12 @@ class KeibaTabNet:
         scaler_path = path + '.scaler'
         with open(scaler_path, 'wb') as f:
             pickle.dump(self.scaler, f)
+            
+        # 特徴量名 (あれば保存)
+        if self.feature_names:
+            feature_path = path + '.features.json'
+            with open(feature_path, 'w') as f:
+                json.dump(self.feature_names, f)
 
         logger.info(f"TabNetモデルを保存しました: {model_path}.zip")
 
@@ -174,6 +204,16 @@ class KeibaTabNet:
             # TabNetはスケール変換必須のため、ここでWarning出すだけだと後でエラーになるが、
             # 訓練済みモデルがないケースもありうるのでExceptionにはしないでおく
             # ただし predict 時にはチェックされる
+
+        # 特徴量名
+        feature_path = path + '.features.json'
+        if os.path.exists(feature_path):
+            with open(feature_path, 'r') as f:
+                self.feature_names = json.load(f)
+            logger.info(f"特徴量名をロードしました: {len(self.feature_names)} features")
+        else:
+            self.feature_names = None
+            logger.info("特徴量名ファイルが見つかりません (旧モデル互換モードで動作します)")
 
         logger.info(f"TabNetモデルをロードしました: {model_path}")
 

@@ -4,6 +4,8 @@ import numpy as np
 import os
 import json
 import matplotlib.pyplot as plt
+import re
+import sys
 
 # ページ設定
 st.set_page_config(
@@ -151,36 +153,97 @@ with tab4:
     st.markdown("指定した日付・レースの予測をリアルタイムに実行します。データはPC-KEIBA DBから取得します。")
 
     # 必要なモジュールのインポート (ここでインポートしてスコープを限定)
-    import sys
     sys.path.append(os.path.join(BASE_DIR, '../'))
     from inference.loader import InferenceDataLoader
     from inference.preprocessor import InferencePreprocessor
     from model.ensemble import EnsembleModel
+    from model.lgbm import KeibaLGBM
+    from model.catboost_model import KeibaCatBoost
+    from model.tabnet_model import KeibaTabNet
     from scipy.special import softmax
+
+    # モデルバージョンの取得
+    def get_model_versions(model_type):
+        if not os.path.exists(MODELS_DIR):
+            return ['v1']
+
+        files = os.listdir(MODELS_DIR)
+        versions = set()
+
+        # Check for legacy/default files
+        if model_type == 'ensemble':
+            if 'ensemble_model.pkl' in files:
+                versions.add('v1')
+        else:
+            # lgbm.pkl, catboost.pkl, tabnet.pkl/zip
+            base_name = f"{model_type}.pkl"
+            if model_type == 'tabnet' and 'tabnet.zip' in files:
+                versions.add('v1')
+            elif base_name in files:
+                versions.add('v1')
+        
+        # Check for versioned files
+        prefix = f"{model_type}_"
+        for f in files:
+            if f.startswith(prefix):
+                # Extract tag
+                tag = ""
+                if f.endswith('.pkl'):
+                    tag = f[len(prefix):-4]
+                elif f.endswith('.zip') and model_type == 'tabnet':
+                    tag = f[len(prefix):-4]
+                
+                if tag:
+                    if model_type == 'ensemble' and tag == 'model':
+                        continue # Already handled as v1
+                    versions.add(tag)
+        
+        # Sort versions
+        return sorted(list(versions))
 
     # キャッシュされたモデルとプリプロセッサのロード関数
     @st.cache_resource
-    def load_model_resources():
-        model_path = os.path.join(MODELS_DIR, 'ensemble_model.pkl')
-        if not os.path.exists(model_path):
-            return None
-        model = EnsembleModel()
-        model.load_model(model_path)
-        return model
+    def load_model_resources(model_type, version):
+        model = None
+        path = ""
+        
+        if model_type == 'ensemble':
+            model = EnsembleModel()
+            # Try specific version first, then default
+            path = os.path.join(MODELS_DIR, f'ensemble_{version}.pkl')
+            if not os.path.exists(path):
+                 path = os.path.join(MODELS_DIR, 'ensemble_model.pkl')
+        elif model_type == 'lgbm':
+            model = KeibaLGBM()
+            path = os.path.join(MODELS_DIR, f'lgbm_{version}.pkl')
+            if not os.path.exists(path):
+                 path = os.path.join(MODELS_DIR, 'lgbm.pkl')
+        elif model_type == 'catboost':
+            model = KeibaCatBoost()
+            path = os.path.join(MODELS_DIR, f'catboost_{version}.pkl')
+            if not os.path.exists(path):
+                 path = os.path.join(MODELS_DIR, 'catboost.pkl')
+        elif model_type == 'tabnet':
+            model = KeibaTabNet()
+            # TabNet special case: zip vs pkl
+            path_zip = os.path.join(MODELS_DIR, f'tabnet_{version}.zip')
+            if os.path.exists(path_zip):
+                path = path_zip.replace('.zip', '.pkl')
+            else:
+                path = os.path.join(MODELS_DIR, 'tabnet.pkl')
+
+        if not os.path.exists(path) and not (model_type == 'tabnet' and os.path.exists(path.replace('.pkl', '.zip'))):
+            return None, f"Model file not found: {path} (Type: {model_type}, Ver: {version})"
+
+        try:
+            model.load_model(path)
+            return model, f"Loaded: {os.path.basename(path)}"
+        except Exception as e:
+            return None, f"Error loading model: {e}"
 
     @st.cache_resource
     def load_preprocessor_resources():
-        # Preprocessorは過去データをロードするため重い。キャッシュする。
         preprocessor = InferencePreprocessor()
-        # ダミー実行でデータをロードさせる（InferencePreprocessorの設計次第だが、
-        # preprocess初回呼び出し時にロードされるなら、ここで明示的に呼び出すか、
-        # インスタンスをキャッシュして使い回す）
-        # constructorではロードしない実装だったため、preprocessメソッド内でロードされる。
-        # データフレーム自体をキャッシュする設計に変更しないと毎回ロードされる可能性がある。
-        # src/inference/preprocessor.py を見ると、preprocess() 内で pd.read_parquet している。
-        # これを回避するには preprocessor 自体にデータを保持させるか、データロード関数を分ける必要がある。
-        # ここでは簡易的に、preprocessorインスタンスをキャッシュする（ただしparquet読み込みはキャッシュされないかも）。
-        # データロード部分だけキャッシュ関数にするのがベスト。
         return preprocessor
 
     # Data Loader for historical data (Heavy)
@@ -193,6 +256,8 @@ with tab4:
         return None
 
     # UI Inputs
+    # Row 1: Race Selection
+    st.subheader("設定 (Settings)")
     col_in1, col_in2, col_in3 = st.columns(3)
     with col_in1:
         selected_date = st.date_input(
@@ -211,18 +276,35 @@ with tab4:
     with col_in3:
         race_no = st.number_input("レース番号", min_value=1, max_value=12, value=11)
 
-    # Race ID (Check purpose only, not used for querying)
-    # PC-KEIBA DB Key is (Year, Venue, Kai, Nichime, Race), not (Date, Venue, Race).
-    # So we load by Date and filter in memory.
-    st.info(f"Target: {target_date} / {venue_map.get(venue_code)} / {race_no}R")
+    # Row 2: Model Selection
+    col_mod1, col_mod2 = st.columns(2)
+    with col_mod1:
+        model_type = st.selectbox("使用モデル", ['ensemble', 'lgbm', 'catboost', 'tabnet'], index=0)
+    
+    # Dynamic version loading
+    avail_versions = get_model_versions(model_type)
+    if not avail_versions:
+        avail_versions = ['v1'] # Fallback
+        
+    with col_mod2:
+        # Default to last one
+        default_idx = len(avail_versions) - 1
+        model_version = st.selectbox("モデルバージョン", avail_versions, index=default_idx)
+
+    st.info(f"Target: {target_date} / {venue_map.get(venue_code)} / {race_no}R | Model: {model_type} ({model_version})")
 
     if st.button("予測実行 (Predict)"):
         with st.spinner('モデルとデータを準備中...'):
-            model = load_model_resources()
+            model, msg = load_model_resources(model_type, model_version)
+            if model:
+                st.success(msg)
+            else:
+                st.error(msg)
+            
             hist_df = get_historical_data() # Cached load
             
             if model is None:
-                st.error("モデルファイルが見つかりません (models/ensemble_model.pkl)")
+                pass # Already showed error
             elif hist_df is None:
                 st.error("過去データが見つかりません (data/processed/preprocessed_data.parquet)")
             else:
@@ -289,6 +371,18 @@ with tab4:
                             st.markdown("---")
                             
                             # 3. 予測
+                            # 特徴量のフィルタリング (モデルが要求するものだけに絞る)
+                            if hasattr(model, 'model') and hasattr(model.model, 'feature_name'): # LightGBM
+                                required_features = model.model.feature_name()
+                                missing = set(required_features) - set(X.columns)
+                                if not missing:
+                                    X = X[required_features]
+                            elif hasattr(model, 'model') and hasattr(model.model, 'feature_names_'): # CatBoost
+                                required_features = model.model.feature_names_
+                                missing = set(required_features) - set(X.columns)
+                                if not missing:
+                                    X = X[required_features]
+                            
                             preds = model.predict(X)
                             
                             # 結果整形

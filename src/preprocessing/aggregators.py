@@ -61,5 +61,14 @@ class HistoryAggregator:
         # 0除算対策（total_racesが0の場合はNaNになるが、0で埋める）
         df['win_rate_all'] = df['win_rate_all'].fillna(0)
 
+        # 獲得賞金 (Total Prize)
+        if 'honshokin' in df.columns:
+            # 欠損は0埋めしてから集計 (数値型に変換必須)
+            df['honshokin_filled'] = pd.to_numeric(df['honshokin'], errors='coerce').fillna(0)
+            df['total_prize'] = grouped['honshokin_filled'].transform(lambda x: x.shift(1).expanding().sum()).fillna(0)
+            df.drop(columns=['honshokin_filled'], inplace=True)
+        else:
+            df['total_prize'] = 0
+
         logger.info("過去走特徴量の生成完了")
         return df

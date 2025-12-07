@@ -95,120 +95,187 @@ class InferencePreprocessor:
         # =================================================================
         logger.info("カテゴリ特徴量のインクリメンタル更新中...")
         
-        # カテゴリごとに処理
-        # CategoryAggregatorは f'{col}_n_races' の形式で保存している (例: jockey_id_n_races)
-        for cat_col in ['jockey_id', 'trainer_id', 'sire_id']:
-            prefix = cat_col # prefix = 'jockey_id' etc.
-            # 1. ヒストリカルデータから各IDの「最新行」を取得
-            # date, race_idでソート済みと仮定 (load時にsortされていない場合はsortが必要)
-            # history_dfは通常時系列ソートされているはず。
-            
-            # 各カテゴリIDごとに最後の1行を取得
-            # 必要なカラム: {prefix}_n_races, {prefix}_win_rate, {prefix}_top3_rate, rank (前走結果)
-            cols_to_keep = [cat_col, f'{prefix}_n_races', f'{prefix}_win_rate', f'{prefix}_top3_rate', 'rank']
-            
-            # カラムが存在するかチェック (初回学習前などで見つからない場合のガード)
-            available_cols = [c for c in cols_to_keep if c in history_df.columns]
-            if len(available_cols) < len(cols_to_keep):
-                logger.warning(f"カテゴリ特徴量列が見つかりません。{cat_col} の集計をスキップします。")
-                continue
+        # =================================================================
+        # Strategy 2a: Bloodline Features (Mapping)
+        # =================================================================
+        from preprocessing.bloodline_features import BloodlineFeatureEngineer
+        bl_engineer = BloodlineFeatureEngineer(data_loader=None) # Loader不要(Mappingだけならhistory不要だが内部で使うかも?)
+        # 実際にはMappingだけ欲しい。Loaderなしか、MockLoaderで...
+        # BloodlineFeatureEngineerは内部でJraVanDataLoaderを作る。
+        # ここではシンプルに、history_dfにある 'sire_id', 'bms_id' などを利用したいが、
+        # new_df には horse_id しかない。
+        # したがって、new_dfに対しても マッピングが必要。
+        # BloodlineFeatureEngineerのadd_featuresの前半(mapping)だけ利用する。
+        
+        # history_df には既に sire_id, bms_id があるはず。
+        # new_df にはないので、結合する必要がある。
+        new_df = bl_engineer.add_features(new_df) 
+        # add_featuresは集計も行うが、historyがないnew_df単体では集計値はNaN/0になる。
+        # しかしマッピング(sire_id列などの追加)は行われる。
+        # 集計カラム (sire_avg_rankなど) は後で上書きする。
 
-            latest_stats = history_df.drop_duplicates(subset=[cat_col], keep='last')[available_cols].set_index(cat_col)
+        # =================================================================
+        # Strategy 2b: Category & Context Features (Lookup & Update)
+        # =================================================================
+        logger.info("カテゴリ・コンテキスト特徴量のインクリメンタル更新中...")
+
+        # ----------------------------------------------------------------
+        # 準備: history_df 側の条件カラム復元 (保存時にdropされているため)
+        # ----------------------------------------------------------------
+        # distance_cat
+        if 'distance' in history_df.columns and 'distance_cat' not in history_df.columns:
+            # history_dfは巨大な可能性があるので、必要な時だけ計算するか、
+            # ここで一括でやるか。一括の方が安全。
+            # SettingWithCopyWarning回避のためcopyするか、直接代入するか。
+            # 推論用なのでメモリ余裕あればcopy推奨だが、遅くなる。
+            # ここでは参照渡しされたhistory_dfを直接変更しないよう、ローカルで扱うが、
+            # Pandasの挙動として列追加はcopy発生することが多い。
+            # 暫定的に: distance_catが必要なのは sire_dist のみ。
+            pass # 個別のupdate関数内で処理、あるいはここでやる。
+
+        # new_df 側
+        if 'distance' in new_df.columns:
+            new_df['distance_cat'] = pd.cut(
+                new_df['distance'], 
+                bins=[0, 1399, 1899, 2399, 9999], 
+                labels=['Sprint', 'Mile', 'Intermediate', 'Long']
+            )
+            new_df['distance_cat'] = new_df['distance_cat'].astype(str)
+
+        # -----------------------------------------------------
+        # Helper: Generic Lookup & Update
+        # -----------------------------------------------------
+        def update_incremental_stats(target_df, source_history, keys, prefix, metrics, is_bloodline=False):
+            # 必要なキーがソースにあるか確認
+            # distance_catなどの動的カラム対応
+            temp_history = source_history
             
-            # 2. new_df にマージ
-            # new_dfの各行に対し、そのカテゴリIDの「前走時点の集計値」と「前走ランク」を紐付ける
-            merged = new_df[[cat_col]].join(latest_stats, on=cat_col, how='left')
+            # distance_cat がキーに含まれていて、ソースにない場合は一時的に作成
+            if 'distance_cat' in keys and 'distance_cat' not in source_history.columns:
+                if 'distance' in source_history.columns:
+                    # viewへの代入を避けるため、必要な列だけ切り出して作成
+                    # メモリ効率のため、全体コピーは避ける
+                    # しかし drop_duplicates するので、結局 subset を作る。
+                    # ここでは「必要な列 + distance」でsubsetを作って計算する。
+                    cols_needed = list(set(keys + [f'{prefix}_{m}' for m in metrics] + ['distance']))
+                    # 存在する列だけ (distanceは確認済み、statsはあるか？)
+                    cols_needed = [c for c in cols_needed if c in source_history.columns]
+                    
+                    temp_history = source_history[cols_needed].copy()
+                    temp_history['distance_cat'] = pd.cut(
+                        temp_history['distance'], 
+                        bins=[0, 1399, 1899, 2399, 9999], 
+                        labels=['Sprint', 'Mile', 'Intermediate', 'Long']
+                    ).astype(str)
+                else:
+                    logger.warning(f"[{prefix}] distanceカラムがないため distance_cat を生成できず、スキップします。")
+                    return
+
+            # Define exact column names expected in history
+            hist_cols = keys + [f'{prefix}_{m}' for m in metrics]
+            missing = [c for c in hist_cols if c not in temp_history.columns]
+            if missing:
+                logger.warning(f"[{prefix}] Missing columns in history: {missing}. Skiping.")
+                return
+                
+            # Drop duplicates keeping last
+            latest_stats = temp_history.drop_duplicates(subset=keys, keep='last')[hist_cols].set_index(keys)
             
-            # 3. インクリメンタル更新計算
-            # 取得できた値は「前走時点の特徴量」ではなく「前走終了時点の特徴量」にしたいが、
-            # preprocessed_dataに入っているのは「そのレースの予測に使われた特徴量 (T-1までの集計)」である。
-            # したがって、最新行(T)が持っている特徴量は (0...T-1) の集計値。
-            # 最新行(T)の rank が T の結果。
-            # 今回(T+1)に使いたい特徴量は (0...T) の集計値。
-            # つまり、Loadした特徴量 + LoadしたRank で更新する必要がある。
+            # Merge to target_df (new_df)
+            merged = target_df[keys].join(latest_stats, on=keys, how='left')
             
-            # n_races (T+1) = n_races (T) + 1
-            # wins (T+1) = wins (T) + (1 if rank==1 else 0)
-            #            = (n_races(T) * win_rate(T)) + (is_win)
+            # Update/Copy
+            if is_bloodline:
+                 # Bloodline Logic (Direct Copy as explained)
+                 target_df[f'{prefix}_count'] = merged[f'{prefix}_count'].fillna(0)
+                 target_df[f'{prefix}_win_rate'] = merged[f'{prefix}_win_rate'].fillna(0)
+                 target_df[f'{prefix}_roi_rate'] = merged[f'{prefix}_roi_rate'].fillna(0)
+                 target_df[f'{prefix}_avg_rank'] = merged[f'{prefix}_avg_rank'].fillna(0)
+            else:
+                 # Category Logic (Direct Copy)
+                 target_df[f'{prefix}_n_races'] = merged[f'{prefix}_n_races'].fillna(0)
+                 target_df[f'{prefix}_win_rate'] = merged[f'{prefix}_win_rate'].fillna(0)
+                 target_df[f'{prefix}_top3_rate'] = merged[f'{prefix}_top3_rate'].fillna(0)
             
-            prev_n_races = merged[f'{prefix}_n_races'].fillna(0)
-            prev_win_rate = merged[f'{prefix}_win_rate'].fillna(0)
-            prev_top3_rate = merged[f'{prefix}_top3_rate'].fillna(0)
-            prev_rank = merged['rank'] # NaNならレース未消化扱い
+            # Check success
+            new_col = f'{prefix}_win_rate'
+            if new_col in target_df.columns:
+                pass # logger.info(f"[{prefix}] Added features successfully.")
+            else:
+                logger.warning(f"[{prefix}] Failed to add features.")
+
+        # -----------------------------------------------------
+        # Execution
+        # -----------------------------------------------------
+        
+        # 1. Basic Categories
+        # Jockey, Trainer, Sire
+        update_incremental_stats(new_df, history_df, ['jockey_id'], 'jockey_id', ['n_races', 'win_rate', 'top3_rate'])
+        update_incremental_stats(new_df, history_df, ['trainer_id'], 'trainer_id', ['n_races', 'win_rate', 'top3_rate'])
+        update_incremental_stats(new_df, history_df, ['sire_id'], 'sire_id', ['n_races', 'win_rate', 'top3_rate'])
+        
+        # 2. Context Categories
+        # (1) Jockey x Course
+        if 'venue' in new_df.columns:
+            update_incremental_stats(new_df, history_df, ['jockey_id', 'venue'], 'jockey_course', ['n_races', 'win_rate', 'top3_rate'])
+            update_incremental_stats(new_df, history_df, ['sire_id', 'venue'], 'sire_course', ['n_races', 'win_rate', 'top3_rate'])
+            update_incremental_stats(new_df, history_df, ['trainer_id', 'venue'], 'trainer_course', ['n_races', 'win_rate', 'top3_rate'])
             
-            # 未知のID(初出走騎手など)は fillna(0) で 0スタートになる
+        # (2) Sire x Distance
+        if 'distance_cat' in new_df.columns:
+            update_incremental_stats(new_df, history_df, ['sire_id', 'distance_cat'], 'sire_dist', ['n_races', 'win_rate', 'top3_rate'])
             
-            # 更新ロジック
-            is_prev_win = (prev_rank == 1).astype(int)
-            is_prev_top3 = (prev_rank <= 3).astype(int)
-            
-            # 履歴データがあった場合のみカウントアップ (履歴がない=これが初=過去0戦)
-            # merged['rank'] が NaN (入っていない) ということはないはず(history由来なので)。
-            # ただし、historyに1走もなければNaN。その場合は n_races=0 で正しい。
-            # しかし、historyの最後の行が「除外」などでrank NaNの可能性はある。
-            # その場合もn_racesはカウントアップすべきか？ -> CategoryAggregatorの実装による(expanding.count()は非NaNを数える)。
-            # 簡単のため、rankが有効な場合のみ更新する、あるいは historyがあるなら +1 する。
-            
-            has_history = prev_n_races > 0
-            
-            # 新しい値
-            new_n_races = prev_n_races + 1
-            
-            # prev_n_races=0 (初) の場合、prev_runs * rate = 0 になるので式は成立する
-            new_wins = (prev_n_races * prev_win_rate) + is_prev_win
-            new_top3 = (prev_n_races * prev_top3_rate) + is_prev_top3
-            
-            # new_df にセット (combined_horse_df 側に入れる必要がある)
-            # combined_horse_df は new_df の行を含んでいるので、race_id, horse_numberでキーにして入れるか、
-            # 単純に new_df と同じ順序であることを利用するか。
-            # combined_horse_df は HistoryAggregator 内で sort_values されている可能性がある。
-            # 安全のため、dictionary mapping を作成して map する。
-            
-            # ID -> 新しい特徴量 のMapを作成したいが、同じ騎手が今回のレースに複数回出ることはない(1レース1騎乗)。
-            # しかし new_df 全体では複数回出る。
-            # したがって、new_dfのindex に基づいて計算したSeriesを、combined_horse_dfに結合する必要がある。
-            
-            # 計算したSeriesを一旦 new_df に格納
-            new_df[f'{prefix}_n_races'] = new_n_races
-            new_df[f'{prefix}_win_rate'] = (new_wins / new_n_races).fillna(0)
-            new_df[f'{prefix}_top3_rate'] = (new_top3 / new_n_races).fillna(0)
+        # (3) Sire x Track
+        if 'surface' in new_df.columns:
+             update_incremental_stats(new_df, history_df, ['sire_id', 'surface'], 'sire_track', ['n_races', 'win_rate', 'top3_rate'])
+             
+        # (4) Jockey x Trainer
+        update_incremental_stats(new_df, history_df, ['jockey_id', 'trainer_id'], 'jockey_trainer', ['n_races', 'win_rate', 'top3_rate'])
+
+        # 3. Bloodline Features
+        # Sire, BMS
+        # Prefix: sire, bms (metrics: avg_rank, win_rate, roi_rate, count)
+        # Note: 'rank' access required in generic func? No, generic func removed 'rank' dependency for direct copy.
+        update_incremental_stats(new_df, history_df, ['sire_id'], 'sire', ['avg_rank', 'win_rate', 'roi_rate', 'count'], is_bloodline=True)
+        update_incremental_stats(new_df, history_df, ['bms_id'], 'bms', ['avg_rank', 'win_rate', 'roi_rate', 'count'], is_bloodline=True)
+
 
         # =================================================================
         # Merge Category Features to Combined DF
         # =================================================================
-        # combined_horse_df には今回分の行(new_df由来)も含まれているが、そこにはカテゴリ特徴量が入っていない(NaN)。
-        # new_df で計算したカテゴリ特徴量を、combined_horse_df の該当行に移す。
-        
-        # combined_horse_df のうち、推論対象データ(dateがnew_dfの日付)を特定
-        # あるいは race_id が new_df にあるもの。
+        # combined_horse_df is composed of [history; new_df].
+        # The history part ALREADY has these features calculated (static in parquet).
+        # The new_df part (at the end) has NaN.
+        # We just calculated the values for new_df in `new_df`.
+        # We process the merge as before.
         
         target_ids = new_df['race_id'].unique()
-        is_target_row = combined_horse_df['race_id'].isin(target_ids)
-        
-        # マージ用のキーを作成 (race_id + horse_number)
         combined_horse_df['temp_key'] = combined_horse_df['race_id'].astype(str) + '_' + combined_horse_df['horse_number'].astype(str)
         new_df['temp_key'] = new_df['race_id'].astype(str) + '_' + new_df['horse_number'].astype(str)
         
-        # カテゴリ特徴量列
-        cat_feature_cols = []
-        for cat_col in ['jockey_id', 'trainer_id', 'sire_id']:
-            prefix = cat_col
-            cat_feature_cols.extend([f'{prefix}_n_races', f'{prefix}_win_rate', f'{prefix}_top3_rate'])
-            
-        # 存在する列のみ
-        cat_feature_cols = [c for c in cat_feature_cols if c in new_df.columns]
+        # Collect all columns we just added
+        # Basic
+        cols_to_merge = []
+        for p in ['jockey_id', 'trainer_id', 'sire_id']:
+             cols_to_merge.extend([f'{p}_n_races', f'{p}_win_rate', f'{p}_top3_rate'])
+        # Context
+        for p in ['jockey_course', 'sire_course', 'trainer_course', 'sire_dist', 'sire_track', 'jockey_trainer']:
+             cols_to_merge.extend([f'{p}_n_races', f'{p}_win_rate', f'{p}_top3_rate'])
+        # Bloodline
+        for p in ['sire', 'bms']:
+             cols_to_merge.extend([f'{p}_avg_rank', f'{p}_win_rate', f'{p}_roi_rate', f'{p}_count'])
+             
+        # Only existing ones
+        cols_to_merge = [c for c in cols_to_merge if c in new_df.columns]
         
-        # new_dfから辞書作成
-        for col in cat_feature_cols:
+        # Mapping
+        for col in cols_to_merge:
             val_map = new_df.set_index('temp_key')[col].to_dict()
-            # combined_horse_df の該当列を更新
-            # mapを使って、target行のみ更新。history行は元の値を維持したいが、
-            # history行には既に値が入っているはず。
-            # fillnaを使って、NaNになっている(new_df由来の)行だけを埋める
+            # Update only new_df rows in combined (fill nans)
             combined_horse_df[col] = combined_horse_df[col].fillna(combined_horse_df['temp_key'].map(val_map))
-            
+           
         combined_horse_df.drop('temp_key', axis=1, inplace=True)
-        new_df.drop('temp_key', axis=1, inplace=True) # clean up
+        new_df.drop('temp_key', axis=1, inplace=True)
 
         # =================================================================
         # 3. 高度特徴量生成 (AdvancedFeatureEngineer)
@@ -248,7 +315,8 @@ class InferencePreprocessor:
             'passing_rank',
             'last_3f',
             'odds', 'popularity',
-            'weight', 'weight_diff', # weightは補完していないので削除対象（学習時も削除している）
+            'weight', 
+            # 'weight_diff', # 学習時に使用しているため残す
             'weight_diff_val', 'weight_diff_sign',
             'winning_numbers', 'payout', 'ticket_type',
             # PC-KEIBA specific

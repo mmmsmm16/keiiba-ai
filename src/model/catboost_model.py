@@ -5,6 +5,8 @@ import os
 import pickle
 import logging
 
+import json
+
 logger = logging.getLogger(__name__)
 
 class KeibaCatBoost:
@@ -12,7 +14,7 @@ class KeibaCatBoost:
     CatBoost (YetiRank) を使用した競馬予測モデルクラス。
     """
     def __init__(self, params=None):
-        self.params = params or {
+        self.params = {
             'loss_function': 'YetiRank',
             'eval_metric': 'NDCG',
             'iterations': 1000,
@@ -24,6 +26,10 @@ class KeibaCatBoost:
             'allow_writing_files': False, # 不要なログファイルの生成を防ぐ
             'task_type': 'CPU' # GPUリソース競合を避けるためCPUで実行
         }
+        
+        if params:
+            self.params.update(params)
+
         self.model = None
 
     def train(self, train_set: dict, valid_set: dict):
@@ -58,6 +64,17 @@ class KeibaCatBoost:
         """
         if self.model is None:
             raise ValueError("モデルが学習されていません。")
+        
+        # 特徴量のフィルタリング
+        if hasattr(self.model, 'feature_names_'):
+            required_features = self.model.feature_names_
+            missing = set(required_features) - set(X.columns)
+            if missing:
+                pass 
+            
+            if len(X.columns) != len(required_features) or list(X.columns) != required_features:
+                 X = X[required_features]
+
         return self.model.predict(X)
 
     def _create_group_id(self, group_counts):

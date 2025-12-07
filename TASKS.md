@@ -73,6 +73,21 @@
     - [x] `jvd_hr` (払戻データ) のロード機能
     - [x] 馬連・3連複・3連単のBOX買いシミュレーション
     - [x] ダッシュボードへの反映
-- [ ] 精度向上 (Accuracy Improvement)
-    - [ ] Optunaによるハイパーパラメータチューニング
-    - [ ] 特徴量エンジニアリングの追加実装
+- [x] 精度向上 (Accuracy Improvement)
+    - [x] Optunaによるハイパーパラメータチューニング
+    - [x] 特徴量エンジニアリングの追加実装 -> See Phase 8
+
+## Phase 8: 特徴量エンジニアリングの深化 (Deep Feature Engineering)
+- [x] **カテゴリ×条件別成績の拡張** (`src/preprocessing/category_aggregators.py`)
+    - [x] 騎手×コース、種牡馬×コース、調教師×コースの成績集計
+    - [x] 種牡馬×距離区分、種牡馬×馬場状態の成績集計
+- [x] **相互作用特徴量の追加**
+    - [x] 騎手×調教師（ゴールデンコンビ）の成績集計
+- [x] **トレンドと変化の検知** (`src/preprocessing/advanced_features.py`)
+    - [x] 間隔 (Interval) と長期休養フラグ
+    - [x] 馬体重増減 (Weight Change) と大幅増減フラグ
+    - [x] 騎手の近走勢い (Rolling 100 races win rate)
+- [x] **レースコンテキストの数値化**
+    - [x] メンバー平均賞金 (Race Level)
+    - [x] メンバー平均年齢 (Race Age)
+    - [x] レース内平均逃げ率 (Pace Prediction)

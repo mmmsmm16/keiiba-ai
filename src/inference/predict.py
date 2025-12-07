@@ -25,6 +25,7 @@ def main():
     parser.add_argument('--date', type=str, help='開催日 (YYYYMMDD)', required=False)
     parser.add_argument('--race_ids', type=str, nargs='+', help='レースIDリスト', required=False)
     parser.add_argument('--model', type=str, default='ensemble', choices=['lgbm', 'catboost', 'tabnet', 'ensemble'], help='使用するモデル')
+    parser.add_argument('--version', type=str, default='v1', help='モデルバージョン')
     parser.add_argument('--model_dir', type=str, default='models', help='モデルディレクトリ')
     parser.add_argument('--output_dir', type=str, default='data/predictions', help='出力ディレクトリ')
     
@@ -53,47 +54,79 @@ def main():
             return
 
         # 3. モデルロード
-        logger.info(f"Step 3: モデルロード ({args.model})")
+        logger.info(f"Step 3: モデルロード ({args.model}, Version: {args.version})")
         
         model = None
         
         if args.model == 'ensemble':
             model = EnsembleModel()
-            model_path = os.path.join(args.model_dir, 'ensemble_model.pkl')
+            model_path = os.path.join(args.model_dir, f'ensemble_{args.version}.pkl')
             if not os.path.exists(model_path):
-                 raise FileNotFoundError(f"モデルファイルが見つかりません: {model_path}")
+                 # Fallback to non-versioned if v1 not found? Or enforce?
+                 # Try default name if versioned not found
+                 default_path = os.path.join(args.model_dir, 'ensemble_model.pkl')
+                 if os.path.exists(default_path):
+                     logger.warning(f"指定バージョンのモデルが見つからないため、デフォルトモデルを使用します: {default_path}")
+                     model_path = default_path
+                 else:
+                     raise FileNotFoundError(f"モデルファイルが見つかりません: {model_path}")
             model.load_model(model_path)
             
         elif args.model == 'lgbm':
             model = KeibaLGBM()
-            model_path = os.path.join(args.model_dir, 'lgbm.pkl')
+            model_path = os.path.join(args.model_dir, f'lgbm_{args.version}.pkl')
             if not os.path.exists(model_path):
-                 raise FileNotFoundError(f"モデルファイルが見つかりません: {model_path}")
+                 # Fallback
+                 default_path = os.path.join(args.model_dir, 'lgbm.pkl')
+                 if os.path.exists(default_path):
+                     logger.warning(f"指定バージョンのモデルが見つからないため、デフォルトモデルを使用します: {default_path}")
+                     model_path = default_path
+                 else:
+                     raise FileNotFoundError(f"モデルファイルが見つかりません: {model_path}")
             model.load_model(model_path)
             
         elif args.model == 'catboost':
             model = KeibaCatBoost()
-            model_path = os.path.join(args.model_dir, 'catboost.pkl')
+            model_path = os.path.join(args.model_dir, f'catboost_{args.version}.pkl')
             if not os.path.exists(model_path):
-                 raise FileNotFoundError(f"モデルファイルが見つかりません: {model_path}")
+                 default_path = os.path.join(args.model_dir, 'catboost.pkl')
+                 if os.path.exists(default_path):
+                     logger.warning(f"指定バージョンのモデルが見つからないため、デフォルトモデルを使用します: {default_path}")
+                     model_path = default_path
+                 else:
+                     raise FileNotFoundError(f"モデルファイルが見つかりません: {model_path}")
             model.load_model(model_path)
             
         elif args.model == 'tabnet':
             model = KeibaTabNet()
-            # TabNet saves as zip, load_model handles it based on implementation details
-            # If standard load_model expects .zip extension or base name
-            # KeibaTabNet.load_model expects path likely
-            model_path = os.path.join(args.model_dir, 'tabnet.zip')
+            # TabNet saves as zip usually
+            model_path = os.path.join(args.model_dir, f'tabnet_{args.version}.zip')
+            
             if not os.path.exists(model_path):
-                 raise FileNotFoundError(f"モデルファイルが見つかりません: {model_path}")
-            model.load_model(model_path.replace('.zip', '.pkl')) # load_model usually takes .pkl path as base or just base path?
-            # Let's check KeibaTabNet.load_model again.
-            # It does: `model_path = path.replace('.pkl', '') + '.zip'`
-            # So passing 'models/tabnet.pkl' works even if only .zip exists.
+                 default_path = os.path.join(args.model_dir, 'tabnet.zip')
+                 if os.path.exists(default_path):
+                     logger.warning(f"指定バージョンのモデルが見つからないため、デフォルトモデルを使用します: {default_path}")
+                     model_path = default_path
+                 else:
+                     raise FileNotFoundError(f"モデルファイルが見つかりません: {model_path}")
+            model.load_model(model_path.replace('.zip', '.pkl'))
             
         
         # 4. 推論実行
         logger.info("Step 4: 推論実行")
+        
+        # 特徴量のフィルタリング (モデルが要求するものだけに絞る)
+        if hasattr(model, 'model') and hasattr(model.model, 'feature_name'): # LightGBM
+            required_features = model.model.feature_name()
+            missing = set(required_features) - set(X.columns)
+            if not missing:
+                X = X[required_features]
+        elif hasattr(model, 'model') and hasattr(model.model, 'feature_names_'): # CatBoost
+            required_features = model.model.feature_names_
+            missing = set(required_features) - set(X.columns)
+            if not missing:
+                X = X[required_features]
+                
         preds = model.predict(X)
         
         # 結果の整形
@@ -101,12 +134,6 @@ def main():
         results['score'] = preds
         
         # スコアに基づいて順位付け (Descending sort -> Rank 1)
-        # TabNetのターゲットは1/rankなので大きいほど良い。LGBM/CatBoostも同様のターゲットならOK。
-        # もしLGBMがRankそのものを学習しているなら昇順だが、
-        # dataset.py: target = 3(1着), 2(2着), 1(3着), 0(着外) -> 大きいほど良い
-        # model details: TabNet -> 1/rank -> 大きいほど良い
-        # よって、全モデル「スコアが大きいほど良い」で統一されているはず。
-        
         results['pred_rank'] = results.groupby('race_id')['score'].rank(ascending=False, method='min')
 
         # 5. 保存
@@ -114,9 +141,9 @@ def main():
         
         # ファイル名決定 (モデル名を含める)
         if args.date:
-            filename = f"{args.date}_{args.model}.csv"
+            filename = f"{args.date}_{args.model}_{args.version}.csv"
         else:
-            filename = f"predictions_{args.model}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+            filename = f"predictions_{args.model}_{args.version}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
         
         output_path = os.path.join(args.output_dir, filename)
         

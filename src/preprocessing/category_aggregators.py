@@ -20,46 +20,113 @@ class CategoryAggregator:
         """
         logger.info("カテゴリ集計特徴量の生成を開始...")
 
-        # 時系列順であることを保証（GroupBy後の順序維持のため）
+        # 時系列順であることを保証
         df = df.sort_values(['date', 'race_id'])
 
-        # 集計対象のカテゴリ列
+        # ----------------------------------------------------------------
+        # 0. 準備: 条件カラムの作成
+        # ----------------------------------------------------------------
+        # 距離区分 (Distance Category)
+        # Sprint: <1400, Mile: <1900, Intermediate: <2400, Long: >=2400
+        # distanceカラムが数値であることを前提
+        if 'distance' in df.columns:
+            df['distance_cat'] = pd.cut(
+                df['distance'], 
+                bins=[0, 1399, 1899, 2399, 9999], 
+                labels=['Sprint', 'Mile', 'Intermediate', 'Long']
+            )
+        else:
+            logger.warning("distanceカラムがないため、距離別集計をスキップします。")
+            df['distance_cat'] = 'Unknown'
+
+        # ----------------------------------------------------------------
+        # 1. 基本集計 (Overall Stats)
+        # ----------------------------------------------------------------
         targets = ['jockey_id', 'trainer_id', 'sire_id']
-
         for col in targets:
-            if col not in df.columns:
-                logger.warning(f"カラム {col} が存在しないためスキップします。")
-                continue
+            df = self._aggregate_basic(df, col)
 
-            logger.info(f"カテゴリ {col} の集計中...")
+        # ----------------------------------------------------------------
+        # 2. 条件別集計 (Context-Specific Stats)
+        # ----------------------------------------------------------------
+        # (1) 騎手 × コース (Jockey x Course)
+        # venue (keibajo_code) を使用
+        if 'venue' in df.columns:
+            df = self._aggregate_context(df, 'jockey_id', 'venue', 'course')
+            df = self._aggregate_context(df, 'sire_id', 'venue', 'course')
+            df = self._aggregate_context(df, 'trainer_id', 'venue', 'course')
 
-            # 欠損値は 'unknown' として扱う
-            # 元のデータを変更しないようにコピーするか、あるいはそのまま埋める
-            # ここでは fillna しますが、元の列に影響を与えるので注意
-            # ただし、IDが欠損していることは稀（スクレイピングの仕様上）
-            if df[col].isnull().any():
-                df[col] = df[col].fillna('unknown')
+        # (2) 種牡馬 × 距離区分 (Sire x Distance)
+        if 'sire_id' in df.columns:
+            df = self._aggregate_context(df, 'sire_id', 'distance_cat', 'dist')
 
-            grouped = df.groupby(col)
+        # (3) 種牡馬 × 馬場状態 (Sire x Track Condition)
+        # surface: 芝, ダート
+        if 'surface' in df.columns and 'sire_id' in df.columns:
+             df = self._aggregate_context(df, 'sire_id', 'surface', 'track')
 
-            # 1. 過去の出走回数 (Experience)
-            # shift(1) することで今回のレースを含めない
-            # expanding().count() は非NaNをカウントする
-            # race_id は常に存在するのでカウントに使用
-            history_count = grouped['race_id'].transform(lambda x: x.shift(1).expanding().count()).fillna(0)
-            df[f'{col}_n_races'] = history_count
-
-            # 2. 過去の勝利数 (Wins)
-            wins = grouped['rank'].transform(lambda x: (x == 1).astype(int).shift(1).expanding().sum()).fillna(0)
-
-            # 3. 過去の複勝数 (Top3)
-            top3 = grouped['rank'].transform(lambda x: (x <= 3).astype(int).shift(1).expanding().sum()).fillna(0)
-
-            # 4. 勝率・複勝率の計算
-            # 0除算が発生した場合は 0 で埋める
-            # (初出走の騎手などは 0/0 = NaN -> 0 となる)
-            df[f'{col}_win_rate'] = (wins / history_count).fillna(0)
-            df[f'{col}_top3_rate'] = (top3 / history_count).fillna(0)
+        # (4) 騎手 × 調教師 (Jockey x Trainer - Interaction)
+        if 'trainer_id' in df.columns and 'jockey_id' in df.columns:
+            df = self._aggregate_context(df, 'jockey_id', 'trainer_id', 'trainer')
 
         logger.info("カテゴリ集計特徴量の生成完了")
+        # 一時カラム削除
+        if 'distance_cat' in df.columns:
+            df.drop(columns=['distance_cat'], inplace=True)
+            
+        return df
+
+    def _aggregate_basic(self, df: pd.DataFrame, col: str) -> pd.DataFrame:
+        if col not in df.columns:
+            return df
+
+        if df[col].isnull().any():
+            df[col] = df[col].fillna('unknown')
+
+        grouped = df.groupby(col)
+
+        # shift(1)してexpanding集計 (リーク防止)
+        # race_idカウントで出走回数
+        # rank=1で勝利数、rank<=3で複勝数
+        
+        # transform内でshift(1) -> expandingを使う
+        history_count = grouped['race_id'].transform(lambda x: x.shift(1).expanding().count()).fillna(0)
+        wins = grouped['rank'].transform(lambda x: (x == 1).astype(int).shift(1).expanding().sum()).fillna(0)
+        top3 = grouped['rank'].transform(lambda x: (x <= 3).astype(int).shift(1).expanding().sum()).fillna(0) # bugfix: rank <= 3
+
+        df[f'{col}_n_races'] = history_count
+        # 0除算回避
+        df[f'{col}_win_rate'] = (wins / (history_count + 1e-5))
+        df[f'{col}_top3_rate'] = (top3 / (history_count + 1e-5))
+        
+        return df
+
+    def _aggregate_context(self, df: pd.DataFrame, target_col: str, cond_col: str, suffix: str) -> pd.DataFrame:
+        """
+        target_col x cond_col の組み合わせで集計
+        例: jockey_id x keibajo_code -> jockey_course_win_rate
+        """
+        if target_col not in df.columns or cond_col not in df.columns:
+            return df
+            
+        # 欠損埋め
+        if df[target_col].isnull().any(): 
+            df[target_col] = df[target_col].fillna('unknown')
+        if df[cond_col].isnull().any():
+            df[cond_col] = df[cond_col].fillna('unknown')
+
+        grouped = df.groupby([target_col, cond_col])
+        
+        feature_prefix = f"{target_col.replace('_id', '')}_{suffix}" # jockey_course
+
+        history_count = grouped['race_id'].transform(lambda x: x.shift(1).expanding().count()).fillna(0)
+        wins = grouped['rank'].transform(lambda x: (x == 1).astype(int).shift(1).expanding().sum()).fillna(0)
+        top3 = grouped['rank'].transform(lambda x: (x <= 3).astype(int).shift(1).expanding().sum()).fillna(0)
+
+        # 出走回数が少ないとノイズになるので、信頼度のようなものを考慮したいが、
+        # ここでは生の率を出す。モデルが回数(n_races)も見て判断することを期待。
+        df[f'{feature_prefix}_n_races'] = history_count
+        df[f'{feature_prefix}_win_rate'] = (wins / (history_count + 1e-5))
+        df[f'{feature_prefix}_top3_rate'] = (top3 / (history_count + 1e-5))
+
         return df

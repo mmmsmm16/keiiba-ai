@@ -53,11 +53,52 @@ class AdvancedFeatureEngineer:
         # shift(1)してexpanding meanを計算 (リーク防止)
         df['nige_rate'] = grouped_horse['is_nige_temp'].transform(lambda x: x.shift(1).expanding().mean()).fillna(0)
 
-        # 3. レース展開予測 (Race Pace)
-        # そのレースに出走するメンバーの「逃げ率」を集計
-        # これにより「逃げ馬が多い＝ハイペース？」などの予測が可能になる
-        # nige_rate は過去データ由来なので、現在のレース内の集計に使ってもOK
+        # ----------------------------------------------------------------
+        # 3. 間隔 (Interval) と体重変化 (Weight Change)
+        # ----------------------------------------------------------------
+        # dateはdatetime型であることを前提
+        df['prev_date'] = grouped_horse['date'].shift(1)
+        df['interval'] = (df['date'] - df['prev_date']).dt.days
+        df['interval'] = df['interval'].fillna(0) # 初出走は0
+        
+        # 長期休養明けフラグ (180日以上)
+        df['is_long_break'] = (df['interval'] > 180).astype(int)
 
+        # 体重増減 (batai_taiju カラムがある場合)
+        if 'batai_taiju' in df.columns:
+            # batai_taiju が文字列の場合もあるので数値変換 ('480(0)' -> 480 or clean_batai_taiju exists?)
+            # Usually cleansed in DataCleanser. Assuming float/int.
+            df['prev_weight'] = grouped_horse['batai_taiju'].shift(1)
+            df['weight_diff'] = df['batai_taiju'] - df['prev_weight']
+            df['weight_diff'] = df['weight_diff'].fillna(0)
+            
+            # 大幅増減フラグ (+- 10kg)
+            df['is_weight_changed_huge'] = (df['weight_diff'].abs() > 10).astype(int)
+
+        # ----------------------------------------------------------------
+        # 4. 騎手の近走勢い (Jockey Recent Momentum)
+        # ----------------------------------------------------------------
+        # 時系列ソート (全体)
+        df = df.sort_values(['date', 'race_id'])
+        
+        # 騎手ごとの直近100レース勝率
+        # (注: これは未来のデータを含まないよう shift(1) してから rolling する必要がある)
+        if 'jockey_id' in df.columns:
+            # 勝利フラグ (1着なら1)
+            df['is_win'] = (df['rank'] == 1).astype(int)
+            
+            # グループ化して shift(1) -> rolling(100) -> mean
+            # 処理が重くなる可能性があるので注意。
+            # transformで実装
+            df['jockey_recent_win_rate'] = df.groupby('jockey_id')['is_win'].transform(
+                lambda x: x.shift(1).rolling(100, min_periods=10).mean()
+            ).fillna(0)
+            
+            df.drop(columns=['is_win'], inplace=True)
+
+        # ----------------------------------------------------------------
+        # 5. レース展開・レベル予測 (Race Context)
+        # ----------------------------------------------------------------
         grouped_race = df.groupby('race_id')
 
         # メンバーの平均逃げ率
@@ -66,8 +107,20 @@ class AdvancedFeatureEngineer:
         # 逃げ馬候補の数 (逃げ率 0.5 以上の馬の数)
         df['race_nige_horse_count'] = grouped_race['nige_rate'].transform(lambda x: (x >= 0.5).sum())
 
+        # メンバーの平均獲得賞金 (本賞金) -> レースレベルの代理変数
+        # HistoryAggregatorで total_prize (過去の獲得賞金累計) が計算されていることを前提
+        if 'total_prize' in df.columns:
+             df['race_avg_prize'] = grouped_race['total_prize'].transform('mean')
+        
+        # メンバーの平均年齢 (Member Age Level) - 若馬戦か古馬戦かなど
+        if 'age' in df.columns:
+            # 必ず数値型に変換
+            df['age'] = pd.to_numeric(df['age'], errors='coerce')
+            df['race_avg_age'] = grouped_race['age'].transform('mean')
+             
         # 不要な一時カラムを削除
-        df.drop(columns=['is_nige_temp'], inplace=True)
+        top_drop_cols = ['is_nige_temp', 'prev_date', 'prev_weight']
+        df.drop(columns=[c for c in top_drop_cols if c in df.columns], inplace=True)
 
         logger.info("高度特徴量の生成完了")
         return df

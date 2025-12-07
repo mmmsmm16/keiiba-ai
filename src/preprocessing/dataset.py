@@ -68,8 +68,9 @@ class DatasetSplitter:
             'passing_rank',           # 通過順
             'last_3f',                # 上がり3F
             'odds', 'popularity',     # オッズ・人気
-            'weight', 'weight_diff',  # 当日馬体重
-            'weight_diff_val', 'weight_diff_sign', # ← これらも削除
+            'weight',                 # 当日馬体重
+            # 'weight_diff',          # ← 有効化 (Advanced Featuresで生成)
+            'weight_diff_val', 'weight_diff_sign', # 元データにある場合は削除（重複回避）
             'winning_numbers', 'payout', 'ticket_type', # 払い戻し
             # PC-KEIBA特有のカラム（もしあれば）
             'pass_1', 'pass_2', 'pass_3', 'pass_4'

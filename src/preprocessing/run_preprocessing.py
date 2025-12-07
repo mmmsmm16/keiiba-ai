@@ -45,6 +45,13 @@ def main():
         cat_aggregator = CategoryAggregator()
         df = cat_aggregator.aggregate(df)
 
+        # 5b. 血統特徴量生成 (Bloodline)
+        # NOTE: BloodlineFeatureEngineerは内部でjvd_umをロードします
+        from preprocessing.bloodline_features import BloodlineFeatureEngineer
+        logger.info("Step 5b: 血統特徴量生成")
+        bloodline_engineer = BloodlineFeatureEngineer()
+        df = bloodline_engineer.add_features(df)
+
         # 6. 高度特徴量生成 (展開予測など)
         logger.info("Step 6: 高度特徴量生成")
         adv_engineer = AdvancedFeatureEngineer()

@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import logging
 import json
+import argparse
 from datetime import datetime
 from scipy.special import softmax
 
@@ -14,6 +15,9 @@ from sqlalchemy import create_engine, text
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from model.ensemble import EnsembleModel
+from model.lgbm import KeibaLGBM
+from model.catboost_model import KeibaCatBoost
+from model.tabnet_model import KeibaTabNet
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -60,6 +64,11 @@ class NpEncoder(json.JSONEncoder):
         return super(NpEncoder, self).default(obj)
 
 def main():
+    parser = argparse.ArgumentParser(description='モデル評価スクリプト')
+    parser.add_argument('--model', type=str, default='ensemble', choices=['lgbm', 'catboost', 'tabnet', 'ensemble'], help='評価するモデル')
+    parser.add_argument('--version', type=str, default='v1', help='モデルバージョン')
+    args = parser.parse_args()
+
     # 1. データのロード (Parquetから元データを取得)
     data_path = os.path.join(os.path.dirname(__file__), '../../data/processed/preprocessed_data.parquet')
     if not os.path.exists(data_path):
@@ -67,8 +76,6 @@ def main():
         return
 
     # テストデータ(2024年)のみロード
-    # 全データを読むと重いので、本来はフィルタリングして読むか分割保存すべきだが、
-    # ここでは既存コードに合わせて全読み込み->フィルタ
     df = pd.read_parquet(data_path)
     test_df = df[df['year'] == 2024].copy()
 
@@ -77,24 +84,77 @@ def main():
         return
 
     # 2. モデルのロード
-    model_path = os.path.join(os.path.dirname(__file__), '../../models/ensemble_model.pkl')
-    if not os.path.exists(model_path):
-        logger.error(f"モデルファイルがありません: {model_path}")
-        return
+    model_dir = os.path.join(os.path.dirname(__file__), '../../models')
+    model = None
+    
+    logger.info(f"評価開始: Model={args.model}, Version={args.version}")
 
-    model = EnsembleModel()
-    model.load_model(model_path)
+    try:
+        if args.model == 'ensemble':
+            model = EnsembleModel()
+            path = os.path.join(model_dir, f'ensemble_{args.version}.pkl')
+            if not os.path.exists(path):
+                 # Fallback
+                 if args.version == 'v1' and os.path.exists(os.path.join(model_dir, 'ensemble_model.pkl')):
+                     path = os.path.join(model_dir, 'ensemble_model.pkl')
+                 else:
+                     raise FileNotFoundError(f"モデルファイルが見つかりません: {path}")
+            model.load_model(path)
+
+        elif args.model == 'lgbm':
+            model = KeibaLGBM()
+            path = os.path.join(model_dir, f'lgbm_{args.version}.pkl')
+            if not os.path.exists(path):
+                 if args.version == 'v1' and os.path.exists(os.path.join(model_dir, 'lgbm.pkl')):
+                     path = os.path.join(model_dir, 'lgbm.pkl')
+                 else:
+                     raise FileNotFoundError(f"モデルファイルが見つかりません: {path}")
+            model.load_model(path)
+
+        elif args.model == 'catboost':
+            model = KeibaCatBoost()
+            path = os.path.join(model_dir, f'catboost_{args.version}.pkl')
+            if not os.path.exists(path):
+                 if args.version == 'v1' and os.path.exists(os.path.join(model_dir, 'catboost.pkl')):
+                     path = os.path.join(model_dir, 'catboost.pkl')
+                 else:
+                     raise FileNotFoundError(f"モデルファイルが見つかりません: {path}")
+            model.load_model(path)
+
+        elif args.model == 'tabnet':
+            model = KeibaTabNet()
+            path = os.path.join(model_dir, f'tabnet_{args.version}.zip')
+            if not os.path.exists(path):
+                 if args.version == 'v1' and os.path.exists(os.path.join(model_dir, 'tabnet.zip')):
+                     path = os.path.join(model_dir, 'tabnet.zip')
+                 else:
+                     raise FileNotFoundError(f"モデルファイルが見つかりません: {path}")
+            model.load_model(path.replace('.zip', '.pkl'))
+            
+    except Exception as e:
+        logger.error(f"モデルロードエラー: {e}")
+        return
 
     # 3. 特徴量の整合性確認と予測
-    dataset_path = os.path.join(os.path.dirname(__file__), '../../data/processed/lgbm_datasets.pkl')
-    with open(dataset_path, 'rb') as f:
-        datasets = pickle.load(f)
+    feature_cols = None
+    
+    # モデルから特徴量リストを取得（互換性維持のため）
+    if args.model == 'lgbm' and hasattr(model.model, 'feature_name'):
+        feature_cols = model.model.feature_name()
+    elif args.model == 'catboost' and hasattr(model.model, 'feature_names_'):
+        feature_cols = model.model.feature_names_
+        
+    # モデルから取得できない場合は最新の学習データセット情報を使用
+    if feature_cols is None:
+        dataset_path = os.path.join(os.path.dirname(__file__), '../../data/processed/lgbm_datasets.pkl')
+        with open(dataset_path, 'rb') as f:
+            datasets = pickle.load(f)
 
-    if datasets['train']['X'] is None:
-        logger.error("学習データの特徴量情報がありません。")
-        return
+        if datasets['train']['X'] is None:
+            logger.error("学習データの特徴量情報がありません。")
+            return
 
-    feature_cols = datasets['train']['X'].columns.tolist()
+        feature_cols = datasets['train']['X'].columns.tolist()
     
     # テストデータにカラムが存在するか確認
     missing_cols = set(feature_cols) - set(test_df.columns)
@@ -122,6 +182,8 @@ def main():
     
     simulation_results = {
         'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'model': args.model,
+        'version': args.version,
         'strategies': {},
         'roi_curve': []
     }
@@ -154,8 +216,14 @@ def main():
         logger.warning("払戻データがロードできなかったため、複合馬券シミュレーションをスキップします。")
 
     # Save to JSON
+    # バージョンごとにファイルを分けるか？
+    # Dashboard reads 'latest_simulation.json'. Let's keep it that way for 'latest', but maybe save a copy.
     json_path = os.path.join(output_dir, 'latest_simulation.json')
+    history_json_path = os.path.join(output_dir, f'simulation_{args.model}_{args.version}.json')
+    
     with open(json_path, 'w') as f:
+        json.dump(simulation_results, f, indent=4, cls=NpEncoder)
+    with open(history_json_path, 'w') as f:
         json.dump(simulation_results, f, indent=4, cls=NpEncoder)
         
     logger.info(f"シミュレーション結果を保存しました: {json_path}")

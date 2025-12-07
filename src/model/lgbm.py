@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import os
 import pickle
 import logging
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +15,7 @@ class KeibaLGBM:
     """
     def __init__(self, params=None):
         # デフォルトパラメータ (LambdaRank用)
-        self.params = params or {
+        self.params = {
             'objective': 'lambdarank',
             'metric': 'ndcg',
             'ndcg_eval_at': [1, 3, 5],
@@ -25,6 +26,11 @@ class KeibaLGBM:
             'random_state': 42,
             'verbose': -1
         }
+        
+        # 引数指定があれば上書き
+        if params:
+            self.params.update(params)
+
         self.model = None
 
     def train(self, train_set: dict, valid_set: dict):
@@ -62,6 +68,22 @@ class KeibaLGBM:
         """
         if self.model is None:
             raise ValueError("モデルが学習されていません。")
+        
+        # 特徴量のフィルタリング (学習時に使用した特徴量のみに絞る)
+        if hasattr(self.model, 'feature_name'):
+            required_features = self.model.feature_name()
+            # 必要なカラムが足りているかチェック
+            missing = set(required_features) - set(X.columns)
+            if missing:
+                # 欠損がある場合はエラーにするか、NaNで埋めるかだが、通常はエラーが望ましい
+                # しかしDashboard等で一部欠損許容するなら警告など。ここでは厳密にチェック。
+                pass # LightGBM本体がエラーを出すのでそのままにする、あるいは独自エラー出す
+            
+            # 余分なカラムがある場合は削除して、順序を合わせる
+            if len(X.columns) != len(required_features) or list(X.columns) != required_features:
+                 # logger.debug("入力データの特徴量を学習時の形式に合わせます。")
+                 X = X[required_features]
+
         return self.model.predict(X, num_iteration=self.model.best_iteration)
 
     def save_model(self, path: str):
