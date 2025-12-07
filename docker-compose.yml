@@ -35,3 +35,17 @@ services:
       - POSTGRES_DB=pckeiba
     ports:
       - "5433:5432"
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.7.1
+    ports:
+      - "5000:5000"
+    environment:
+      # バックエンドDBはSQLite
+      - MLFLOW_BACKEND_STORE_URI=sqlite:////mlflow_store/mlflow.db
+      - MLFLOW_DEFAULT_ARTIFACT_ROOT=/mlflow_store/artifacts
+      - MLFLOW_HOST=0.0.0.0
+    volumes:
+      # 専用ディレクトリをマウント
+      - ./mlflow_store:/mlflow_store
+    command: mlflow server --backend-store-uri sqlite:////mlflow_store/mlflow.db --default-artifact-root /mlflow_store/artifacts --host 0.0.0.0

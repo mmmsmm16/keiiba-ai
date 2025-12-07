@@ -215,9 +215,24 @@ def main():
     else:
         logger.warning("払戻データがロードできなかったため、複合馬券シミュレーションをスキップします。")
 
+    # Strategy 5: オッズフィルタリング (穴馬狙い)
+    logger.info("--- Simulation: Max EV with Odds Filter ---")
+    # 10倍〜50倍 (中穴)
+    sim_ev_mid = simulate_single_choice(test_df, 'expected_value', min_odds=10.0, max_odds=50.0)
+    simulation_results['strategies']['max_ev_odds_10_50'] = sim_ev_mid
+    logger.info(f"Max EV (10-50x) - ROI: {sim_ev_mid['roi']:.2f}%, Hit: {sim_ev_mid['accuracy']:.2%} ({sim_ev_mid['bet_count']} bets)")
+
+    # 50倍以上 (大穴)
+    sim_ev_long = simulate_single_choice(test_df, 'expected_value', min_odds=50.0)
+    simulation_results['strategies']['max_ev_odds_50plus'] = sim_ev_long
+    logger.info(f"Max EV (50x+) - ROI: {sim_ev_long['roi']:.2f}%, Hit: {sim_ev_long['accuracy']:.2%} ({sim_ev_long['bet_count']} bets)")
+
+    # Strategy 6: 流し (Formation) シミュレーション
+    if not payout_df.empty:
+        sim_formation = simulate_formation_betting(test_df, payout_df)
+        simulation_results['strategies'].update(sim_formation)
+
     # Save to JSON
-    # バージョンごとにファイルを分けるか？
-    # Dashboard reads 'latest_simulation.json'. Let's keep it that way for 'latest', but maybe save a copy.
     json_path = os.path.join(output_dir, 'latest_simulation.json')
     history_json_path = os.path.join(output_dir, f'simulation_{args.model}_{args.version}.json')
     
@@ -229,7 +244,7 @@ def main():
     logger.info(f"シミュレーション結果を保存しました: {json_path}")
 
 
-def simulate_single_choice(df, target_col):
+def simulate_single_choice(df, target_col, min_odds=None, max_odds=None):
     results = []
     
     for race_id, group in df.groupby('race_id'):
@@ -239,8 +254,15 @@ def simulate_single_choice(df, target_col):
         best_idx = group[target_col].idxmax()
         best_horse = group.loc[best_idx]
         
-        actual_rank = best_horse['rank']
         odds = best_horse['odds']
+        
+        # オッズフィルタ
+        if min_odds is not None and (pd.isna(odds) or odds < min_odds):
+            continue
+        if max_odds is not None and (pd.isna(odds) or odds > max_odds):
+            continue
+        
+        actual_rank = best_horse['rank']
         
         bet = 100
         return_amount = odds * 100 if actual_rank == 1 else 0
@@ -249,35 +271,25 @@ def simulate_single_choice(df, target_col):
         
     sim_df = pd.DataFrame(results)
     if sim_df.empty:
-        return {'roi': 0, 'accuracy': 0, 'total_bet': 0, 'total_return': 0}
+        return {'roi': 0, 'accuracy': 0, 'total_bet': 0, 'total_return': 0, 'bet_count': 0}
         
     total_bet = sim_df['bet'].sum()
     total_return = sim_df['return'].sum()
     roi = total_return / total_bet * 100 if total_bet > 0 else 0
     accuracy = sim_df['hit'].mean()
     
-    return {'roi': roi, 'accuracy': accuracy, 'total_bet': total_bet, 'total_return': total_return}
+    return {'roi': roi, 'accuracy': accuracy, 'total_bet': total_bet, 'total_return': total_return, 'bet_count': len(sim_df)}
 
 def simulate_threshold_curve(df):
     target_col = 'expected_value'
-    # 閾値を0.5刻みなどで設定
-    # 期待値は prob * odds。prob約0.1 * odds10 = 1.0 (等倍)。
-    # 0.5 (回収率50%期待) から 2.0 (回収率200%期待) くらいまでスキャン
     thresholds = np.arange(0.5, 3.0, 0.1)
-    
     curve_data = []
     
     for th in thresholds:
-        # 閾値を超える条件の行を抽出
         bets = df[df[target_col] >= th].copy()
         
         if bets.empty:
-            curve_data.append({
-                'threshold': th,
-                'roi': 0,
-                'bet_count': 0,
-                'accuracy': 0
-            })
+            curve_data.append({'threshold': th, 'roi': 0, 'bet_count': 0, 'accuracy': 0})
             continue
             
         bets['bet_amount'] = 100
@@ -298,25 +310,19 @@ def simulate_threshold_curve(df):
         
     return curve_data
 
-def simulate_complex_betting(df, payout_df):
+def simulate_formation_betting(df, payout_df):
     from itertools import combinations, permutations
     
-    logger.info("--- Simulation: Complex Betting (Box 5) ---")
+    logger.info("--- Simulation: Formation Betting (Nagashi) ---")
     
-    # Payoutデータを検索しやすいように辞書化
-    # race_id -> { 'umaren': {comb: pay, ...}, 'sanrenpuku': ..., 'sanrentan': ... }
+    # 既存の payout_map 作成ロジックを流用したいが、関数分割していないので再実装または関数化すべき
+    # ここでは冗長だが再実装する
     payout_map = {}
-    
-    # 必要な列だけ抽出して反復
-    # haraimodoshi_umaren_1a, 1b, 2a, 2b, 3a, 3b... max usually 3?
-    # JRA-VAN doc says up to 3 entries for simple bets usually.
-    # We will check 1 to 3.
-    
     for _, row in payout_df.iterrows():
         rid = row['race_id']
         payout_map[rid] = {'umaren': {}, 'sanrenpuku': {}, 'sanrentan': {}}
         
-        # Umaren (1-3)
+        # Umaren
         for i in range(1, 4):
             k_comb = f'haraimodoshi_umaren_{i}a'
             k_pay = f'haraimodoshi_umaren_{i}b'
@@ -326,7 +332,7 @@ def simulate_complex_betting(df, payout_df):
                     payout_map[rid]['umaren'][str(row[k_comb])] = pay
                 except: pass
 
-        # Sanrenpuku (1-3)
+        # Sanrenpuku
         for i in range(1, 4):
             k_comb = f'haraimodoshi_sanrenpuku_{i}a'
             k_pay = f'haraimodoshi_sanrenpuku_{i}b'
@@ -336,7 +342,7 @@ def simulate_complex_betting(df, payout_df):
                     payout_map[rid]['sanrenpuku'][str(row[k_comb])] = pay
                 except: pass
 
-        # Sanrentan (1-6? usually 3, but up to 6 in huge dead heat)
+        # Sanrentan
         for i in range(1, 7):
             k_comb = f'haraimodoshi_sanrentan_{i}a'
             k_pay = f'haraimodoshi_sanrentan_{i}b'
@@ -346,41 +352,177 @@ def simulate_complex_betting(df, payout_df):
                     payout_map[rid]['sanrentan'][str(row[k_comb])] = pay
                 except: pass
 
-    # Strategies
+    stats = {
+        'umaren_nagashi': {'bet': 0, 'return': 0, 'hit': 0, 'races': 0},
+        'sanrenpuku_nagashi': {'bet': 0, 'return': 0, 'hit': 0, 'races': 0},
+        'sanrentan_nagashi': {'bet': 0, 'return': 0, 'hit': 0, 'races': 0}
+    }
+    
+    for race_id, group in df.groupby('race_id'):
+        if race_id not in payout_map:
+            continue
+            
+        # Top 6 horses by score (Axis:1, Opp:2-6)
+        sorted_horses = group.sort_values('score', ascending=False)
+        if len(sorted_horses) < 3:
+            continue
+            
+        axis_horse = sorted_horses.iloc[0] # Axis
+        opp_horses = sorted_horses.iloc[1:6] # Opponents (Max 5)
+        
+        axis_num = int(axis_horse['horse_number'])
+        opp_nums = opp_horses['horse_number'].astype(int).tolist()
+        
+        if not opp_nums:
+            continue
+
+        # --- Umaren Nagashi (Axis - Opps) ---
+        bet_count = 0
+        return_amount = 0
+        hit = 0
+        
+        combos = [(axis_num, opp) for opp in opp_nums]  # (1, 2), (1, 3)...
+        bet_count = len(combos)
+        
+        for c in combos:
+            c_sorted = sorted(c)
+            comb_str = f"{c_sorted[0]:02}{c_sorted[1]:02}"
+            if comb_str in payout_map[race_id]['umaren']:
+                return_amount += payout_map[race_id]['umaren'][comb_str]
+                hit = 1
+        
+        stats['umaren_nagashi']['bet'] += bet_count * 100
+        stats['umaren_nagashi']['return'] += return_amount
+        stats['umaren_nagashi']['hit'] += hit
+        stats['umaren_nagashi']['races'] += 1
+
+        # --- Sanrenpuku Nagashi (Axis 1 head - Opps Combos) ---
+        # Axis固定、相手から2頭選ぶ
+        bet_count = 0
+        return_amount = 0
+        hit = 0
+        
+        if len(opp_nums) >= 2:
+            opp_combos = list(combinations(opp_nums, 2)) # Opponents同士の組み合わせ
+            bet_count = len(opp_combos) # 10 if 5 opps
+            
+            for oc in opp_combos:
+                c = (axis_num, oc[0], oc[1])
+                c_sorted = sorted(c)
+                comb_str = f"{c_sorted[0]:02}{c_sorted[1]:02}{c_sorted[2]:02}"
+                
+                if comb_str in payout_map[race_id]['sanrenpuku']:
+                    return_amount += payout_map[race_id]['sanrenpuku'][comb_str]
+                    hit = 1
+        
+            stats['sanrenpuku_nagashi']['bet'] += bet_count * 100
+            stats['sanrenpuku_nagashi']['return'] += return_amount
+            stats['sanrenpuku_nagashi']['hit'] += hit
+            stats['sanrenpuku_nagashi']['races'] += 1
+
+        # --- Sanrentan Nagashi (1-head Multi) ---
+        # Axis 1着固定、相手が2,3着 (順列)
+        bet_count = 0
+        return_amount = 0
+        hit = 0
+        
+        if len(opp_nums) >= 2:
+            opp_perms = list(permutations(opp_nums, 2)) # Opponents同士の順列
+            bet_count = len(opp_perms) # 20 if 5 opps
+            
+            for op in opp_perms:
+                # 1着: Axis, 2着: op[0], 3着: op[1]
+                perm_str = f"{axis_num:02}{op[0]:02}{op[1]:02}"
+                
+                if perm_str in payout_map[race_id]['sanrentan']:
+                    return_amount += payout_map[race_id]['sanrentan'][perm_str]
+                    hit = 1
+            
+            stats['sanrentan_nagashi']['bet'] += bet_count * 100
+            stats['sanrentan_nagashi']['return'] += return_amount
+            stats['sanrentan_nagashi']['hit'] += hit
+            stats['sanrentan_nagashi']['races'] += 1
+
+    final_results = {}
+    for k, v in stats.items():
+        roi = v['return'] / v['bet'] * 100 if v['bet'] > 0 else 0
+        accuracy = v['hit'] / v['races'] if v['races'] > 0 else 0
+        final_results[k] = {
+            'roi': roi, 
+            'accuracy': accuracy, 
+            'bet': v['bet'], 
+            'return': v['return'],
+            'races': v['races']
+        }
+        logger.info(f"{k} - ROI: {roi:.2f}%, Hit: {accuracy:.2%} ({v['races']} races)")
+        
+    return final_results
+
+def simulate_complex_betting(df, payout_df):
+    from itertools import combinations, permutations
+    
+    logger.info("--- Simulation: Complex Betting (Box 5) ---")
+    
+    payout_map = {}
+    for _, row in payout_df.iterrows():
+        rid = row['race_id']
+        payout_map[rid] = {'umaren': {}, 'sanrenpuku': {}, 'sanrentan': {}}
+        
+        for i in range(1, 4):
+            k_comb = f'haraimodoshi_umaren_{i}a'
+            k_pay = f'haraimodoshi_umaren_{i}b'
+            if k_comb in row and row[k_comb] and str(row[k_comb]).strip():
+                try:
+                    pay = int(row[k_pay])
+                    payout_map[rid]['umaren'][str(row[k_comb])] = pay
+                except: pass
+
+        for i in range(1, 4):
+            k_comb = f'haraimodoshi_sanrenpuku_{i}a'
+            k_pay = f'haraimodoshi_sanrenpuku_{i}b'
+            if k_comb in row and row[k_comb] and str(row[k_comb]).strip():
+                try:
+                    pay = int(row[k_pay])
+                    payout_map[rid]['sanrenpuku'][str(row[k_comb])] = pay
+                except: pass
+
+        for i in range(1, 7):
+            k_comb = f'haraimodoshi_sanrentan_{i}a'
+            k_pay = f'haraimodoshi_sanrentan_{i}b'
+            if k_comb in row and row[k_comb] and str(row[k_comb]).strip():
+                try:
+                    pay = int(row[k_pay])
+                    payout_map[rid]['sanrentan'][str(row[k_comb])] = pay
+                except: pass
+
     stats = {
         'umaren_box5': {'bet': 0, 'return': 0, 'hit': 0, 'races': 0},
         'sanrenpuku_box5': {'bet': 0, 'return': 0, 'hit': 0, 'races': 0},
         'sanrentan_box5': {'bet': 0, 'return': 0, 'hit': 0, 'races': 0}
     }
     
-    # 予測データでループ
-    race_groups = df.groupby('race_id')
-    for race_id, group in race_groups:
+    for race_id, group in df.groupby('race_id'):
         if race_id not in payout_map:
             continue
             
-        # Top 5 horses by score
         top5 = group.sort_values('score', ascending=False).head(5)
         if len(top5) < 2:
             continue
             
-        horse_nums = top5['horse_number'].astype(int).tolist() # [1, 5, 2, ...]
+        horse_nums = top5['horse_number'].astype(int).tolist()
         
-        # --- Umaren Box 5 (10点) ---
-        # 組み合わせ (順序なし) -> 小さい順に並べて文字列化 (0102)
+        # --- Umaren Box 5 ---
         bet_count = 0
         return_amount = 0
         hit = 0
         
         if len(horse_nums) >= 2:
-            combos = list(combinations(horse_nums, 2)) # (1, 5), (1, 2)...
-            bet_count = len(combos) # 10 if 5 horses
+            combos = list(combinations(horse_nums, 2))
+            bet_count = len(combos)
             
             for c in combos:
-                # ソートして文字列化 (0205)
                 c_sorted = sorted(c)
                 comb_str = f"{c_sorted[0]:02}{c_sorted[1]:02}"
-                
                 if comb_str in payout_map[race_id]['umaren']:
                     return_amount += payout_map[race_id]['umaren'][comb_str]
                     hit = 1
@@ -390,19 +532,18 @@ def simulate_complex_betting(df, payout_df):
             stats['umaren_box5']['hit'] += hit
             stats['umaren_box5']['races'] += 1
 
-        # --- Sanrenpuku Box 5 (10点) ---
+        # --- Sanrenpuku Box 5 ---
         bet_count = 0
         return_amount = 0
         hit = 0
         
         if len(horse_nums) >= 3:
             combos = list(combinations(horse_nums, 3))
-            bet_count = len(combos) # 10
+            bet_count = len(combos)
             
             for c in combos:
                 c_sorted = sorted(c)
                 comb_str = f"{c_sorted[0]:02}{c_sorted[1]:02}{c_sorted[2]:02}"
-                
                 if comb_str in payout_map[race_id]['sanrenpuku']:
                     return_amount += payout_map[race_id]['sanrenpuku'][comb_str]
                     hit = 1
@@ -412,20 +553,17 @@ def simulate_complex_betting(df, payout_df):
             stats['sanrenpuku_box5']['hit'] += hit
             stats['sanrenpuku_box5']['races'] += 1
 
-        # --- Sanrentan Box 5 (60点) ---
+        # --- Sanrentan Box 5 ---
         bet_count = 0
         return_amount = 0
         hit = 0
         
-        if len(horse_nums) >= 3: # 3連単も3頭以上必要
-            # Boxなので順列 (Permutations)
+        if len(horse_nums) >= 3:
             perms = list(permutations(horse_nums, 3))
-            bet_count = len(perms) # 60
+            bet_count = len(perms)
             
             for p in perms:
-                # 順序通り文字列化
                 perm_str = f"{p[0]:02}{p[1]:02}{p[2]:02}"
-                
                 if perm_str in payout_map[race_id]['sanrentan']:
                     return_amount += payout_map[race_id]['sanrentan'][perm_str]
                     hit = 1
@@ -435,7 +573,6 @@ def simulate_complex_betting(df, payout_df):
             stats['sanrentan_box5']['hit'] += hit
             stats['sanrentan_box5']['races'] += 1
 
-    # 集計結果作成
     final_results = {}
     for k, v in stats.items():
         roi = v['return'] / v['bet'] * 100 if v['bet'] > 0 else 0

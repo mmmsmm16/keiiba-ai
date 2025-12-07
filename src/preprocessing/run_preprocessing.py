@@ -18,32 +18,53 @@ from preprocessing.advanced_features import AdvancedFeatureEngineer
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+import argparse
+
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--resume', action='store_true', help='前回のStep 5完了時点から再開します')
+    args = parser.parse_args()
+
     try:
-        # 1. データのロード
-        logger.info("Step 1: データのロード (JRA-VAN)")
-        loader = JraVanDataLoader()
-        df = loader.load() # 全データをロード
+        checkpoint_dir = os.path.join(os.path.dirname(__file__), '../../data/interim')
+        os.makedirs(checkpoint_dir, exist_ok=True)
+        checkpoint_path = os.path.join(checkpoint_dir, 'step5_checkpoint.parquet')
 
-        # 2. データクレンジング
-        logger.info("Step 2: データクレンジング")
-        cleanser = DataCleanser()
-        df = cleanser.cleanse(df)
+        df = None
 
-        # 3. 特徴量生成
-        logger.info("Step 3: 基本特徴量生成")
-        engineer = FeatureEngineer()
-        df = engineer.add_features(df)
+        if args.resume and os.path.exists(checkpoint_path):
+            logger.info(f"チェックポイントからデータをロードします: {checkpoint_path}")
+            df = pd.read_parquet(checkpoint_path)
+            logger.info("Step 1-5: スキップ (完了済み)")
+        else:
+            # 1. データのロード
+            logger.info("Step 1: データのロード (JRA-VAN)")
+            loader = JraVanDataLoader()
+            df = loader.load() # 全データをロード
 
-        # 4. 過去走特徴量生成
-        logger.info("Step 4: 過去走特徴量生成")
-        aggregator = HistoryAggregator()
-        df = aggregator.aggregate(df)
+            # 2. データクレンジング
+            logger.info("Step 2: データクレンジング")
+            cleanser = DataCleanser()
+            df = cleanser.cleanse(df)
 
-        # 5. カテゴリ集計特徴量生成
-        logger.info("Step 5: カテゴリ集計特徴量生成")
-        cat_aggregator = CategoryAggregator()
-        df = cat_aggregator.aggregate(df)
+            # 3. 特徴量生成
+            logger.info("Step 3: 基本特徴量生成")
+            engineer = FeatureEngineer()
+            df = engineer.add_features(df)
+
+            # 4. 過去走特徴量生成
+            logger.info("Step 4: 過去走特徴量生成")
+            aggregator = HistoryAggregator()
+            df = aggregator.aggregate(df)
+
+            # 5. カテゴリ集計特徴量生成
+            logger.info("Step 5: カテゴリ集計特徴量生成")
+            cat_aggregator = CategoryAggregator()
+            df = cat_aggregator.aggregate(df)
+            
+            # チェックポイント保存
+            logger.info(f"Step 5完了: チェックポイントを保存します ({checkpoint_path})")
+            df.to_parquet(checkpoint_path, index=False)
 
         # 5b. 血統特徴量生成 (Bloodline)
         # NOTE: BloodlineFeatureEngineerは内部でjvd_umをロードします
@@ -57,7 +78,6 @@ def main():
         adv_engineer = AdvancedFeatureEngineer()
         df = adv_engineer.add_features(df)
 
-        # 7. データの保存 (全データ)
         # 7. データの保存 (全データ)
         output_dir = os.path.join(os.path.dirname(__file__), '../../data/processed')
         os.makedirs(output_dir, exist_ok=True)

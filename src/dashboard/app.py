@@ -67,18 +67,26 @@ with tab3:
         st.subheader("戦略別サマリ (単純1点買い)")
         strat = sim_data.get('strategies', {})
         
-        col1, col2 = st.columns(2)
+        col1, col2, col3, col4 = st.columns(4)
         with col1:
-            st.markdown("### 最大期待値 (Max EV)")
+            st.markdown("### Max EV (All)")
             max_ev = strat.get('max_ev', {})
-            st.metric("回収率 (ROI)", f"{max_ev.get('roi', 0):.2f}%")
-            st.metric("的中率 (Hit)", f"{max_ev.get('accuracy', 0):.2%}")
+            st.metric("回収率", f"{max_ev.get('roi', 0):.2f}%", f"{max_ev.get('accuracy', 0):.2%}")
             
         with col2:
-            st.markdown("### 最大スコア (Max Score)")
+            st.markdown("### Max EV (10-50倍)")
+            ev_mid = strat.get('max_ev_odds_10_50', {})
+            st.metric("回収率", f"{ev_mid.get('roi', 0):.2f}%", f"{ev_mid.get('accuracy', 0):.2%}")
+
+        with col3:
+            st.markdown("### Max EV (50倍+)")
+            ev_long = strat.get('max_ev_odds_50plus', {})
+            st.metric("回収率", f"{ev_long.get('roi', 0):.2f}%", f"{ev_long.get('accuracy', 0):.2%}")
+
+        with col4:
+            st.markdown("### Max Score")
             max_score = strat.get('max_score', {})
-            st.metric("回収率 (ROI)", f"{max_score.get('roi', 0):.2f}%")
-            st.metric("的中率 (Hit)", f"{max_score.get('accuracy', 0):.2%}")
+            st.metric("回収率", f"{max_score.get('roi', 0):.2f}%", f"{max_score.get('accuracy', 0):.2%}")
 
         # 2. ROI Curve
         st.subheader("回収率カーブ (期待値閾値ごとの推移)")
@@ -113,17 +121,23 @@ with tab3:
             st.warning("カーブデータが見つかりません。")
 
         # 3. Complex Betting
-        st.subheader("複合馬券シミュレーション (Box 5)")
-        st.markdown("スコア上位5頭をBOX買いした場合の回収率シミュレーション")
+        st.subheader("複合馬券シミュレーション")
+        st.markdown("Box: スコア上位5頭Box / Nagashi: スコア1位軸・上位2-6位相手")
         
         strategies = sim_data.get('strategies', {})
-        complex_keys = ['umaren_box5', 'sanrenpuku_box5', 'sanrentan_box5']
+        complex_keys = [
+            'umaren_box5', 'sanrenpuku_box5', 'sanrentan_box5',
+            'umaren_nagashi', 'sanrenpuku_nagashi', 'sanrentan_nagashi'
+        ]
         
         complex_data = []
         names = {
-            'umaren_box5': '馬連 Box5 (10点)', 
-            'sanrenpuku_box5': '3連複 Box5 (10点)', 
-            'sanrentan_box5': '3連単 Box5 (60点)'
+            'umaren_box5': '馬連 Box (5頭)', 
+            'sanrenpuku_box5': '3連複 Box (5頭)', 
+            'sanrentan_box5': '3連単 Box (5頭)',
+            'umaren_nagashi': '馬連 流し (軸1頭-相手5頭)',
+            'sanrenpuku_nagashi': '3連複 流し (軸1頭-相手5頭)',
+            'sanrentan_nagashi': '3連単 流し (軸1頭マルチ-相手5頭)'
         }
         
         for k in complex_keys:

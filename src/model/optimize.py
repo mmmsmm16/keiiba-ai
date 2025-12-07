@@ -224,7 +224,20 @@ def main():
     )
     
     logger.info(f"最適化を開始します (Model: {args.model}, Trials: {args.trials}, Version: {args.version})")
-    study.optimize(objective_func, n_trials=args.trials)
+    
+    # MLflow Callback Setup
+    from optuna.integration.mlflow import MLflowCallback
+    
+    mlflow_callback = MLflowCallback(
+        tracking_uri="http://mlflow:5000",
+        metric_name="value",
+        mlflow_kwargs={
+            "experiment_name": f"keiiba_{args.model}",
+            "run_name": f"{args.version}_{args.trials}trials"
+        }
+    )
+    
+    study.optimize(objective_func, n_trials=args.trials, callbacks=[mlflow_callback])
 
     print(f"Best trial:")
     print(f"  Value: {study.best_value}")

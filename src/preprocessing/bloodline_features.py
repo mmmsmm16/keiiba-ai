@@ -46,7 +46,7 @@ class BloodlineFeatureEngineer:
             # 重複排除（念のため）
             df_um = df_um.drop_duplicates(subset=['horse_id'])
 
-            self.bloodline_map = df_um.set_index('horse_id')[['sire_id', 'mare_id', 'bms_id']]
+            self.bloodline_map = df_um[['horse_id', 'sire_id', 'mare_id', 'bms_id']]
             logger.info(f"血統情報ロード完了: {len(self.bloodline_map)}頭")
         except Exception as e:
             logger.error(f"血統情報のロードに失敗しました: {e}")
@@ -72,8 +72,15 @@ class BloodlineFeatureEngineer:
             return df
 
         # データセットにsire_id, mare_id, bms_idを結合
-        # 左結合で、情報がない馬はNaNになる
-        df = df.merge(self.bloodline_map, on='horse_id', how='left')
+        # 既に存在する場合（JRA-VAN Loaderで結合済みなど）は、ないものだけ追加する
+        # 特に sire_id が重複すると _x, _y になってしまい、後の集計でエラーになる
+        new_cols = [c for c in self.bloodline_map.columns if c not in df.columns and c != 'horse_id']
+        
+        if new_cols:
+            logger.info(f"血統情報を以下のカラムで結合します: {new_cols}")
+            df = df.merge(self.bloodline_map[['horse_id'] + new_cols], on='horse_id', how='left')
+        else:
+            logger.info("血統情報は既に全て含まれているため、結合をスキップします。")
 
         # 2. ターゲットエンコーディング的な集計 (リーク防止のため時系列shiftが必要)
 
@@ -135,7 +142,11 @@ class BloodlineFeatureEngineer:
         df.drop(columns=['rank_numeric', 'is_win', 'is_top3'], inplace=True)
 
         # 欠損値埋め: 初出走の種牡馬などはNaNになる -> 0で埋める
-        cols_to_fill = [c for c in df.columns if c.startswith('sire_') or c.startswith('bms_')]
+        # IDカラム(_id)は埋めない（StringとIntが混ざるとParquet保存でエラーになるため）
+        cols_to_fill = [
+            c for c in df.columns 
+            if (c.startswith('sire_') or c.startswith('bms_')) and not c.endswith('_id')
+        ]
         df[cols_to_fill] = df[cols_to_fill].fillna(0)
 
         logger.info("血統特徴量の生成完了")

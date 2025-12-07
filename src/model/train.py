@@ -127,46 +127,58 @@ def main():
         logger.error("学習データが空です。")
         return
 
-    # 実験ロガーの初期化
-    exp_logger = ExperimentLogger(experiment_name=args.experiment_name)
-    logger.info(f"実験開始: 実験名={exp_logger.experiment_name}, モード={args.model}, Version={args.version}")
+    # MLflow Setup
+    import mlflow
+    mlflow.set_tracking_uri("http://mlflow:5000")
+    mlflow.set_experiment(f"keiiba_{args.model}")
 
-    model_dir = os.path.join(os.path.dirname(__file__), '../../models')
-    os.makedirs(model_dir, exist_ok=True)
+    with mlflow.start_run(run_name=f"{args.version}_train"):
+        # パラメータロード & ログ
+        params = load_params(args.model, args.version)
+        mlflow.log_params(params)
+        mlflow.log_param("version", args.version)
+        mlflow.log_param("batch_size", args.batch_size)
 
-    model = None
-    if args.model == 'lgbm':
-        model = train_lgbm(train_set, valid_set, model_dir, args.version)
-    elif args.model == 'catboost':
-        model = train_catboost(train_set, valid_set, model_dir, args.version)
-    elif args.model == 'tabnet':
-        model = train_tabnet(train_set, valid_set, model_dir, args.version, batch_size=args.batch_size)
-    elif args.model == 'ensemble':
-        model = train_ensemble(train_set, valid_set, model_dir, args.version)
+        model = None
+        if args.model == 'lgbm':
+            model = train_lgbm(train_set, valid_set, model_dir, args.version)
+        elif args.model == 'catboost':
+            model = train_catboost(train_set, valid_set, model_dir, args.version)
+        elif args.model == 'tabnet':
+            model = train_tabnet(train_set, valid_set, model_dir, args.version, batch_size=args.batch_size)
+        elif args.model == 'ensemble':
+            model = train_ensemble(train_set, valid_set, model_dir, args.version)
 
-    # 簡易評価ログ (Ensemble時のみ、または各モデルのValidスコア)
-    # ここでは共通処理としてエラーが出ない範囲で記録
-    metrics = {}
-    params = {}
-    
-    try:
-        if args.model == 'ensemble':
+        # 評価 & メトリクスログ
+        metrics = {}
+        try:
             preds = model.predict(valid_set['X'])
-            mse = ((preds - valid_set['y']) ** 2).mean()
-            metrics['valid_mse'] = mse
-            logger.info(f"Valid MSE: {mse:.4f}")
             
-            params['meta_model_coef'] = model.meta_model.coef_.tolist()
-    except Exception as e:
-        logger.warning(f"メトリクス計算中にエラーが発生しました: {e}")
+            # RMSE (共通指標)
+            mse = ((preds - valid_set['y']) ** 2).mean()
+            rmse = mse ** 0.5
+            metrics['rmse'] = rmse
+            
+            # NDCG (ランキングモデル用) - 簡易計算 (Top-N精度などはModelクラス依存が強いため、ここではRMSEメイン)
+            # もしNDCGが必要なら別途 evaluate.py で計算する推奨
+            
+            logger.info(f"Validation RMSE: {rmse:.4f}")
+            mlflow.log_metrics(metrics)
 
-    # 実験ログ保存
-    exp_logger.log_result(
-        model_type=args.model,
-        metrics=metrics,
-        params=params,
-        note=args.note
-    )
+            # モデルファイル保存 (Artifact)
+            # 各train関数内で保存されたパスを推定
+            ext = 'zip' if args.model == 'tabnet' else 'pkl'
+            model_path = os.path.join(model_dir, f'{args.model}_{args.version}.{ext}')
+            if os.path.exists(model_path):
+                mlflow.log_artifact(model_path)
+                logger.info(f"MLflow artifact saved: {model_path}")
+
+        except Exception as e:
+            logger.warning(f"メトリクス計算/保存中にエラーが発生しました: {e}")
+
+        # 旧ロガー互換性 (Optional: まだ残しておく)
+        exp_logger = ExperimentLogger(experiment_name=args.experiment_name)
+        exp_logger.log_result(model_type=args.model, metrics=metrics, params=params, note=args.note)
 
 if __name__ == "__main__":
     main()
