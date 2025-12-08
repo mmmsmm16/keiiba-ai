@@ -144,18 +144,13 @@ class InferencePreprocessor:
         # =================================================================
         # Strategy 2a: Bloodline Features (Mapping)
         # =================================================================
-        from preprocessing.bloodline_features import BloodlineFeatureEngineer
-        bl_engineer = BloodlineFeatureEngineer(data_loader=None) # Loader不要(Mappingだけならhistory不要だが内部で使うかも?)
-        # 実際にはMappingだけ欲しい。Loaderなしか、MockLoaderで...
-        # BloodlineFeatureEngineerは内部でJraVanDataLoaderを作る。
-        # ここではシンプルに、history_dfにある 'sire_id', 'bms_id' などを利用したいが、
-        # new_df には horse_id しかない。
-        # したがって、new_dfに対しても マッピングが必要。
-        # BloodlineFeatureEngineerのadd_featuresの前半(mapping)だけ利用する。
+        if not hasattr(self, 'bl_engineer') or self.bl_engineer is None:
+             from preprocessing.bloodline_features import BloodlineFeatureEngineer
+             self.bl_engineer = BloodlineFeatureEngineer(data_loader=None)
         
         # history_df には既に sire_id, bms_id があるはず。
         # new_df にはないので、結合する必要がある。
-        new_df = bl_engineer.add_features(new_df) 
+        new_df = self.bl_engineer.add_features(new_df) 
         # add_featuresは集計も行うが、historyがないnew_df単体では集計値はNaN/0になる。
         # しかしマッピング(sire_id列などの追加)は行われる。
         # 集計カラム (sire_avg_rankなど) は後で上書きする。

@@ -30,7 +30,7 @@ data/
 experiments/
 !experiments/LEADERBOARD.md
 models/
-src/scripts/
+
 .env
 
 # OS

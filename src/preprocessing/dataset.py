@@ -10,29 +10,31 @@ class DatasetSplitter:
     データセットを学習用・検証用・テスト用に分割し、
     LightGBM (Ranking) で学習可能な形式に整形するクラス。
     """
-    def split_and_create_dataset(self, df: pd.DataFrame) -> Dict[str, Dict]:
+    def split_and_create_dataset(self, df: pd.DataFrame, valid_year: int = 2024) -> Dict[str, Dict]:
         """
         データを分割してデータセットを作成します。
 
         Args:
             df (pd.DataFrame): 前処理済みの全データ。
+            valid_year (int): 検証に使用する年。Trainはこれより前の年、Testはこれより後の年になる。
 
         Returns:
             Dict: train, valid, test それぞれの {'X', 'y', 'group'} を含む辞書。
         """
-        logger.info("データセットの分割と作成を開始...")
+        logger.info(f"データセットの分割と作成を開始 (Valid Year: {valid_year})...")
 
         # ターゲット変数の作成 (Relevance Score)
         # 1着=3, 2着=2, 3着=1, 着外=0
-        df['target'] = df['rank'].apply(lambda x: 3 if x == 1 else (2 if x == 2 else (1 if x == 3 else 0)))
+        if 'target' not in df.columns:
+            df['target'] = df['rank'].apply(lambda x: 3 if x == 1 else (2 if x == 2 else (1 if x == 3 else 0)))
 
         # 時系列分割
-        # Train: 2015-2023 (Updated)
-        # Valid: 2024
-        # Test: 2025
-        train_df = df[df['year'].between(2015, 2023)].copy()
-        valid_df = df[df['year'] == 2024].copy()
-        test_df = df[df['year'] == 2025].copy()
+        # Train: 2010 ~ valid_year - 1 (Expanded start range)
+        # Valid: valid_year
+        # Test: valid_year + 1 ~
+        train_df = df[df['year'] < valid_year].copy()
+        valid_df = df[df['year'] == valid_year].copy()
+        test_df = df[df['year'] > valid_year].copy()
 
         logger.info(f"分割完了: Train({len(train_df)}), Valid({len(valid_df)}), Test({len(test_df)})")
 

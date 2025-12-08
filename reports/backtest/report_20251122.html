@@ -1,0 +1,274 @@
+
+        <!DOCTYPE html>
+        <html lang="ja">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Keiba AI Report (2025-11-22)</title>
+            <style>
+                body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background-color: #f4f6f9; color: #333; }
+                .container { max-width: 950px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+                h1 { color: #2c3e50; text-align: center; margin-bottom: 30px; }
+                .summary { background: #e8f0fe; padding: 20px; border-radius: 8px; margin-bottom: 30px; display: flex; justify-content: space-around; }
+                .summary div { text-align: center; }
+                .summary strong { display: block; font-size: 0.9em; color: #5f6368; }
+                .summary span { font-size: 1.4em; font-weight: bold; color: #1a73e8; }
+                
+                /* Accordion Style */
+                details { margin-bottom: 15px; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background: white; }
+                summary { cursor: pointer; padding: 15px; background-color: #f8f9fa; font-weight: bold; display: flex; align-items: center; justify-content: space-between; }
+                summary:hover { background-color: #f1f3f4; }
+                details[open] summary { border-bottom: 1px solid #e0e0e0; }
+                
+                .race-content { padding: 20px; }
+                
+                .tag { padding: 3px 8px; border-radius: 4px; font-size: 0.8em; margin-right: 10px; }
+                .tag-venue { background: #e6f4ea; color: #137333; }
+                .tag-miss { background: #fce8e6; color: #c5221f; }
+                .tag-hit { background: #fce8e6; color: #d93025; background: #e6f4ea; color: #1e8e3e; } /* Fixed typo logic in python code below */
+                
+                .bet-section { background: #fffbe6; padding: 15px; border-radius: 6px; margin-bottom: 20px; border-left: 5px solid #fbc02d; }
+                .result-msg { font-weight: bold; margin-top: 10px; }
+                
+                table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+                th { background-color: #f8f9fa; text-align: left; padding: 8px; border-bottom: 2px solid #ddd; }
+                td { padding: 8px; border-bottom: 1px solid #eee; }
+                tr:hover { background-color: #f5f5f5; }
+                .rank-1 { background-color: #fff9c4; font-weight: bold; }
+                .rank-2 { background-color: #f0f0f0; }
+                .rank-3 { background-color: #f5f5f5; }
+                .prob-bar { height: 4px; background-color: #1a73e8; border-radius: 2px; }
+                .footer { text-align: center; margin-top: 40px; color: #888; font-size: 0.8em; border-top: 1px solid #eee; padding-top: 20px; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>♘ Keiba AI Report (2025-11-22)</h1>
+                
+                <div class="summary">
+                    <div><strong>勝負レース</strong><span>1</span></div>
+                    <div><strong>総投資</strong><span>¥500</span></div>
+                    <div><strong>総回収</strong><span>¥0</span></div>
+                    <div><strong>純利益</strong><span style="color: blue">¥-500</span></div>
+                </div>
+        
+                <details>
+                    <summary>
+                    <div>
+                        <span class="tag tag-venue">8 1R</span>
+                        　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　
+                    </div>
+                    <div class="tag-miss tag">LOSE (-500)</div>
+                </summary>
+                    <div class="race-content">
+                        <div class="bet-section">
+                            <div style="display:flex; justify-content:space-between;">
+                                <div>
+                                    <strong>推奨買い目 (馬連)</strong>
+                                    <p style="margin:5px 0 0 0; font-family:monospace;">馬連ながし: 11 - 4, 13, 7, 9, 2<br>(@ 100円)<br><span style='color:blue;'>ハズレ (-500)</span></p>
+                                </div>
+                                <div style="text-align:right;">
+                                    <div style="font-size:0.9em; color:#666;">投資額</div>
+                                    <div style="font-weight:bold; font-size:1.1em;">¥500</div>
+                                    <br>
+                                    <div style="font-size:0.9em; color:#666;">払戻額</div>
+                                    <div style="font-weight:bold; font-size:1.2em; color:#333">¥0</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <h4 style="margin-top:20px; margin-bottom:10px;">出馬表 & 結果</h4>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th width="50">番</th>
+                                    <th>馬名</th>
+                                    <th width="60">Odds</th>
+                                    <th width="40">人</th>
+                                    <th width="100">AI確率</th>
+                                    <th width="40">着</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                
+                            <tr class="">
+                                <td>1</td>
+                                <td>コウユーネロガ　　　　　　　　　　　</td>
+                                <td>193.6</td>
+                                <td>12</td>
+                                <td>
+                                    0.6%
+                                    <div class="prob-bar" style="width: 3.08166409861325px;"></div>
+                                </td>
+                                <td>-</td>
+                            </tr>
+                            
+                            <tr class="">
+                                <td>2</td>
+                                <td>リリーサンライズ　　　　　　　　　　</td>
+                                <td>60.7</td>
+                                <td>9</td>
+                                <td>
+                                    7.2%
+                                    <div class="prob-bar" style="width: 36.22693096377305px;"></div>
+                                </td>
+                                <td>-</td>
+                            </tr>
+                            
+                            <tr class="">
+                                <td>3</td>
+                                <td>アロハマウロア　　　　　　　　　　　</td>
+                                <td>216.6</td>
+                                <td>13</td>
+                                <td>
+                                    0.3%
+                                    <div class="prob-bar" style="width: 1.4705882352941px;"></div>
+                                </td>
+                                <td>-</td>
+                            </tr>
+                            
+                            <tr class="">
+                                <td>4</td>
+                                <td>テーオーナタリー　　　　　　　　　　</td>
+                                <td>2.7</td>
+                                <td>1</td>
+                                <td>
+                                    16.1%
+                                    <div class="prob-bar" style="width: 80.64516129032255px;"></div>
+                                </td>
+                                <td>-</td>
+                            </tr>
+                            
+                            <tr class="">
+                                <td>5</td>
+                                <td>クリスプレミアム　　　　　　　　　　</td>
+                                <td>82.4</td>
+                                <td>10</td>
+                                <td>
+                                    1.2%
+                                    <div class="prob-bar" style="width: 6.1188811188811px;"></div>
+                                </td>
+                                <td>-</td>
+                            </tr>
+                            
+                            <tr class="">
+                                <td>6</td>
+                                <td>スノーガーネット　　　　　　　　　　</td>
+                                <td>16.2</td>
+                                <td>5</td>
+                                <td>
+                                    2.9%
+                                    <div class="prob-bar" style="width: 14.6135265700483px;"></div>
+                                </td>
+                                <td>-</td>
+                            </tr>
+                            
+                            <tr class="">
+                                <td>7</td>
+                                <td>アスターエポワス　　　　　　　　　　</td>
+                                <td>3.3</td>
+                                <td>3</td>
+                                <td>
+                                    7.3%
+                                    <div class="prob-bar" style="width: 36.39774859287051px;"></div>
+                                </td>
+                                <td>-</td>
+                            </tr>
+                            
+                            <tr class="">
+                                <td>8</td>
+                                <td>フェンネル　　　　　　　　　　　　　</td>
+                                <td>169.6</td>
+                                <td>11</td>
+                                <td>
+                                    0.6%
+                                    <div class="prob-bar" style="width: 3.08166409861325px;"></div>
+                                </td>
+                                <td>-</td>
+                            </tr>
+                            
+                            <tr class="">
+                                <td>9</td>
+                                <td>マリノムーンリーフ　　　　　　　　　</td>
+                                <td>12.5</td>
+                                <td>4</td>
+                                <td>
+                                    7.3%
+                                    <div class="prob-bar" style="width: 36.39774859287051px;"></div>
+                                </td>
+                                <td>-</td>
+                            </tr>
+                            
+                            <tr class="">
+                                <td>10</td>
+                                <td>モノノケ　　　　　　　　　　　　　　</td>
+                                <td>33.5</td>
+                                <td>7</td>
+                                <td>
+                                    5.5%
+                                    <div class="prob-bar" style="width: 27.7425491439442px;"></div>
+                                </td>
+                                <td>-</td>
+                            </tr>
+                            
+                            <tr class="">
+                                <td>11</td>
+                                <td>ガーネットフレア　　　　　　　　　　</td>
+                                <td>3.2</td>
+                                <td>2</td>
+                                <td>
+                                    41.8%
+                                    <div class="prob-bar" style="width: 100px;"></div>
+                                </td>
+                                <td>-</td>
+                            </tr>
+                            
+                            <tr class="">
+                                <td>12</td>
+                                <td>マユナイト　　　　　　　　　　　　　</td>
+                                <td>37.9</td>
+                                <td>8</td>
+                                <td>
+                                    3.7%
+                                    <div class="prob-bar" style="width: 18.471659919028298px;"></div>
+                                </td>
+                                <td>-</td>
+                            </tr>
+                            
+                            <tr class="">
+                                <td>13</td>
+                                <td>エボニードール　　　　　　　　　　　</td>
+                                <td>24.5</td>
+                                <td>6</td>
+                                <td>
+                                    8.1%
+                                    <div class="prob-bar" style="width: 40.50235478806905px;"></div>
+                                </td>
+                                <td>-</td>
+                            </tr>
+                            
+                            <tr class="">
+                                <td>14</td>
+                                <td>ライクシュガー　　　　　　　　　　　</td>
+                                <td>586.8</td>
+                                <td>14</td>
+                                <td>
+                                    0.2%
+                                    <div class="prob-bar" style="width: 0.98135426889105px;"></div>
+                                </td>
+                                <td>-</td>
+                            </tr>
+                            
+                            </tbody>
+                        </table>
+                        
+                    </div>
+                </details>
+                
+                <div class="footer">
+                    Generated by Keiba AI Operation System
+                </div>
+            </div>
+        </body>
+        </html>
+        

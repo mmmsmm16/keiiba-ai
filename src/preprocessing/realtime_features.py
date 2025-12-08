@@ -83,27 +83,36 @@ class RealTimeFeatureEngineer:
         # Select for merge
         trend_cols = [f"trend_{c}_rate" for c in cols]
         trend_df = race_stats[['date', 'venue', 'race_number'] + trend_cols].copy()
-        
+
         # 3. 元のデータフレームに結合
-        df_out = pd.merge(df, trend_df, on=['date', 'venue', 'race_number'], how='left')
+        # Variable initialization to avoid scope error
+        df_out = df.copy() 
+        
+        if trend_df.empty:
+            logger.warning("Trend DF is empty. Creating empty trend columns.")
+            # Columns will be filled by defaults loop below, so minimal action needed here
+            # But ensure they exist? Defaults loop handles "if col not in df_out.columns"
+            pass
+        else:
+            # logger.info(f"Merging trend_df columns: {trend_df.columns.tolist()}")
+            df_out = pd.merge(df, trend_df, on=['date', 'venue', 'race_number'], how='left')
         
         # 欠損値埋め (第1レースなどは情報がないので 0)
         # 「平均的」な値で埋める方が安全かも？
-        # inner/mid/outer random probability: 2/8=0.25, 4/8=0.5, 2/8=0.25
-        # front: ~20%?
-        # fav: ~30%?
-        # バイアス特徴量なので、0 (neutral assumption or deviations) or Mean.
-        # ここでは 0.0 で埋めると「特徴量として効かない」ことになるか、「低い」ことになるか。
-        # LightGBMは0を値として扱う。平均値で埋めるのが無難だが、Unknownとして扱うならNaNでもいいがLGBMはNaN扱える。
-        # しかし前処理でNaN埋めすることが多い。
-        # ここでは「開催前」=「バイアスなし」としたい。
-        # バイアスなしの基準値を入れる。
-        df_out['trend_win_inner_rate'] = df_out['trend_win_inner_rate'].fillna(0.25)
-        df_out['trend_win_mid_rate']   = df_out['trend_win_mid_rate'].fillna(0.50)
-        df_out['trend_win_outer_rate'] = df_out['trend_win_outer_rate'].fillna(0.25)
-        df_out['trend_win_front_rate'] = df_out['trend_win_front_rate'].fillna(0.20) # Approx nige win rate
-        df_out['trend_win_fav_rate']   = df_out['trend_win_fav_rate'].fillna(0.33)   # Approx fav win rate
+        defaults = {
+            'trend_win_inner_rate': 0.25,
+            'trend_win_mid_rate': 0.50,
+            'trend_win_outer_rate': 0.25,
+            'trend_win_front_rate': 0.20,
+            'trend_win_fav_rate': 0.33
+        }
         
-        logger.info(f"リアルタイム特徴量生成完了: {len(trend_cols)} features added.")
+        for col, val in defaults.items():
+            if col not in df_out.columns:
+                df_out[col] = val
+            else:
+                df_out[col] = df_out[col].fillna(val)
+        
+        logger.info(f"リアルタイム特徴量生成完了: {len(trend_cols)} features processed.")
         return df_out
 

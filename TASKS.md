@@ -176,22 +176,33 @@
 
 
 
-## Phase 16: 運用パイプラインの自動化 (Systematization & Automation - Priority A)
-- [ ] **統合パイプラインスクリプト** (`src/scripts/run_weekly.py`)
-    - [ ] データ更新 (Data Ingestion)
-    - [ ] 前処理 & 特徴量更新 (Preprocessing)
-    - [ ] 推論実行 (Inference v4)
-    - [ ] 買い目フィルタリング (Betting Strategy)
-    - [ ] レポート出力 (HTML/CSV)
-- [ ] **出力フォーマットの整備**
-    - [ ] スマホで見やすいHTMLレポート作成
-- [ ] **ログ監視**
+## Phase 16: 運用パイプラインの自動化 (Systematization & Automation - Priority A) [x] Verified
+- [x] **統合パイプラインスクリプト** (`src/scripts/run_weekly.py`)
+    - [x] データ更新 (Data Ingestion)
+    - [x] 前処理 & 特徴量更新 (Preprocessing)
+    - [x] モデル再学習 (Retraining / Update Model)
+    - [x] 推論実行 (Inference v4)
+    - [x] 買い目フィルタリング (Betting Strategy)
+    - [x] レポート出力 (HTML)
+- [x] **出力フォーマットの整備**
+    - [x] スマホで見やすいHTMLレポート作成 (`src/reporting/html_generator.py`)
+- [ ] ログ監視
     - [ ] 実行ログの保存とエラー通知
 
-## Phase 17: リスク管理UI (Risk Management Dashboard)
-- [ ] **ダッシュボード拡張**
-    - [ ] 資金シミュレーション結果の統合表示
-    - [ ] 「推奨賭け金」計算ツールの実装 (Your Bankroll -> Bet Size)
+## Phase 16.5: Daily Backtest & Verification (Verification Tooling) [x] Verified
+- [x] **Backtest Tool Impl** (`src/scripts/run_daily_backtest.py`)
+    - [x] Simulate past inference and betting (`predict.py`)
+    - [x] Evaluation against actual results (`evaluate_bets`)
+    - [x] Payout data parsing (`BettingOptimizer` integration)
+    - [x] HTML Report Generation (`reports/backtest/`)
+- [x] **Verification on Past Data**
+    - [x] Tested on 2024-11-24 (Japan Cup Day)
+    - [x] Confirmed pipeline consistency (Loader -> Features -> Predict -> Strategy -> P&L)
+
+## Phase 17: リスク管理UI (Risk Management Dashboard) [x] Implemented
+- [x] **ダッシュボード拡張**
+    - [x] 資金シミュレーション結果の統合表示 (`src/dashboard/pages/4_Risk_Management.py`)
+    - [x] 「推奨賭け金」計算ツールの実装 (Your Bankroll -> Bet Size, Kelly Criterion)
 
 ## Phase 18: リアルタイム・オッズ連携 (Real-time Integration)
 - [ ] **直前オッズ取得**

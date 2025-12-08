@@ -1,0 +1,12 @@
+
+betting:
+  initial_bankroll: 1000000
+  kelly_fraction: 0.1
+  ticket_type: "umaren"
+  model_type: "lgbm"
+  model_version: "v4_emb" # Base model
+  
+pipeline:
+  update_data: true
+  retrain_model: true
+  valid_year: 2024

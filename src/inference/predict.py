@@ -29,37 +29,34 @@ def main():
     parser.add_argument('--version', type=str, default='v1')
     args = parser.parse_args()
     
-    # 1. Load Data
+    # 1. データのロード
     loader = InferenceDataLoader()
     # 開催日を判定 (指定日が開催日でない場合、直近の過去開催日を取得したりするロジックが必要だが、ここでは指定日必須とする)
     target_date = args.date.replace('-', '') # YYYYMMDD
     
-    logger.info(f"Loading data for date: {target_date}")
-    raw_df = loader.load_race_data(target_date)
+    logger.info(f"データロード中: {target_date}")
+    raw_df = loader.load(target_date=target_date)
     
     if raw_df.empty:
-        logger.warning(f"No race data found for {target_date}")
+        logger.warning(f"{target_date} のレースデータが見つかりません。")
         return
 
-    # 2. Preprocess
-    logger.info("Preprocessing...")
+    # 2. 前処理
+    logger.info("前処理を実行中...")
     preprocessor = InferencePreprocessor()
     # 過去データ(学習用)を使って特徴量エンジニアリング
-    # 注意: ここで過去データを全ロードすると重いので、キャッシュを使うか、あるいは推論に必要な統計量だけロードする仕組みが推奨される
-    # 現状の実装: load_data() で train_data をロードしている
-    preprocessor.load_data() 
-    
-    processed_df = preprocessor.process(raw_df)
+    X, ids = preprocessor.preprocess(raw_df)
+    processed_df = pd.concat([ids, X], axis=1)
     
     if processed_df.empty:
-        logger.error("Preprocessing failed (empty result).")
+        logger.error("前処理に失敗しました (データが空です)。")
         return
 
-    # 3. Load Model
+    # 3. モデルのロード
     model_dir = os.path.join(os.path.dirname(__file__), '../../models')
     model = None
     
-    logger.info(f"Loading Model: {args.model} ({args.version})")
+    logger.info(f"モデルをロード中: {args.model} ({args.version})")
     try:
         if args.model == 'ensemble':
             model = EnsembleModel()
@@ -82,11 +79,11 @@ def main():
             if not os.path.exists(path): path = os.path.join(model_dir, 'tabnet.zip')
             model.load_model(path.replace('.zip', '.pkl'))
     except Exception as e:
-        logger.error(f"Model load failed: {e}")
+        logger.error(f"モデルロード失敗: {e}")
         return
 
-    # 4. Load Calibrator (New for Phase 13)
-    logger.info("Loading Probability Calibrator...")
+    # 4. Calibrator のロード (New for Phase 13)
+    logger.info("確率補正器 (Calibrator) をロード中...")
     calibrator = None
     calib_path = os.path.join(model_dir, 'calibrator.pkl')
     if os.path.exists(calib_path):
@@ -95,17 +92,34 @@ def main():
         try:
             calibrator.load(calib_path)
         except Exception as e:
-            logger.warning(f"Failed to load calibrator: {e}")
+            logger.warning(f"Calibratorのロードに失敗: {e}")
             calibrator = None
     else:
-        logger.warning("Calibrator not found. Proceeding with raw probabilities.")
+        logger.warning("Calibratorが見つかりません。生の確率を使用します。")
 
-    # 5. Predict
-    logger.info("Predicting...")
+    # 5. 予測実行
+    logger.info("予測を実行中...")
     # Feature selection
     feature_cols = None
-    if args.model == 'lgbm' and hasattr(model.model, 'feature_name'):
-        feature_cols = model.model.feature_name()
+    
+    if args.model == 'lgbm':
+        # Check various attributes
+        bst = model.model
+        logger.info(f"モデル内部タイプ: {type(bst)}")
+        
+        if hasattr(bst, 'feature_name'):
+            # Booster
+            try:
+                feature_cols = bst.feature_name()
+            except:
+                feature_cols = bst.feature_name
+        elif hasattr(bst, 'feature_name_'):
+            # Sklearn API
+            feature_cols = bst.feature_name_
+        elif hasattr(bst, 'booster_'):
+            # Sklearn API
+            feature_cols = bst.booster_.feature_name()
+            
     elif args.model == 'catboost' and hasattr(model.model, 'feature_names_'):
         feature_cols = model.model.feature_names_
     
@@ -119,13 +133,20 @@ def main():
                 feature_cols = datasets['train']['X'].columns.tolist()
 
     if feature_cols:
+        logger.info(f"モデル定義の特徴量数: {len(feature_cols)}")
+        # Deduplicate processed_df columns just in case
+        processed_df = processed_df.loc[:, ~processed_df.columns.duplicated()]
+        
         missing = set(feature_cols) - set(processed_df.columns)
+        if missing: logger.warning(f"入力に欠損している特徴量: {missing}")
         for c in missing: processed_df[c] = 0
         X_pred = processed_df[feature_cols]
     else:
+        logger.warning("モデルの特徴量名が見つかりません。全ての数値カラムを使用します。")
         # Fallback risky
         X_pred = processed_df.select_dtypes(include=[np.number])
     
+    logger.info(f"{X_pred.shape[1]} 個の特徴量をモデルに入力します。")
     scores = model.predict(X_pred)
     processed_df['score'] = scores
     
@@ -156,16 +177,17 @@ def main():
     out_cols = [
         'race_id', 'horse_number', 'horse_name', 
         'score', 'prob', 'calibrated_prob', 'expected_value', 
-        'odds', 'popularity', 'rank' # rank might be missing for future
+        'odds', 'popularity', 'rank', # rank might be missing for future
+        'title', 'venue', 'race_number' # Metadata for reporting
     ]
     # Filter existing
     out_cols = [c for c in out_cols if c in processed_df.columns]
     
     processed_df[out_cols].to_csv(save_path, index=False)
-    logger.info(f"Predictions saved to {save_path}")
+    logger.info(f"予測結果を保存しました: {save_path}")
     
     # Also print top picks
-    print("\n--- Top Picks (EV Top 5) ---")
+    print("\n--- 推奨馬 (EV Top 5) ---")
     picks = processed_df.sort_values('expected_value', ascending=False).head(5)
     print(picks[['race_id', 'horse_number', 'horse_name', 'calibrated_prob', 'odds', 'expected_value']])
 

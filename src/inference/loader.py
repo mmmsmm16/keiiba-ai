@@ -156,7 +156,8 @@ class InferenceDataLoader:
             -- Fetch Results (Rank, Passing Rank) for Context Features
             -- se (Results) takes precedence over ur (Entry) if available
             COALESCE(se.kakutei_chakujun, NULL)::numeric AS rank,
-            se.tsuka_jun AS passing_rank,
+            -- se.tsuka_jun AS passing_rank,
+            NULL AS passing_rank,
             
             NULL AS rank_str, -- Deprecated/Unused downstream but kept for schema compat
             NULL AS raw_time,
