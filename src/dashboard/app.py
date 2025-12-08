@@ -298,68 +298,14 @@ with tab4:
                         bet_type = "-" # For debug
                         
                         if strategy_mode == "Perfect Portfolio (推奨)":
-                            # 1. Solid Match
-                            if odds < 3.0 and ev >= 1.0:
-                                bet_type = "Solid Formation"
-                                # Formation: 1 -> 2-5 -> 2-8 (24 pts)
-                                cost = 24 * 100
-                                pm = _payout_map.get(rid, {})
-                                # Hit Check
-                                actual_rank1 = sub[sub['rank'] == 1]
-                                actual_rank2 = sub[sub['rank'] == 2]
-                                actual_rank3 = sub[sub['rank'] == 3]
-                                h1 = int(actual_rank1['horse_number'].iloc[0]) if not actual_rank1.empty else -1
-                                h2 = int(actual_rank2['horse_number'].iloc[0]) if not actual_rank2.empty else -1
-                                h3 = int(actual_rank3['horse_number'].iloc[0]) if not actual_rank3.empty else -1
-                                axis = int(top['horse_number'])
-                                
-                                # Opponents by AI Rank
-                                opps_ordered = sub.sort_values('score', ascending=False).iloc[1:] # 2nd place and below
-                                if len(opps_ordered) >= 9:
-                                    rank_map = {i+2: int(row['horse_number']) for i, row in enumerate(opps_ordered.iloc[:9].to_dict('records'))}
-                                    
-                                    # Generate Formation
-                                    if h1 == axis:
-                                        # Check if h2 in 2-5
-                                        valid_h2 = [rank_map.get(r) for r in [2,3,4,5] if rank_map.get(r) is not None]
-                                        valid_h3 = [rank_map.get(r) for r in [2,3,4,5,6,7,8] if rank_map.get(r) is not None]
-                                        
-                                        if h2 in valid_h2 and h3 in valid_h3:
-                                            k = f"{h1:02}{h2:02}{h3:02}"
-                                            payout = pm.get('sanrentan', {}).get(k, 0)
-                                            
-                            # 2. Longshot Match
-                            elif odds >= 10.0 and ev >= 1.3:
-                                bet_type = "Longshot Nagashi"
-                                # Nagashi: 1 -> 2-7 (30 pts)
-                                cost = 30 * 100
-                                pm = _payout_map.get(rid, {})
-                                actual_rank1 = sub[sub['rank'] == 1]
-                                actual_rank2 = sub[sub['rank'] == 2]
-                                actual_rank3 = sub[sub['rank'] == 3]
-                                h1 = int(actual_rank1['horse_number'].iloc[0]) if not actual_rank1.empty else -1
-                                h2 = int(actual_rank2['horse_number'].iloc[0]) if not actual_rank2.empty else -1
-                                h3 = int(actual_rank3['horse_number'].iloc[0]) if not actual_rank3.empty else -1
-                                axis = int(top['horse_number'])
-                                
-                                opps = sub.sort_values('score', ascending=False).iloc[1:7]['horse_number'].tolist()
-                                opp_nums = [int(x) for x in opps if not pd.isna(x)]
-                                
-                                if h1 == axis and h2 in opp_nums and h3 in opp_nums:
-                                    k = f"{h1:02}{h2:02}{h3:02}"
-                                    payout = pm.get('sanrentan', {}).get(k, 0)
-                                    
-                            # 3. Skip
-                            else:
-                                pass # Cost 0
-
-                        elif strategy_mode == "Smart Bet (旧推奨)":
-                            # Old Logic
+                            # v9 Recommended Stratgy (Aligned with evaluate.py "recommended_formation")
+                            # Condition: Prob >= 20%, Odds >= 3.0, EV >= 1.2
                             if (prob >= 0.20 and odds >= 3.0 and ev >= 1.2):
-                                bet_type = "Smart Bet Nagashi"
+                                bet_type = "Recommended Formation (v9)"
+                                # Formation: Axis -> Opps(2-7) -> Opps(2-7) (30 pts)
                                 cost = 30 * 100
                                 pm = _payout_map.get(rid, {})
-                                # Standard Nagashi 1 -> 2-7
+                                
                                 actual_rank1 = sub[sub['rank'] == 1]
                                 actual_rank2 = sub[sub['rank'] == 2]
                                 actual_rank3 = sub[sub['rank'] == 3]
@@ -367,12 +313,15 @@ with tab4:
                                 h2 = int(actual_rank2['horse_number'].iloc[0]) if not actual_rank2.empty else -1
                                 h3 = int(actual_rank3['horse_number'].iloc[0]) if not actual_rank3.empty else -1
                                 axis = int(top['horse_number'])
+                                
                                 opps = sub.sort_values('score', ascending=False).iloc[1:7]['horse_number'].tolist()
                                 opp_nums = [int(x) for x in opps if not pd.isna(x)]
                                 
                                 if h1 == axis and h2 in opp_nums and h3 in opp_nums:
                                     k = f"{h1:02}{h2:02}{h3:02}"
                                     payout = pm.get('sanrentan', {}).get(k, 0)
+                            else:
+                                pass # Skip
 
                         else: # Normal
                             # Standard Logic (Odds based)

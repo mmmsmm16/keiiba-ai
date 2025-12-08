@@ -96,6 +96,12 @@ def main():
         realtime_engineer = RealTimeFeatureEngineer()
         df = realtime_engineer.add_features(df)
 
+        # 6.8. Deep Learning Embedding Features (Phase 12)
+        from preprocessing.embedding_features import EmbeddingFeatureEngineer
+        logger.info("Step 6.8: Embedding特徴量生成 (Entity Embeddings)")
+        emb_engineer = EmbeddingFeatureEngineer()
+        df = emb_engineer.add_features(df)
+
         # 7. データの保存 (全データ)
         output_dir = os.path.join(os.path.dirname(__file__), '../../data/processed')
         os.makedirs(output_dir, exist_ok=True)

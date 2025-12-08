@@ -6,47 +6,39 @@ import pandas as pd
 import numpy as np
 import logging
 import pickle
+import lightgbm as lgb
+from sklearn.metrics import roc_auc_score
 from scipy.special import softmax
 from scipy.stats import entropy
-import lightgbm as lgb
-from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_auc_score
 
 # Add src to path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-from model.betting_strategy import BettingSimulator
-from model.evaluate import load_payout_data
-# from model.ensemble import EnsembleModel
+from model.lgbm import KeibaLGBM
+from model.ensemble import EnsembleModel
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 def calculate_race_features(df):
     """
-    レース単位の特徴量を計算
+    レース単位の統計量特徴量を計算
+    calibrated_prob があればそちらを優先使用する
     """
     race_feats = []
     
-    logger.info(f"CalcFeatures DF Cols: {df.columns.tolist()}")
-    logger.info(f"CalcFeatures Input Size: {len(df)}")
-    for race_id, group in df.groupby(df['race_id']):
-        probs = group['prob'].values
+    prob_col = 'calibrated_prob' if 'calibrated_prob' in df.columns else 'prob'
+    logger.info(f"Using '{prob_col}' for Feature Generation.")
+
+    for race_id, group in df.groupby('race_id'):
+        probs = group[prob_col].values
         odds = group['odds'].fillna(0).values
         
-        # 1. Entropy (Confusion)
         ent = entropy(probs)
-        
-        # 2. Odds Volatility (Standard Deviation)
         odds_std = np.std(odds)
-        
-        # 3. Model Confidence (Max Prob)
         max_prob = np.max(probs)
-        
-        # 4. Confidence Gap (1st - 2nd)
         sorted_probs = sorted(probs, reverse=True)
         gap = sorted_probs[0] - sorted_probs[1] if len(sorted_probs) > 1 else 0
-        
-        # 5. Number of horses
         n_horses = len(group)
         
         race_feats.append({
@@ -57,246 +49,169 @@ def calculate_race_features(df):
             'confidence_gap': gap,
             'n_horses': n_horses
         })
-        
-    res_df = pd.DataFrame(race_feats)
-    if res_df.empty:
-        # Ensure columns exist to prevent merge error
+    df_res = pd.DataFrame(race_feats)
+    if df_res.empty:
         return pd.DataFrame(columns=['race_id', 'entropy', 'odds_std', 'max_prob', 'confidence_gap', 'n_horses'])
-    return res_df
+    return df_res
 
-def main():
-    parser = argparse.ArgumentParser(description='Train Betting Decision Model')
-    parser.add_argument('--input', type=str, default='data/processed/preprocessed_data.parquet')
-    parser.add_argument('--model_dir', type=str, default='models')
-    args = parser.parse_args()
-
-    # 1. Load Data
-    logger.info("Loading data...")
-    df = pd.read_parquet(args.input)
-    # Ensure race_id is a column
-    if 'race_id' not in df.columns:
-        df = df.reset_index()
-    
-    # 2. Load LightGBM Model (Faster scoring)
-    logger.info("Loading LightGBM Model for scoring...")
-    from model.lgbm import KeibaLGBM
-    model = KeibaLGBM()
-    model_path = os.path.join(args.model_dir, 'lgbm.pkl')
-    
-    if not os.path.exists(model_path):
-        logger.error(f"LGBM model not found at {model_path}")
-        return
-        
-    model.load_model(model_path)
-    
-    # Feature Extraction logic
-    # Use 2020-2023 for Training, 2024 for Valid
-    train_df = df[df['year'].isin([2020, 2021, 2022, 2023])].copy()
-    valid_df = df[df['year'] == 2024].copy()
-    
-    logger.info(f"DEBUG: Train DF Cols Initial: {train_df.columns.tolist()}") 
-    
-    # Predict Scores
-    feature_cols = None
-    if hasattr(model.model, 'feature_name'):
-         feature_cols = model.model.feature_name()
-
-    logger.info(f"Train DF Columns: {train_df.columns.tolist()}")
-    if 'race_id' not in train_df.columns:
-        logger.error("race_id missing from train_df!")
-
-    if feature_cols:
-        missing = set(feature_cols) - set(train_df.columns)
-        for c in missing: train_df[c] = 0
-        for c in missing: valid_df[c] = 0
-        # Ensure we don't overwrite train_df, just pick features
-        X_train = train_df[feature_cols]
-        X_valid = valid_df[feature_cols]
-    else:
-        # Fallback
-        exclude = ['race_id', 'horse_number', 'horse_id', 'jockey_id', 'trainer_id', 'rank', 'time', 'odds', 'popularity', 'year']
-        X_train = train_df.select_dtypes(include=[np.number]).drop(columns=[c for c in exclude if c in train_df.columns])
-        X_valid = valid_df.select_dtypes(include=[np.number]).drop(columns=[c for c in exclude if c in valid_df.columns])
-
-    logger.info("Generating scores (LGBM)...")
-    # Predict
-    train_scores = model.predict(X_train)
-    valid_scores = model.predict(X_valid)
-    
-    # Reconstruct Clean DataFrames for Context Calculation
-    # Step 1: Select rows (all columns)
-    clean_train = df.loc[train_df.index].copy()
-    clean_valid = df.loc[valid_df.index].copy()
-    
-    # Step 2: Ensure race_id is column
-    if 'race_id' not in clean_train.columns:
-        clean_train = clean_train.reset_index()
-    if 'race_id' not in clean_valid.columns:
-        clean_valid = clean_valid.reset_index()
-
-    # Step 3: Select columns + Score
-    cols_to_keep = ['race_id', 'odds', 'horse_number']
-    clean_train = clean_train[cols_to_keep].copy()
-    clean_valid = clean_valid[cols_to_keep].copy()
-    
-    clean_train['score'] = train_scores
-    clean_valid['score'] = valid_scores
-    
-    logger.info(f"CleanTrain Cols: {clean_train.columns.tolist()}")
-    
-    # Probabilities
-    # Use explicit Series for groupby to avoid lookup errors
-    if 'race_id' in clean_train.columns:
-        clean_train['prob'] = clean_train.groupby(clean_train['race_id'])['score'].transform(lambda x: softmax(x))
-        clean_valid['prob'] = clean_valid.groupby(clean_valid['race_id'])['score'].transform(lambda x: softmax(x))
-    else:
-        logger.error("CRITICAL: race_id still missing in clean_train!")
-
-    # 3. Create Race Features
-    logger.info("Calculating Race Context Features...")
-    # Use clean DFs
-    train_race_feats = calculate_race_features(clean_train)
-    valid_race_feats = calculate_race_features(clean_valid)
-    
-    # 4. Define Target (Did "Sanrenpuku Formation" hit?)
-    logger.info("Defining Targets...")
-    # Load Payouts
-    year_list = df['year'].unique()
-    logger.info(f"Loading Payouts for years: {year_list}")
-    payout_dfs = []
-    for y in year_list:
-        p_df = load_payout_data(year=y)
-        if not p_df.empty:
-            payout_dfs.append(p_df)
-            
-    if not payout_dfs:
-        logger.error("No payout data found!")
-        return
-
-    payout_df = pd.concat(payout_dfs)
-    
-    # Helper to check hit
-    # Logic: For each race, check if [Axis=1st by Score, Opp=2-6th by Score] hits Sanrenpuku.
-    
+def create_targets(df):
+    """
+    正解ラベルを作成: 
+    1. Win: モデルの1位指名が1着だったか
+    2. Place: モデルの1位指名が3着以内だったか
+    """
     targets = []
     
-    # Merge Features and Target
-    # Prepare Targets using simulation on Clean Data
-    logger.info("Defining Targets using Clean Data...")
-    
-    all_df = pd.concat([clean_train, clean_valid])
-    sim = BettingSimulator(all_df, payout_df)
-    
-    # Run simple simulation per race to get hit status
-    strategies = []
-    # Using the standard strategy as Target Reference
-    axis_rank = 1
-    opp_ranks = [2,3,4,5,6]
-    
-    logger.info(f"All DF Size: {len(all_df)}")
-    if not all_df.empty:
-        logger.info(f"All DF Head: {all_df.head()}")
-        logger.info(f"All DF RaceID Dtype: {all_df['race_id'].dtype}")
-        logger.info(f"All DF Unique Races: {all_df['race_id'].nunique()}")
-
-    for race_id, group in all_df.groupby(all_df['race_id']):
-        if race_id not in sim.payout_map:
+    for race_id, group in df.groupby('race_id'):
+        if group['score'].isna().all(): continue
+        
+        # Best Score Horse
+        best_horse = group.loc[group['score'].idxmax()]
+        
+        if pd.isna(best_horse['rank']):
             continue
             
-        sorted_horses = group.sort_values('score', ascending=False)
-        if len(sorted_horses) < 6: continue
+        rank = int(best_horse['rank'])
+        is_win = 1 if rank == 1 else 0
+        is_place = 1 if rank <= 3 else 0
         
-        axis = int(sorted_horses.iloc[axis_rank-1]['horse_number'])
-        opps = [int(h) for h in sorted_horses.iloc[1:6]['horse_number']] 
-        
-        results = sim.payout_map[race_id].get('sanrenpuku', {})
-        is_hit = 0
-        return_amount = 0
-        
-        for combo_str, payout in results.items():
-            # Parse combo keys (assuming 6 digits for sanrenpuku "010203")
-            # If length is insufficient, skip or handle (e.g. integer conversion stripped leading zero)
-            # But BettingSimulator assumes :02 padding, so keys should be padded if _build_payout_map is consistent.
-            # However, _build_payout_map uses str(row[...]). If DB returns int, it might lack padding.
-            # Let's simple check membership.
-            
-            # Robust parsing?
-            # Try to convert to padded string if needed?
-            s = str(combo_str).zfill(6)
-            try:
-                horses = [int(s[i:i+2]) for i in range(0, 6, 2)]
-            except:
-                continue
-
-            if axis in horses:
-                others = [h for h in horses if h != axis]
-                if all(o in opps for o in others):
-                    is_hit = 1
-                    return_amount += int(payout)
-        
-        cost = 10 * 100 
-        is_profitable = 1 if return_amount > cost else 0
-        
-        strategies.append({
-            'race_id': race_id,
-            'is_hit': is_hit,
-            'is_profitable': is_profitable,
-            'return': return_amount
+        targets.append({
+            'race_id': race_id, 
+            'target_win': is_win,
+            'target_place': is_place
         })
-        
-    target_df = pd.DataFrame(strategies)
-    if target_df.empty:
-         target_df = pd.DataFrame(columns=['race_id', 'is_hit', 'is_profitable', 'return'])
-    
-    # Merge Features and Target
-    logger.info(f"Train Feats Cols: {train_race_feats.columns.tolist()}, Shape: {train_race_feats.shape}")
-    logger.info(f"Target DF Cols: {target_df.columns.tolist()}, Shape: {target_df.shape}")
-    
-    train_data = train_race_feats.merge(target_df, on='race_id')
-    valid_data = valid_race_feats.merge(target_df, on='race_id')
-    
-    # 5. Train Logic
-    logger.info("Training Betting Model...")
-    
+            
+    df_res = pd.DataFrame(targets)
+    if df_res.empty:
+        return pd.DataFrame(columns=['race_id', 'target_win', 'target_place'])
+    return df_res
+
+def train_and_save(train_data, valid_data, target_col, output_name, model_dir):
+    """
+    指定されたターゲットでモデルを学習・保存
+    """
     features = ['entropy', 'odds_std', 'max_prob', 'confidence_gap', 'n_horses']
-    target = 'is_profitable' # Trying to predict broken races where we win big? Or just hit?
-    # Better: Predict 'is_hit' (Stability) or 'is_profitable' (ROI).
-    # Let's try 'is_profitable'.
     
-    lgb_train = lgb.Dataset(train_data[features], train_data[target])
-    lgb_valid = lgb.Dataset(valid_data[features], valid_data[target], reference=lgb_train)
+    logger.info(f"Training Model for Target: {target_col}")
+    logger.info(f"Positive Ratio (Train): {train_data[target_col].mean():.4f}")
+    
+    lgb_train = lgb.Dataset(train_data[features], train_data[target_col])
+    lgb_eval = lgb.Dataset(valid_data[features], valid_data[target_col], reference=lgb_train)
     
     params = {
         'objective': 'binary',
         'metric': 'auc',
+        'verbosity': -1,
         'boosting_type': 'gbdt',
         'learning_rate': 0.05,
         'num_leaves': 31,
-        'verbose': -1
+        'is_unbalance': True,
     }
     
-    bst = lgb.train(params, lgb_train, valid_sets=[lgb_valid], num_boost_round=100,
-                    callbacks=[lgb.early_stopping(10), lgb.log_evaluation(10)])
+    callbacks = [
+        lgb.early_stopping(stopping_rounds=50),
+        lgb.log_evaluation(period=50)
+    ]
     
-    # Evaluate
-    preds = bst.predict(valid_data[features])
-    valid_data['pred_conf'] = preds
-    auc = roc_auc_score(valid_data[target], preds)
-    logger.info(f"Test AUC: {auc:.4f}")
+    bst = lgb.train(params, lgb_train, num_boost_round=1000, valid_sets=[lgb_train, lgb_eval],
+                    callbacks=callbacks)
     
-    # Save Feature Importance
-    importance = pd.DataFrame({'feature': features, 'gain': bst.feature_importance(importance_type='gain')})
-    logger.info(f"Feature Importance:\n{importance.sort_values('gain', ascending=False)}")
-
-    # Save Model
-    out_path = os.path.join(args.model_dir, 'betting_model.pkl')
-    with open(out_path, 'wb') as f:
+    save_path = os.path.join(model_dir, output_name)
+    with open(save_path, 'wb') as f:
         pickle.dump(bst, f)
-    logger.info(f"Model saved to {out_path}")
+    logger.info(f"Saved model to {save_path}")
+    return bst
+
+def main():
+    parser = argparse.ArgumentParser(description='Train Betting Confidence Models (Win & Place)')
+    parser.add_argument('--input', type=str, default='data/processed/preprocessed_data.parquet')
+    parser.add_argument('--model_dir', type=str, default='models')
+    parser.add_argument('--base_model', type=str, default='lgbm')
+    parser.add_argument('--year_train', type=str, default='2020,2021,2022,2023')
+    parser.add_argument('--year_valid', type=str, default='2024') 
+    args = parser.parse_args()
+
+    # Data Loading
+    logger.info("Loading Data...")
+    df = pd.read_parquet(args.input)
+    if 'race_id' not in df.columns: df = df.reset_index()
+
+    train_years = [int(y) for y in args.year_train.split(',')]
+    valid_years = [int(y) for y in args.year_valid.split(',')]
+    
+    # Load Base Model
+    logger.info(f"Loading Base Model: {args.base_model}")
+    model = None
+    if args.base_model == 'lgbm':
+        model = KeibaLGBM()
+        model.load_model(os.path.join(args.model_dir, 'lgbm.pkl'))
+    elif args.base_model == 'ensemble':
+        model = EnsembleModel()
+        model.load_model(os.path.join(args.model_dir, 'ensemble_model.pkl'))
+        
+    # Load Calibrator
+    logger.info("Loading Calibrator...")
+    calibrator = None
+    calib_path = os.path.join(args.model_dir, 'calibrator.pkl')
+    if os.path.exists(calib_path):
+        from model.calibration import ProbabilityCalibrator
+        calibrator = ProbabilityCalibrator()
+        calibrator.load(calib_path)
+    
+    # Predict Scores
+    feature_cols = None
+    if args.base_model == 'lgbm' and hasattr(model.model, 'feature_name'):
+        feature_cols = model.model.feature_name()
+    
+    if not feature_cols:
+        X = df.select_dtypes(include=[np.number])
+    else:
+        for c in feature_cols: 
+             if c not in df.columns: df[c] = 0
+        X = df[feature_cols]
+
+    logger.info("Predicting Base Scores...")
+    df['score'] = model.predict(X)
+    df['prob'] = df.groupby('race_id')['score'].transform(lambda x: softmax(x))
+    
+    if calibrator:
+        df['calibrated_prob'] = calibrator.predict(df['prob'].values)
+        
+    # Split
+    train_df = df[df['year'].isin(train_years)].copy()
+    valid_df = df[df['year'].isin(valid_years)].copy()
+    
+    if 'rank' not in train_df.columns:
+        logger.error("Rank column missing from data!")
+        return
+
+    logger.info(f"Train Rows: {len(train_df)}, Valid Rows: {len(valid_df)}")
+    
+    # Create Targets
+    logger.info("Creating Targets (Win & Place)...")
+    target_train = create_targets(train_df)
+    target_valid = create_targets(valid_df)
+    
+    if target_train.empty:
+        logger.error("Target Train is empty.")
+        return
+        
+    # Create Features
+    logger.info("Creating Race Features...")
+    feat_train = calculate_race_features(train_df)
+    feat_valid = calculate_race_features(valid_df)
+    
+    # Merge
+    train_data = pd.merge(feat_train, target_train, on='race_id')
+    valid_data = pd.merge(feat_valid, target_valid, on='race_id')
+    
+    logger.info(f"Final Train Samples: {len(train_data)}")
+    
+    # Train Win Model
+    train_and_save(train_data, valid_data, 'target_win', 'betting_model_win.pkl', args.model_dir)
+    
+    # Train Place Model
+    train_and_save(train_data, valid_data, 'target_place', 'betting_model_place.pkl', args.model_dir)
 
 if __name__ == "__main__":
-    import traceback
-    try:
-        main()
-    except Exception:
-        traceback.print_exc()
+    main()

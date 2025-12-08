@@ -13,6 +13,7 @@ from preprocessing.category_aggregators import CategoryAggregator
 from preprocessing.advanced_features import AdvancedFeatureEngineer
 from preprocessing.disadvantage_detector import DisadvantageDetector
 from preprocessing.relative_features import RelativeFeatureEngineer
+from preprocessing.embedding_features import EmbeddingFeatureEngineer
 from preprocessing.cleansing import DataCleanser
 from scipy.stats import entropy
 
@@ -293,6 +294,12 @@ class InferencePreprocessor:
         # Note: 'rank' access required in generic func? No, generic func removed 'rank' dependency for direct copy.
         update_incremental_stats(new_df, history_df, ['sire_id'], 'sire', ['avg_rank', 'win_rate', 'roi_rate', 'count'], is_bloodline=True)
         update_incremental_stats(new_df, history_df, ['bms_id'], 'bms', ['avg_rank', 'win_rate', 'roi_rate', 'count'], is_bloodline=True)
+
+        # =================================================================
+        # Strategy 2c: Embedding Features (Phase 12)
+        # =================================================================
+        emb_engineer = EmbeddingFeatureEngineer()
+        new_df = emb_engineer.add_features(new_df)
 
 
         # =================================================================

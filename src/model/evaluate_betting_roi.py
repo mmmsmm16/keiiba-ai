@@ -5,16 +5,15 @@ import argparse
 import pandas as pd
 import numpy as np
 import logging
-import lightgbm as lgb
-import matplotlib.pyplot as plt
+import pickle
 from scipy.special import softmax
 from scipy.stats import entropy
-from tabulate import tabulate
+from itertools import combinations
 
 # Add src to path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-from model.betting_strategy import BettingSimulator
+from model.betting_strategy import BettingSimulator, BettingOptimizer, BankrollSimulator
 from model.evaluate import load_payout_data
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -22,11 +21,13 @@ logger = logging.getLogger(__name__)
 
 def calculate_race_features(df):
     """
-    レース単位の特徴量を計算 (Same as train_betting_model.py)
+    レース単位の特徴量を計算
     """
     race_feats = []
+    prob_col = 'calibrated_prob' if 'calibrated_prob' in df.columns else 'prob'
+    
     for race_id, group in df.groupby('race_id'):
-        probs = group['prob'].values
+        probs = group[prob_col].values
         odds = group['odds'].fillna(0).values
         
         ent = entropy(probs)
@@ -44,185 +45,310 @@ def calculate_race_features(df):
             'confidence_gap': gap,
             'n_horses': n_horses
         })
-    return pd.DataFrame(race_feats)
+    df_res = pd.DataFrame(race_feats)
+    if df_res.empty:
+         return pd.DataFrame(columns=['race_id', 'entropy', 'odds_std', 'max_prob', 'confidence_gap', 'n_horses'])
+    return df_res
 
 def main():
-    parser = argparse.ArgumentParser(description='Evaluate Betting Model ROI')
+    parser = argparse.ArgumentParser(description='Evaluate Two-Stage Betting ROI with Staking')
     parser.add_argument('--input', type=str, default='data/processed/preprocessed_data.parquet')
     parser.add_argument('--model_dir', type=str, default='models')
     parser.add_argument('--year', type=int, default=2024, help='Year to evaluate')
+    parser.add_argument('--simulation_mode', type=str, default='flat', choices=['flat', 'kelly', 'grid_search'], help='Staking Strategy')
+    parser.add_argument('--ticket_type', type=str, default='sanrenpuku', choices=['sanrenpuku', 'umaren', 'wide'], help='Betting Ticket Type')
+    parser.add_argument('--kelly_fraction', type=float, default=0.25, help='Fractional Kelly (0.1-1.0)')
+    parser.add_argument('--initial_bankroll', type=int, default=1000000, help='Start Bankroll')
+    parser.add_argument('--model_type', type=str, default='lgbm', choices=['lgbm', 'catboost'], help='Model Type')
     args = parser.parse_args()
 
     # 1. Load Data
     logger.info(f"Loading data for year {args.year}...")
     df = pd.read_parquet(args.input)
-    if 'race_id' not in df.columns:
-        df = df.reset_index()
+    if 'race_id' not in df.columns: df = df.reset_index()
         
     valid_df = df[df['year'] == args.year].copy()
     if valid_df.empty:
         logger.error(f"No data found for year {args.year}")
         return
 
-    # 2. Load Base Model (LGBM)
-    logger.info("Loading Base Model (LGBM)...")
-    from model.lgbm import KeibaLGBM
-    model = KeibaLGBM()
-    model_path = os.path.join(args.model_dir, 'lgbm.pkl')
-    if not os.path.exists(model_path):
-        logger.error("Base model not found")
-        return
-    model.load_model(model_path)
+    # 2. Base Model Predictions
+    logger.info(f"Loading Base Model ({args.model_type}) & Calibrator...")
     
-    # Predict Base Scores
-    feature_cols = None
-    if hasattr(model.model, 'feature_name'):
-        feature_cols = model.model.feature_name()
+    if args.model_type == 'lgbm':
+        from model.lgbm import KeibaLGBM
+        model = KeibaLGBM()
+        if os.path.exists(os.path.join(args.model_dir, 'lgbm_v4_emb.pkl')):
+             model.load_model(os.path.join(args.model_dir, 'lgbm_v4_emb.pkl'))
+        else:
+             model.load_model(os.path.join(args.model_dir, 'lgbm.pkl'))
+    elif args.model_type == 'catboost':
+        from model.catboost_model import KeibaCatBoost
+        model = KeibaCatBoost()
+        if os.path.exists(os.path.join(args.model_dir, 'catboost_v9_emb.pkl')):
+             model.load_model(os.path.join(args.model_dir, 'catboost_v9_emb.pkl'))
+        elif os.path.exists(os.path.join(args.model_dir, 'catboost_v9.pkl')):
+             model.load_model(os.path.join(args.model_dir, 'catboost_v9.pkl'))
+        else:
+             model.load_model(os.path.join(args.model_dir, 'catboost.pkl'))
     
-    if feature_cols:
-        missing = set(feature_cols) - set(valid_df.columns)
-        for c in missing: valid_df[c] = 0
-        X_valid = valid_df[feature_cols]
-    else:
-        # Fallback
+    feature_cols = getattr(model.model, 'feature_name', lambda: [])()
+    if not feature_cols:
         X_valid = valid_df.select_dtypes(include=[np.number])
+    else:
+        for c in feature_cols: 
+             if c not in valid_df.columns: valid_df[c] = 0
+        X_valid = valid_df[feature_cols]
         
-    valid_scores = model.predict(X_valid)
+    valid_df['score'] = model.predict(X_valid)
+    valid_df['prob'] = valid_df.groupby('race_id')['score'].transform(lambda x: softmax(x))
     
-    # 3. Prepare Betting Data
-    clean_valid = df.loc[valid_df.index].copy()
-    if 'race_id' not in clean_valid.columns: clean_valid = clean_valid.reset_index()
-    clean_valid = clean_valid[['race_id', 'odds', 'horse_number']].copy()
-    clean_valid['score'] = valid_scores
-    clean_valid['prob'] = clean_valid.groupby('race_id')['score'].transform(lambda x: softmax(x))
-    
-    # 4. Load Betting Model
-    logger.info("Loading Betting Model...")
-    betting_model_path = os.path.join(args.model_dir, 'betting_model.pkl')
-    if not os.path.exists(betting_model_path):
-        logger.error("Betting model not found")
-        return
+    # Calibration
+    calib_path = os.path.join(args.model_dir, 'calibrator.pkl')
+    if os.path.exists(calib_path):
+        from model.calibration import ProbabilityCalibrator
+        calibrator = ProbabilityCalibrator()
+        calibrator.load(calib_path)
+        valid_df['calibrated_prob'] = calibrator.predict(valid_df['prob'].values)
+    else:
+        valid_df['calibrated_prob'] = valid_df['prob']
         
-    import pickle
-    with open(betting_model_path, 'rb') as f:
-        bet_bst = pickle.load(f)
+    # 3. Betting Models for Thresholding
+    # Note: These use 'calibrated_prob' derived features.
+    with open(os.path.join(args.model_dir, 'betting_model_win.pkl'), 'rb') as f:
+        model_win = pickle.load(f)
+    with open(os.path.join(args.model_dir, 'betting_model_place.pkl'), 'rb') as f:
+        model_place = pickle.load(f)
     
-    # Calc Features
+    clean_valid = valid_df[['race_id', 'odds', 'horse_number', 'calibrated_prob', 'score', 'date']].copy()
     race_feats = calculate_race_features(clean_valid)
-    
-    # Predict Betting Confidence
     features = ['entropy', 'odds_std', 'max_prob', 'confidence_gap', 'n_horses']
-    bet_preds = bet_bst.predict(race_feats[features])
-    race_feats['bet_confidence'] = bet_preds
     
-    # Merge Confidence back to Races? No, just use race_feats map
-    confidence_map = race_feats.set_index('race_id')['bet_confidence'].to_dict()
+    race_feats['conf_win'] = model_win.predict(race_feats[features])
+    race_feats['conf_place'] = model_place.predict(race_feats[features])
     
-    logger.info(f"Clean Valid Size: {len(clean_valid)}")
-    logger.info(f"Race Feats Size: {len(race_feats)}")
-    if not race_feats.empty:
-         sample_key = list(confidence_map.keys())[0]
-         logger.info(f"Conf Map Key Sample: {sample_key} (Type: {type(sample_key)})")
-         
-    sample_valid_id = clean_valid['race_id'].iloc[0]
-    logger.info(f"Valid DF ID Sample: {sample_valid_id} (Type: {type(sample_valid_id)})")
+    conf_map = race_feats.set_index('race_id')[['conf_win', 'conf_place']].to_dict('index')
 
-    # 5. Simulation Loop
-    logger.info("Running ROI Simulation...")
-    payout_df = load_payout_data(year=args.year)
-    if payout_df.empty:
-        logger.error("No payout data")
-        return
-        
-    sim = BettingSimulator(clean_valid, payout_df)
-    logger.info(f"Payout Map Size: {len(sim.payout_map)}")
-    if sim.payout_map:
-         logger.info(f"Payout Map Key Sample: {list(sim.payout_map.keys())[0]} (Type: {type(list(sim.payout_map.keys())[0])})")
+    # Prepare for Simulation
+    logger.info("Initializing Simulator...")
+    payout_df = load_payout_data(years=[args.year])
+    optimizer = BettingOptimizer(clean_valid, payout_df)
     
-    # Grid of Thresholds
-    bet_conf_thresholds = [0.0, 0.5, 0.52, 0.55, 0.6, 0.7] # Model AUC is low (0.55), so distribution might be tight around 0.5
-    ev_threshold = 1.2 # Constant for now, or loop it too
-    
-    results = []
-    
-    for conf_th in bet_conf_thresholds:
-        # Custom Simulation Logic: explicit control over race filtering
-        total_bet = 0
-        total_return = 0
-        n_races_bet = 0
-        debug_count = 0 
-        
-        # Iterate races
-        for race_id, group in clean_valid.groupby('race_id'):
-            if debug_count < 10 and conf_th == 0.0:
-                 logger.info(f"DEBUG Process Race: {race_id} (Type: {type(race_id)})")
-                 
-            # Check Confidence
-            conf = confidence_map.get(race_id, 0)
-            if debug_count < 10 and conf_th == 0.0:
-                 logger.info(f"  -> Conf: {conf} vs Th: {conf_th}")
+    # Optimal Thresholds (Updated via Grid Search)
+    TH_WIN = 0.40
+    TH_PLACE = 0.70
 
-            if conf < conf_th:
-                if debug_count < 10 and conf_th == 0.0: logger.info("  -> Skipped by Conf")
-                continue
-                
-            # Check Betting Strategy (Sanrenpuku Box/Formation?)
-            # Let's use the logic from optimize_betting.py: Formation Axis(1) - Opps(2-6)
-            # If Axis EV > ev_threshold
+    # Strategy Function for Simulator
+    def strategy_two_stage(optimizer, race_id, current_bankroll, **kwargs):
+        confs = conf_map.get(race_id, {'conf_win':0, 'conf_place':0})
+        c_win = confs['conf_win']
+        c_place = confs['conf_place']
+        
+        group = optimizer.df[optimizer.df['race_id'] == race_id]
+        if group.empty or len(group) < 6: return [], 0
+        
+        sorted_horses = group.sort_values('score', ascending=False)
+        axis_horse = sorted_horses.iloc[0]
+        
+        # EV Check
+        ev_check = (axis_horse['calibrated_prob'] * axis_horse['odds']) > 1.2
+        if not ev_check:
+            return [], 0
             
+        # Build Bets Candidates first to count them
+        temp_bets = []
+        
+        # Strategy A & B Combined Logic
+        if (c_win >= TH_WIN) or (c_place >= TH_PLACE):
+            opp_nums = [int(h) for h in sorted_horses.iloc[1:6]['horse_number']]
+            axis_num = int(sorted_horses.iloc[0]['horse_number'])
+            
+            ticket_type = kwargs.get('ticket_type', 'sanrenpuku')
+            
+            if ticket_type == 'sanrenpuku':
+                if len(opp_nums) >= 2:
+                    for oc in combinations(opp_nums, 2):
+                        c = sorted([axis_num, oc[0], oc[1]])
+                        temp_bets.append({'type': 'sanrenpuku', 'combo': c})
+            
+            elif ticket_type == 'umaren':
+                for opp in opp_nums:
+                    c = sorted([axis_num, opp])
+                    temp_bets.append({'type': 'umaren', 'combo': c})
+
+            elif ticket_type == 'wide':
+                for opp in opp_nums:
+                    c = sorted([axis_num, opp])
+                    temp_bets.append({'type': 'wide', 'combo': c})
+
+        if not temp_bets:
+            return [], 0
+            
+        bet_count = len(temp_bets) # Usually 10
+        
+        # Determine Bet Amount
+        unit_stake = 100 # Default Flat
+        
+        if kwargs.get('mode') == 'kelly':
+            # p = High Confidence (0.7~). b = Effective Odds (e.g. 4.0).
+            # We calculate TOTAL budget for this opportunity.
+            total_budget = optimizer.calculate_kelly_bet(c_place, 5.0, current_bankroll, fraction=kwargs.get('fraction', 0.25))
+            
+            # Split budget
+            if bet_count > 0:
+                unit_stake = int(total_budget // bet_count)
+                # Round to 100
+                unit_stake = (unit_stake // 100) * 100
+                
+            if unit_stake < 100:
+                # If budget too low, skip
+                return [], 0
+        
+        # Create Final Bets
+        bets_list = []
+        for b in temp_bets:
+            b['amount'] = unit_stake
+            bets_list.append(b)
+        
+        # Total cost is sum of amounts
+        total_cost = sum([b['amount'] for b in bets_list])
+        return bets_list, total_cost
+
+
+    
+    if args.simulation_mode == 'grid_search':
+        logger.info(f"Running Grid Search for Optimal Thresholds (Ticket: {args.ticket_type})...")
+        
+        # Define Grid
+        TH_WIN_GRID = np.arange(0.20, 0.60, 0.05)
+        TH_PLACE_GRID = np.arange(0.40, 0.90, 0.05)
+        
+        results = []
+        
+        # Pre-calculate Race Data
+        processed_races = {}
+        for race_id, group in clean_valid.groupby('race_id'):
             sorted_horses = group.sort_values('score', ascending=False)
-            if len(sorted_horses) < 6: 
-                if debug_count < 10 and conf_th == 0.0: logger.info("  -> Skipped by Horses Count")
-                continue
+            if len(sorted_horses) < 6: continue
             
             axis_horse = sorted_horses.iloc[0]
-            axis_ev = axis_horse['prob'] * axis_horse['odds']
+            # Opponent: Rank 2-6 (5 horses)
+            opp_nums = [int(h) for h in sorted_horses.iloc[1:6]['horse_number']]
             
-            if debug_count < 10 and conf_th == 0.0: 
-                 logger.info(f"  -> Axis EV: {axis_ev} (Prob {axis_horse['prob']:.4f} * Odds {axis_horse['odds']})")
-                 debug_count += 1
+            # EV Check
+            ev_check = (axis_horse['calibrated_prob'] * axis_horse['odds']) > 1.2
+            
+            payouts = optimizer.payout_map.get(race_id, {})
+            # Sanity check if payouts exist
+            if not payouts: continue
 
-            if axis_ev < ev_threshold:
-                continue
+            ret_race = 0
+            cost_race = 0
+            
+            # --- Logic Switch based on ticket_type ---
+            if args.ticket_type == 'sanrenpuku':
+                # Axis 1 - Rank 2-6 (Box? No, Axis + Opponents) -> Formations
+                 if len(opp_nums) >= 2:
+                    sanren_map = payouts.get('sanrenpuku', {})
+                    tickets = list(combinations(opp_nums, 2))
+                    cost_race = len(tickets) * 100
+                    for oc in tickets:
+                        c = sorted([int(axis_horse['horse_number']), oc[0], oc[1]])
+                        key = f"{c[0]:02}{c[1]:02}{c[2]:02}"
+                        if key in sanren_map:
+                            ret_race += int(sanren_map[key])
+                            
+            elif args.ticket_type == 'umaren':
+                # Axis 1 - Rank 2-6 (5 points)
+                umaren_map = payouts.get('umaren', {})
+                cost_race = len(opp_nums) * 100
+                for opp in opp_nums:
+                    c = sorted([int(axis_horse['horse_number']), opp])
+                    key = f"{c[0]:02}{c[1]:02}"
+                    if key in umaren_map:
+                        ret_race += int(umaren_map[key])
 
-            # If passed both filters, BET is placed
-            if debug_count < 10 and conf_th == 0.0:
-                 logger.info(f"  -> BET PLACED for {race_id}")
+            elif args.ticket_type == 'wide':
+                # Axis 1 - Rank 2-6 (5 points)
+                wide_map = payouts.get('wide', {})
+                cost_race = len(opp_nums) * 100
+                for opp in opp_nums:
+                    c = sorted([int(axis_horse['horse_number']), opp])
+                    key = f"{c[0]:02}{c[1]:02}"
+                    if key in wide_map:
+                        ret_race += int(wide_map[key])
+
+            processed_races[race_id] = {
+                'ev_check': ev_check,
+                'return': ret_race,
+                'cost': cost_race,
+                'conf_win': conf_map[race_id]['conf_win'],
+                'conf_place': conf_map[race_id]['conf_place']
+            }
             
-            payout_map = sim.payout_map.get(race_id, {}).get('sanrenpuku', {})
-            axis_num = int(axis_horse['horse_number'])
-            opps_nums = [int(h) for h in sorted_horses.iloc[1:6]['horse_number']]
-            bet_cost = 1000 # 10 combinations * 100 yen
-            
-            race_return = 0
-            
-            # Check hits
-            # Payout map keys are typically "010203"
-            for combo_str, payout in payout_map.items():
-                s = str(combo_str).zfill(6)
-                try:
-                    horses = [int(s[i:i+2]) for i in range(0, 6, 2)]
-                except: continue
-                
-                if axis_num in horses:
-                    others = [h for h in horses if h != axis_num]
-                    if all(o in opps_nums for o in others):
-                        race_return += int(payout)
-            
-            total_bet += bet_cost
-            total_return += race_return
-            n_races_bet += 1
-            
-        roi = total_return / total_bet * 100 if total_bet > 0 else 0
-        results.append({
-            'Conf >=': conf_th,
-            'Bets': n_races_bet,
-            'Total Bet': total_bet,
-            'Return': total_return,
-            'ROI (%)': roi
-        })
+        print(f"{'TH_WIN':<10} {'TH_PLACE':<10} {'ROI':<10} {'BETS':<10} {'PROFIT':<15}")
+        print("-" * 60)
         
-    print(tabulate(results, headers="keys", floatfmt=".1f"))
-    
+        for th_win in TH_WIN_GRID:
+            for th_place in TH_PLACE_GRID:
+                tot_bet = 0
+                tot_ret = 0
+                cnt = 0
+                
+                for rid, data in processed_races.items():
+                    if not data['ev_check']: continue
+                    
+                    if (data['conf_win'] >= th_win) or (data['conf_place'] >= th_place):
+                        tot_bet += data['cost']
+                        tot_ret += data['return']
+                        cnt += 1
+                
+                roi = tot_ret / tot_bet * 100 if tot_bet > 0 else 0
+                profit = tot_ret - tot_bet
+                
+                if cnt > 10 and roi > 80: # Filter slightly
+                     print(f"{th_win:<10.2f} {th_place:<10.2f} {roi:<10.1f} {cnt:<10} {profit:<15,}")
+
+    elif args.simulation_mode == 'flat':
+        # Flat Simulation using BettingSimulator directly or simplified loop
+        # We need to print the stats as before.
+        logger.info("Running Flat Bet Simulation...")
+        
+        # Grid for reference or just single point
+        TH_WIN_GRID = [0.42] 
+        TH_PLACE_GRID = [0.70]
+        
+        for th_win in TH_WIN_GRID:
+            for th_place in TH_PLACE_GRID:
+                # Use Sim
+                sim = BankrollSimulator(optimizer, initial_bankroll=args.initial_bankroll)
+                
+                # We need a wrapper to force flat bet
+                def strategy_flat(optimizer, race_id, current_bankroll, **kwargs):
+                    return strategy_two_stage(optimizer, race_id, current_bankroll, mode='flat', ticket_type=args.ticket_type) 
+                
+                sorted_races = clean_valid.sort_values(['date', 'race_id'])['race_id'].unique()
+                res = sim.run(sorted_races, strategy_flat)
+                
+                print(f"TH_Win: {th_win} | TH_Place: {th_place}")
+                print(f"Final: {res['final_bankroll']:,} | ROI: {res['roi']:.2f}% | Max DD: {res['max_drawdown']:.2f}%")
+
+    elif args.simulation_mode == 'kelly':
+         # ... (Kelly Logic) ...
+         # Need to ensure TH_WIN/TH_PLACE are set correctly.
+         # For now using hardcoded inside strategy_two_stage, but should ideally be args.
+         # We will use 0.42/0.70 as default unless updated.
+         logger.info(f"Running Bankroll Simulation (Kelly Fraction={args.kelly_fraction})...")
+         sim = BankrollSimulator(optimizer, initial_bankroll=args.initial_bankroll)
+         sorted_races = clean_valid.sort_values(['date', 'race_id'])['race_id'].unique()
+         res = sim.run(sorted_races, strategy_two_stage, mode='kelly', fraction=args.kelly_fraction, ticket_type=args.ticket_type)
+         
+         print("\n=== Kelly Simulation Results ===")
+         print(f"Initial: {args.initial_bankroll:,} Yen")
+         print(f"Final:   {res['final_bankroll']:,} Yen")
+         print(f"Profit:  {res['final_bankroll'] - args.initial_bankroll:,} Yen")
+         print(f"ROI:     {res['roi']:.2f}%")
+         print(f"Max DD:  {res['max_drawdown']:.2f}%")
+
 if __name__ == "__main__":
     main()

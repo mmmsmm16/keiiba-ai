@@ -36,3 +36,5 @@ src/scripts/
 # OS
 .DS_Store
 Thumbs.db
+
+mlflow_store/
