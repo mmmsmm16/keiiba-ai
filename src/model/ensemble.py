@@ -18,36 +18,48 @@ class EnsembleModel:
     def __init__(self):
         self.lgbm = KeibaLGBM()
         self.catboost = KeibaCatBoost()
-        # GPU競合 (CUBLAS Error) を避けるため、アンサンブル時のTabNetはCPUで実行する
-        self.tabnet = KeibaTabNet(params={'device_name': 'cpu'})
+        # GPU競合 (CUBLAS Error) が解決したと思われるため、GPU利用を許可する (default: auto detect)
+        self.tabnet = KeibaTabNet()
+
         self.meta_model = LinearRegression() # シンプルな線形回帰で重み付け
 
-    def load_base_models(self, model_dir: str):
+    def load_base_models(self, model_dir: str, version: str = 'v1'):
         """
         学習済みのBase Models (LightGBM, CatBoost, TabNet) をロードします。
+        Args:
+            model_dir (str): モデルディレクトリのパス
+            version (str): ロードするモデルのバージョン (デフォルト: v1)
         """
-        logger.info(f"Base Modelsをロードします: {model_dir}")
+        logger.info(f"Base Models (Version: {version}) をロードします: {model_dir}")
+        self.version = version
         
         # LightGBM
-        lgbm_path = os.path.join(model_dir, 'lgbm.pkl')
+        lgbm_path = os.path.join(model_dir, f'lgbm_{version}.pkl')
         if os.path.exists(lgbm_path):
             self.lgbm.load_model(lgbm_path)
+            self.has_lgbm = True
         else:
             logger.warning(f"LightGBMモデルが見つかりません: {lgbm_path}")
+            self.has_lgbm = False
 
         # CatBoost
-        catboost_path = os.path.join(model_dir, 'catboost.pkl')
+        catboost_path = os.path.join(model_dir, f'catboost_{version}.pkl')
         if os.path.exists(catboost_path):
             self.catboost.load_model(catboost_path)
+            self.has_catboost = True
         else:
             logger.warning(f"CatBoostモデルが見つかりません: {catboost_path}")
+            self.has_catboost = False
 
         # TabNet
-        tabnet_path = os.path.join(model_dir, 'tabnet.zip')
+        # v7ではTabNet最適化を行っていないためスキップされる可能性がある
+        tabnet_path = os.path.join(model_dir, f'tabnet_{version}.zip')
         if os.path.exists(tabnet_path):
-            self.tabnet.load_model(tabnet_path.replace('.zip', '')) # load_model adds .zip internally or handles it
+            self.tabnet.load_model(tabnet_path.replace('.zip', ''), device_name='cpu')
+            self.has_tabnet = True
         else:
-            logger.warning(f"TabNetモデルが見つかりません: {tabnet_path}")
+            logger.info(f"TabNetモデルが見つかりません (スキップします): {tabnet_path}")
+            self.has_tabnet = False
 
     def train_meta_model(self, valid_set: dict):
         """
@@ -59,15 +71,18 @@ class EnsembleModel:
         
         # 予測値の取得
         logger.info("予測値の生成中...")
-        pred_lgbm = self.lgbm.predict(valid_set['X'])
-        pred_cb = self.catboost.predict(valid_set['X'])
-        pred_tab = self.tabnet.predict(valid_set['X'])
+        preds = {}
+        if self.has_lgbm:
+            preds['lgbm'] = self.lgbm.predict(valid_set['X'])
+        if self.has_catboost:
+            preds['cb'] = self.catboost.predict(valid_set['X'])
+        if self.has_tabnet:
+            preds['tabnet'] = self.tabnet.predict(valid_set['X'])
+            
+        if not preds:
+            raise ValueError("有効なBase Modelが1つもありません。")
 
-        X_meta = pd.DataFrame({
-            'lgbm': pred_lgbm,
-            'cb': pred_cb,
-            'tabnet': pred_tab
-        })
+        X_meta = pd.DataFrame(preds)
         y_meta = valid_set['y']
 
         # Metaモデル学習
@@ -75,7 +90,9 @@ class EnsembleModel:
 
         weights = self.meta_model.coef_
         intercept = self.meta_model.intercept_
-        logger.info(f"Meta Model Weights: LGBM={weights[0]:.4f}, CatBoost={weights[1]:.4f}, TabNet={weights[2]:.4f}, Bias={intercept:.4f}")
+        
+        weight_str = ", ".join([f"{k}={w:.4f}" for k, w in zip(X_meta.columns, weights)])
+        logger.info(f"Meta Model Weights: {weight_str}, Bias={intercept:.4f}")
         logger.info("Meta Modelの学習が完了しました。")
 
     def train(self, train_set: dict, valid_set: dict):
@@ -83,21 +100,24 @@ class EnsembleModel:
         [Deprecated] 一括学習用メソッド。将来的に削除予定。
         """
         logger.info("アンサンブル一括学習開始 (非推奨)...")
-        self.lgbm.train(train_set, valid_set)
-        self.catboost.train(train_set, valid_set)
-        self.tabnet.train(train_set, valid_set)
+        # 個別モデルの学習は完了している前提
         self.train_meta_model(valid_set)
         logger.info("アンサンブル一括学習完了")
 
     def predict(self, X: pd.DataFrame) -> np.ndarray:
-        p1 = self.lgbm.predict(X)
-        p2 = self.catboost.predict(X)
-        p3 = self.tabnet.predict(X)
-        X_meta = pd.DataFrame({
-            'lgbm': p1,
-            'cb': p2,
-            'tabnet': p3
-        })
+        preds = {}
+        if self.has_lgbm:
+            preds['lgbm'] = self.lgbm.predict(X)
+        if self.has_catboost:
+            preds['cb'] = self.catboost.predict(X)
+        if self.has_tabnet:
+            preds['tabnet'] = self.tabnet.predict(X)
+            
+        if not preds:
+            # フォールバック: 全て0
+            return np.zeros(len(X))
+
+        X_meta = pd.DataFrame(preds)
         return self.meta_model.predict(X_meta)
 
     def save_model(self, path: str):
@@ -106,13 +126,16 @@ class EnsembleModel:
 
         os.makedirs(os.path.dirname(path), exist_ok=True)
 
-        # TabNet保存
-        tabnet_path = path.replace('.pkl', '_tabnet.pkl')
-        self.tabnet.save_model(tabnet_path)
-
-        # 一時的にTabNetを外して保存（Pickleできない可能性があるため）
+        # TabNet保存 (存在する場合のみ)
         temp_tabnet = self.tabnet
-        self.tabnet = None
+        if hasattr(self, 'has_tabnet') and self.has_tabnet:
+            tabnet_path = path.replace('.pkl', '_tabnet.pkl')
+            self.tabnet.save_model(tabnet_path)
+            # 一時的にTabNetを外して保存（Pickleできない可能性があるため）
+            self.tabnet = None
+        else:
+            # TabNetがない場合はNoneにしておく
+            self.tabnet = None
 
         with open(path, 'wb') as f:
             pickle.dump(self, f)
@@ -121,20 +144,29 @@ class EnsembleModel:
         self.tabnet = temp_tabnet
         logger.info(f"アンサンブルモデルを保存しました: {path}")
 
-    def load_model(self, path: str):
+    def load_model(self, path: str, device_name: str = None):
         # メインのロード
         with open(path, 'rb') as f:
             loaded = pickle.load(f)
         self.lgbm = loaded.lgbm
         self.catboost = loaded.catboost
         self.meta_model = loaded.meta_model
+        
+        # 保存時にhas_lgbm等が保存されているはずだが、念のため復元
+        if hasattr(loaded, 'has_lgbm'): self.has_lgbm = loaded.has_lgbm
+        if hasattr(loaded, 'has_catboost'): self.has_catboost = loaded.has_catboost
+        if hasattr(loaded, 'has_tabnet'): self.has_tabnet = loaded.has_tabnet
 
-        # TabNetのロード (CPU強制)
-        self.tabnet = KeibaTabNet(params={'device_name': 'cpu'})
-        tabnet_path = path.replace('.pkl', '_tabnet.pkl')
-        if os.path.exists(tabnet_path.replace('.pkl', '.zip')): # TabNet saves as zip
-             self.tabnet.load_model(tabnet_path)
-        else:
-             logger.warning(f"TabNetモデルが見つかりません: {tabnet_path}")
+        # TabNetのロード (GPU利用可, 推論時はCPU強制も可)
+        self.tabnet = KeibaTabNet()
+        if hasattr(self, 'has_tabnet') and self.has_tabnet:
+            tabnet_path = path.replace('.pkl', '_tabnet.pkl')
+            # zip拡張子の確認
+            if os.path.exists(tabnet_path.replace('.pkl', '.zip')) or os.path.exists(tabnet_path + '.zip'): 
+                 self.tabnet.load_model(tabnet_path, device_name=device_name)
+            else:
+                 logger.warning(f"TabNetモデルが見つかりません: {tabnet_path}")
+                 self.has_tabnet = False # ロード失敗したらFalseにする
+
 
         logger.info(f"アンサンブルモデルをロードしました: {path}")

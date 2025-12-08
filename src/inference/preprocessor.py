@@ -11,9 +11,54 @@ from preprocessing.feature_engineering import FeatureEngineer
 from preprocessing.aggregators import HistoryAggregator
 from preprocessing.category_aggregators import CategoryAggregator
 from preprocessing.advanced_features import AdvancedFeatureEngineer
+from preprocessing.disadvantage_detector import DisadvantageDetector
+from preprocessing.relative_features import RelativeFeatureEngineer
 from preprocessing.cleansing import DataCleanser
+from scipy.stats import entropy
 
 logger = logging.getLogger(__name__)
+
+def calculate_race_features(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    レース単位の特徴量を計算 (Betting Model用)
+    Args:
+        df: 'race_id', 'prob', 'odds' カラムを持つDataFrame
+    Returns:
+        DataFrame: 'entropy', 'odds_std', 'max_prob', 'confidence_gap', 'n_horses' を持つ1行のDF (1レース分の場合)
+    """
+    race_feats = []
+    
+    # 複数レースが含まれている場合に対応するため groupby
+    for race_id, group in df.groupby('race_id'):
+        probs = group['prob'].values
+        odds = group['odds'].fillna(0).values
+        
+        # 1. Entropy (Confusion)
+        ent = entropy(probs)
+        
+        # 2. Odds Volatility (Standard Deviation)
+        odds_std = np.std(odds)
+        
+        # 3. Model Confidence (Max Prob)
+        max_prob = np.max(probs)
+        
+        # 4. Confidence Gap (1st - 2nd)
+        sorted_probs = sorted(probs, reverse=True)
+        gap = sorted_probs[0] - sorted_probs[1] if len(sorted_probs) > 1 else 0
+        
+        # 5. Number of horses
+        n_horses = len(group)
+        
+        race_feats.append({
+            'race_id': race_id,
+            'entropy': ent,
+            'odds_std': odds_std,
+            'max_prob': max_prob,
+            'confidence_gap': gap,
+            'n_horses': n_horses
+        })
+        
+    return pd.DataFrame(race_feats)
 
 class InferencePreprocessor:
     """
@@ -228,6 +273,16 @@ class InferencePreprocessor:
         # (3) Sire x Track
         if 'surface' in new_df.columns:
              update_incremental_stats(new_df, history_df, ['sire_id', 'surface'], 'sire_track', ['n_races', 'win_rate', 'top3_rate'])
+             # NEW v3
+             update_incremental_stats(new_df, history_df, ['jockey_id', 'surface'], 'jockey_surface', ['n_races', 'win_rate', 'top3_rate'])
+             update_incremental_stats(new_df, history_df, ['trainer_id', 'surface'], 'trainer_surface', ['n_races', 'win_rate', 'top3_rate'])
+
+        # NEW v3: Distance Context
+        if 'distance_cat' in new_df.columns:
+             # sire_dist is already handled above at line 226, but let's regroup if needed. 
+             # Actually line 226 handles sire_dist. I'll add jockey/trainer here.
+             update_incremental_stats(new_df, history_df, ['jockey_id', 'distance_cat'], 'jockey_dist', ['n_races', 'win_rate', 'top3_rate'])
+             update_incremental_stats(new_df, history_df, ['trainer_id', 'distance_cat'], 'trainer_dist', ['n_races', 'win_rate', 'top3_rate'])
              
         # (4) Jockey x Trainer
         update_incremental_stats(new_df, history_df, ['jockey_id', 'trainer_id'], 'jockey_trainer', ['n_races', 'win_rate', 'top3_rate'])
@@ -259,7 +314,8 @@ class InferencePreprocessor:
         for p in ['jockey_id', 'trainer_id', 'sire_id']:
              cols_to_merge.extend([f'{p}_n_races', f'{p}_win_rate', f'{p}_top3_rate'])
         # Context
-        for p in ['jockey_course', 'sire_course', 'trainer_course', 'sire_dist', 'sire_track', 'jockey_trainer']:
+        for p in ['jockey_course', 'sire_course', 'trainer_course', 'sire_dist', 'sire_track', 'jockey_trainer',
+                  'jockey_surface', 'trainer_surface', 'jockey_dist', 'trainer_dist']:
              cols_to_merge.extend([f'{p}_n_races', f'{p}_win_rate', f'{p}_top3_rate'])
         # Bloodline
         for p in ['sire', 'bms']:
@@ -289,6 +345,25 @@ class InferencePreprocessor:
         adv_engineer = AdvancedFeatureEngineer()
         combined_horse_df = adv_engineer.add_features(combined_horse_df)
 
+        # =================================================================
+        # 3.5. 不利検出特徴量生成 (Phase 11.1新規)
+        # =================================================================
+        disadv_detector = DisadvantageDetector()
+        combined_horse_df = disadv_detector.add_features(combined_horse_df)
+
+        # =================================================================
+        # 3.6. 相対的特徴量生成 (Phase 11.1新規)
+        # =================================================================
+        relative_engineer = RelativeFeatureEngineer()
+        combined_horse_df = relative_engineer.add_features(combined_horse_df)
+
+        # =================================================================
+        # 3.7. リアルタイム特徴量生成 (v9新規 - 当日の傾向)
+        # =================================================================
+        # 推論時は Loader が全レース(過去レース含む)を取得していることを前提とする
+        from preprocessing.realtime_features import RealTimeFeatureEngineer
+        realtime_engineer = RealTimeFeatureEngineer()
+        combined_horse_df = realtime_engineer.add_features(combined_horse_df)
 
         # =================================================================
         # 4. 推論対象行の抽出 & クリーニング
@@ -322,7 +397,13 @@ class InferencePreprocessor:
             # PC-KEIBA specific
             'pass_1', 'pass_2', 'pass_3', 'pass_4',
             # Temporary
-            'is_nige_temp'
+            'is_nige_temp',
+            
+            # --- Leakage Features (Phase 11.1 fix: Sync with dataset.py) ---
+            'slow_start_recovery', 'pace_disadvantage', 'wide_run',
+            'track_bias_disadvantage', 'outer_frame_disadv',
+            'odds_race_rank', 'popularity_race_rank',
+            'odds_deviation', 'popularity_deviation'
         ]
 
         # ID情報は返却用に確保（レース情報も含める）

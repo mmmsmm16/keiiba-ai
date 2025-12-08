@@ -115,17 +115,14 @@ def main():
         # 4. 推論実行
         logger.info("Step 4: 推論実行")
         
-        # 特徴量のフィルタリング (モデルが要求するものだけに絞る)
-        if hasattr(model, 'model') and hasattr(model.model, 'feature_name'): # LightGBM
-            required_features = model.model.feature_name()
-            missing = set(required_features) - set(X.columns)
-            if not missing:
-                X = X[required_features]
-        elif hasattr(model, 'model') and hasattr(model.model, 'feature_names_'): # CatBoost
-            required_features = model.model.feature_names_
-            missing = set(required_features) - set(X.columns)
-            if not missing:
-                X = X[required_features]
+        # 特徴量アダプターの適用 (Backward Compatibility)
+        from inference.feature_adapter import FeatureAdapter
+        
+        # モデルの実体を取得 (Wrapperの場合があるため)
+        raw_model = model.model if hasattr(model, 'model') else model
+        adapter = FeatureAdapter(raw_model)
+        X = adapter.adapt(X)
+
                 
         preds = model.predict(X)
         
@@ -139,6 +136,12 @@ def main():
         # 5. 保存
         os.makedirs(args.output_dir, exist_ok=True)
         
+        # フィルタリング: ユーザが特定レースのみ要求した場合
+        if args.race_ids:
+            results = results[results['race_id'].astype(str).isin(args.race_ids)]
+            if results.empty:
+                logger.warning("指定されたレースIDの結果がありません（日付不一致の可能性があります）。")
+
         # ファイル名決定 (モデル名を含める)
         if args.date:
             filename = f"{args.date}_{args.model}_{args.version}.csv"

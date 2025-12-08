@@ -30,10 +30,11 @@ def get_db_engine():
     dbname = os.environ.get('POSTGRES_DB', 'pckeiba')
     return create_engine(f"postgresql://{user}:{password}@{host}:{port}/{dbname}")
 
-def load_payout_data(year=2024):
-    logger.info(f"払戻データ(jvd_hr)をロード中... Year={year}")
+def load_payout_data(years=[2024]):
+    logger.info(f"払戻データ(jvd_hr)をロード中... Years={years}")
     engine = get_db_engine()
-    query = text(f"SELECT * FROM jvd_hr WHERE kaisai_nen = '{year}'")
+    years_str = ",".join([f"'{y}'" for y in years])
+    query = text(f"SELECT * FROM jvd_hr WHERE kaisai_nen IN ({years_str})")
     try:
         df = pd.read_sql(query, engine)
         
@@ -67,6 +68,7 @@ def main():
     parser = argparse.ArgumentParser(description='モデル評価スクリプト')
     parser.add_argument('--model', type=str, default='ensemble', choices=['lgbm', 'catboost', 'tabnet', 'ensemble'], help='評価するモデル')
     parser.add_argument('--version', type=str, default='v1', help='モデルバージョン')
+    parser.add_argument('--years', type=str, default='2024', help='評価対象年 (カンマ区切り, e.g. "2024,2025")')
     args = parser.parse_args()
 
     # 1. データのロード (Parquetから元データを取得)
@@ -75,12 +77,13 @@ def main():
         logger.error(f"データファイルがありません: {data_path}")
         return
 
-    # テストデータ(2024年)のみロード
+    # テストデータ(指定年)のみロード
+    target_years = [int(y) for y in args.years.split(',')]
     df = pd.read_parquet(data_path)
-    test_df = df[df['year'] == 2024].copy()
+    test_df = df[df['year'].isin(target_years)].copy()
 
     if test_df.empty:
-        logger.error("テストデータ(2024年)がありません。")
+        logger.error(f"テストデータ({target_years})がありません。")
         return
 
     # 2. モデルのロード
@@ -176,9 +179,27 @@ def main():
     # 期待値 = 確率 * オッズ (欠損は0)
     test_df['expected_value'] = test_df['prob'] * test_df['odds'].fillna(0)
 
-    # 4. シミュレーションと保存
     output_dir = os.path.join(os.path.dirname(__file__), '../../experiments')
     os.makedirs(output_dir, exist_ok=True)
+
+    # Save raw predictions for analysis
+    pred_path = os.path.join(output_dir, f'predictions_{args.model}_{args.version}.parquet')
+    try:
+        test_df.to_parquet(pred_path, index=False)
+        logger.info(f"詳細予測データを保存しました: {pred_path}")
+    except Exception as e:
+        logger.warning(f"予測データの保存に失敗しました: {e}")
+
+    # Save payout data if loaded
+    payout_df = load_payout_data(years=target_years)
+    if not payout_df.empty:
+        payout_path = os.path.join(output_dir, 'payouts_2024.parquet')
+        try:
+             # Ensure types for parquet
+             payout_df.to_parquet(payout_path, index=False)
+             logger.info(f"払戻データを保存しました: {payout_path}")
+        except Exception as e:
+             logger.warning(f"払戻データの保存に失敗しました: {e}")
     
     simulation_results = {
         'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
@@ -208,7 +229,7 @@ def main():
 
     # Strategy 4: 複合馬券シミュレーション (Box 5)
     # n_races が多いので少し時間がかかる可能性あり
-    payout_df = load_payout_data(year=2024)
+    payout_df = load_payout_data(years=target_years)
     if not payout_df.empty:
         sim_complex = simulate_complex_betting(test_df, payout_df)
         simulation_results['strategies'].update(sim_complex)
@@ -242,6 +263,46 @@ def main():
         json.dump(simulation_results, f, indent=4, cls=NpEncoder)
         
     logger.info(f"シミュレーション結果を保存しました: {json_path}")
+
+    # Save Raw Predictions to Parquet (for Dashboard)
+    try:
+        logger.info("予測結果(Parquet)を保存中...")
+        race_info = load_race_info(target_years)
+        if not race_info.empty:
+            # Ensure race_id type matches
+            if test_df['race_id'].dtype != race_info['race_id'].dtype:
+                 test_df['race_id'] = test_df['race_id'].astype(str)
+                 race_info['race_id'] = race_info['race_id'].astype(str)
+            
+            test_df = pd.merge(test_df, race_info, on='race_id', how='left')
+        
+        # Filter JRA Only (Venue 01-10)
+        # venue column might be '01', '05' etc. Ensure it exists.
+        if 'venue' in test_df.columns:
+            # Cast to int for comparison if needed, but string comparison works '01' <= x <= '10'
+            # Be careful with '10' vs '2'. '01'...'10'.
+            # Safer to use list.
+            jra_venues = [f"{i:02}" for i in range(1, 11)]
+            before_len = len(test_df)
+            test_df = test_df[test_df['venue'].isin(jra_venues)]
+            logger.info(f"JRAレース(01-10)のみ抽出: {before_len} -> {len(test_df)}")
+        
+        # Select important columns to save space
+        save_cols = [
+            'race_id', 'date', 'year', 'month', 'day', 
+            'venue', 'race_number', 'hondai', # Race Metadata
+            'horse_number', 'horse_name', 
+            'odds', 'popularity', 'rank', # Ground Truth
+            'score', 'prob', 'expected_value' # Predictions
+        ]
+        # Only save columns that exist
+        save_cols = [c for c in save_cols if c in test_df.columns]
+        
+        parquet_path = os.path.join(output_dir, f'predictions_{args.model}_{args.version}.parquet')
+        test_df[save_cols].to_parquet(parquet_path)
+        logger.info(f"予測データを保存(Parquet): {parquet_path}")
+    except Exception as e:
+        logger.error(f"Parquet保存エラー: {e}")
 
 
 def simulate_single_choice(df, target_col, min_odds=None, max_odds=None):
@@ -554,10 +615,6 @@ def simulate_complex_betting(df, payout_df):
             stats['sanrenpuku_box5']['races'] += 1
 
         # --- Sanrentan Box 5 ---
-        bet_count = 0
-        return_amount = 0
-        hit = 0
-        
         if len(horse_nums) >= 3:
             perms = list(permutations(horse_nums, 3))
             bet_count = len(perms)
@@ -573,6 +630,49 @@ def simulate_complex_betting(df, payout_df):
             stats['sanrentan_box5']['hit'] += hit
             stats['sanrentan_box5']['races'] += 1
 
+        # --- Recommended Formation (3-Renta Axis 1 -> 6 Opponents) ---
+        # Cond: Prob >= 0.20, Odds >= 3.0 (EV >= 0.6 check implied but explicit EV > 1.2 in leaderboard)
+        # Note: Leaderboard says Prob>=0.2, Odds>=3.0, EV>=1.2.
+        # We need prob/odds from the top horse.
+        top_horse = top5.iloc[0]
+        prob = top_horse['prob']
+        odds = top_horse['odds'] if not pd.isna(top_horse['odds']) else 0
+        ev = prob * odds
+        
+        # Check conditions
+        if prob >= 0.20 and odds >= 3.0 and ev >= 1.2:
+            # Need top 7 horses for opponents (Axis + 6 Opponents)
+            # Re-fetch top 7
+            top7 = group.sort_values('score', ascending=False).head(7)
+            if len(top7) >= 7:
+                axis = int(top_horse['horse_number'])
+                opps = top7.iloc[1:7]['horse_number'].astype(int).tolist() # 2nd to 7th
+                
+                # 3-Renta Formation: Axis -> Opps -> Opps
+                # Points: 1 * 6 * 5 = 30
+                # Generate all (Axis, o1, o2) perms where o1, o2 in opps, o1 != o2
+                
+                f_bet_count = 0
+                f_return = 0
+                f_hit = 0
+                
+                opp_perms = list(permutations(opps, 2)) # (o1, o2)
+                f_bet_count = len(opp_perms) # Should be 30
+                
+                for o1, o2 in opp_perms:
+                    comb_str = f"{axis:02}{o1:02}{o2:02}"
+                    if comb_str in payout_map[race_id]['sanrentan']:
+                        f_return += payout_map[race_id]['sanrentan'][comb_str]
+                        f_hit = 1
+                
+                if 'recommended_formation' not in stats:
+                     stats['recommended_formation'] = {'bet': 0, 'return': 0, 'hit': 0, 'races': 0}
+                
+                stats['recommended_formation']['bet'] += f_bet_count * 100
+                stats['recommended_formation']['return'] += f_return
+                stats['recommended_formation']['hit'] += f_hit
+                stats['recommended_formation']['races'] += 1
+
     final_results = {}
     for k, v in stats.items():
         roi = v['return'] / v['bet'] * 100 if v['bet'] > 0 else 0
@@ -585,8 +685,35 @@ def simulate_complex_betting(df, payout_df):
             'races': v['races']
         }
         logger.info(f"{k} - ROI: {roi:.2f}%, Hit: {accuracy:.2%} ({v['races']} races)")
-        
+
     return final_results
+
+def load_race_info(years=[2024]):
+    logger.info(f"レース情報(jvd_ra)をロード中... Years={years}")
+    engine = get_db_engine()
+    years_str = ",".join([f"'{y}'" for y in years])
+    # Fetch minimal columns: race keys and hondai (title)
+    # Construct race_id from keys to match
+    query = text(f"""
+        SELECT 
+            kaisai_nen, keibajo_code, kaisai_kai, kaisai_nichime, race_bango,
+            kyosomei_hondai AS hondai
+        FROM jvd_ra 
+        WHERE kaisai_nen IN ({years_str})
+    """)
+    try:
+        df = pd.read_sql(query, engine)
+        df['race_id'] = (
+            df['kaisai_nen'].astype(str) +
+            df['keibajo_code'].astype(str) +
+            df['kaisai_kai'].astype(str) +
+            df['kaisai_nichime'].astype(str) +
+            df['race_bango'].astype(str)
+        )
+        return df[['race_id', 'hondai']]
+    except Exception as e:
+        logger.error(f"レース情報ロードエラー: {e}")
+        return pd.DataFrame()
 
 if __name__ == "__main__":
     main()

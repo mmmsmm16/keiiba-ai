@@ -27,12 +27,12 @@ class DatasetSplitter:
         df['target'] = df['rank'].apply(lambda x: 3 if x == 1 else (2 if x == 2 else (1 if x == 3 else 0)))
 
         # 時系列分割
-        # Train: 2015-2022
-        # Valid: 2023
-        # Test: 2024
-        train_df = df[df['year'].between(2015, 2022)].copy()
-        valid_df = df[df['year'] == 2023].copy()
-        test_df = df[df['year'] == 2024].copy()
+        # Train: 2015-2023 (Updated)
+        # Valid: 2024
+        # Test: 2025
+        train_df = df[df['year'].between(2015, 2023)].copy()
+        valid_df = df[df['year'] == 2024].copy()
+        test_df = df[df['year'] == 2025].copy()
 
         logger.info(f"分割完了: Train({len(train_df)}), Valid({len(valid_df)}), Test({len(test_df)})")
 
@@ -73,7 +73,33 @@ class DatasetSplitter:
             'weight_diff_val', 'weight_diff_sign', # 元データにある場合は削除（重複回避）
             'winning_numbers', 'payout', 'ticket_type', # 払い戻し
             # PC-KEIBA特有のカラム（もしあれば）
-            'pass_1', 'pass_2', 'pass_3', 'pass_4'
+            'pass_1', 'pass_2', 'pass_3', 'pass_4',
+            
+            # --- Leakage Features to Drop (Phase 11.1 fix) ---
+            # These are derived from current race result or future odds
+            'slow_start_recovery', 'pace_disadvantage', 'wide_run',
+            'track_bias_disadvantage', 'outer_frame_disadv',
+            'odds_race_rank', 'popularity_race_rank',
+            'odds_deviation', 'popularity_deviation',
+            
+            # --- Low Impact Features to Drop (v5 Feature Selection) ---
+            # 重要度 0 または極めて低い特徴量を削除
+            'race_avg_prize',         # 重要度 0
+            'race_pace_cat',          # 重要度 0
+            'total_prize',            # 重要度 0
+            'is_long_break',          # 重要度 0
+            'race_nige_horse_count',  # 重要度 9
+            'race_nige_bias',         # 重要度 46
+            'horse_pace_disadv_rate', # 重要度 74
+            'weather_num',            # 重要度 92
+            'weekday',                # 重要度 119
+            
+            # --- v6 Ineffective Features (重要度 0) ---
+            'frame_zone',             # 重要度 0
+            'distance_category',      # 重要度 0
+            'state_num',              # 重要度 0
+            'surface_num',            # 重要度 0
+            'day',                    # 重要度 0
         ]
 
         # 存在しないカラムをdropしようとしてもエラーにならないように errors='ignore'

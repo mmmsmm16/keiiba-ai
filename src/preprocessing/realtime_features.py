@@ -1,0 +1,109 @@
+
+import pandas as pd
+import numpy as np
+import logging
+
+logger = logging.getLogger(__name__)
+
+class RealTimeFeatureEngineer:
+    """
+    当日のリアルタイム傾向（トラックバイアス）を特徴量化するクラス。
+    各レースについて、その日の「それまでのレース」の結果を集計して特徴量とします。
+    """
+    def add_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        logger.info("リアルタイム特徴量(当日の傾向)を生成中...")
+        
+        # 必要なカラムの確認
+        required = ['date', 'venue', 'race_number', 'frame_number', 'rank', 'passing_rank', 'popularity']
+        for col in required:
+            if col not in df.columns:
+                logger.error(f"必須カラムがありません: {col}")
+                return df
+
+        if 'surface' not in df.columns:
+            logger.warning("surfaceカラムがないため、コース別のバイアス集計ができません。全体集計を行います。")
+            df['surface'] = 'All'
+
+        df = df.sort_values(['date', 'venue', 'race_number']).copy()
+        
+        # グループ化: 日付 + 開催地 + サーフェス (芝/ダート別)
+        # 計算効率のため、レース単位のデータフレームを作成して集計する
+        
+        # 1. レース単位の「勝った枠」「逃げ切りか」「1番人気が勝ったか」を判定
+        # rank=1 の行のみ抽出
+        winners = df[df['rank'] == 1].copy()
+        
+        # 枠番定義 (Standardized with AdvancedFeatureEngineer)
+        # Inner: 1-2, Mid: 3-6, Outer: 7-8
+        # But commonly Inner is 1-3. Let's align with AdvancedFeatureEngineer (Inner<=2, Outer>=7)
+        # AdvancedFeatureEngineer: 1-2 (Inner), 3-6 (Mid), 7-8 (Outer)
+        winners['win_inner'] = winners['frame_number'].isin([1, 2]).astype(int)
+        winners['win_mid']   = winners['frame_number'].isin([3, 4, 5, 6]).astype(int)
+        winners['win_outer'] = winners['frame_number'].isin([7, 8]).astype(int)
+
+        # 逃げ(通過順位の最初が1)が勝ったか
+        # passing_rank format "1-1-1-1" or "1-1"
+        def is_nige(s):
+            if not isinstance(s, str): return 0
+            try:
+                first_pos = s.split('-')[0]
+                return 1 if first_pos == '1' else 0
+            except: return 0
+        winners['win_front'] = winners['passing_rank'].apply(is_nige)
+        
+        # 1番人気が勝ったか
+        winners['win_fav'] = (winners['popularity'] == 1).astype(int)
+
+        # レースIDごとの結果辞書
+        # key = (date, venue, race_number, surface)
+        # Note: A race has only one surface.
+        race_results = winners.set_index(['date', 'venue', 'race_number'])[[
+            'win_inner', 'win_mid', 'win_outer', 'win_front', 'win_fav'
+        ]]
+        
+        # Join surface back to race_results
+        # Need unique surface per race
+        race_meta = df[['date', 'venue', 'race_number', 'surface']].drop_duplicates()
+        race_stats = pd.merge(race_meta, race_results, on=['date', 'venue', 'race_number'], how='left').fillna(0)
+        
+        # Sort
+        race_stats = race_stats.sort_values(['date', 'venue', 'surface', 'race_number'])
+        
+        # 2. 累積和 (Cumsum) と 平均 (Running Average) の計算
+        # Group by Date+Venue+Surface
+        grouped = race_stats.groupby(['date', 'venue', 'surface'], group_keys=False)
+        
+        cols = ['win_inner', 'win_mid', 'win_outer', 'win_front', 'win_fav']
+        
+        # Calculate features directly into race_stats
+        for col in cols:
+            # Shifted expanding mean (Today's trend so far)
+            race_stats[f"trend_{col}_rate"] = grouped[col].apply(lambda x: x.shift(1).expanding().mean())
+            
+        # Select for merge
+        trend_cols = [f"trend_{c}_rate" for c in cols]
+        trend_df = race_stats[['date', 'venue', 'race_number'] + trend_cols].copy()
+        
+        # 3. 元のデータフレームに結合
+        df_out = pd.merge(df, trend_df, on=['date', 'venue', 'race_number'], how='left')
+        
+        # 欠損値埋め (第1レースなどは情報がないので 0)
+        # 「平均的」な値で埋める方が安全かも？
+        # inner/mid/outer random probability: 2/8=0.25, 4/8=0.5, 2/8=0.25
+        # front: ~20%?
+        # fav: ~30%?
+        # バイアス特徴量なので、0 (neutral assumption or deviations) or Mean.
+        # ここでは 0.0 で埋めると「特徴量として効かない」ことになるか、「低い」ことになるか。
+        # LightGBMは0を値として扱う。平均値で埋めるのが無難だが、Unknownとして扱うならNaNでもいいがLGBMはNaN扱える。
+        # しかし前処理でNaN埋めすることが多い。
+        # ここでは「開催前」=「バイアスなし」としたい。
+        # バイアスなしの基準値を入れる。
+        df_out['trend_win_inner_rate'] = df_out['trend_win_inner_rate'].fillna(0.25)
+        df_out['trend_win_mid_rate']   = df_out['trend_win_mid_rate'].fillna(0.50)
+        df_out['trend_win_outer_rate'] = df_out['trend_win_outer_rate'].fillna(0.25)
+        df_out['trend_win_front_rate'] = df_out['trend_win_front_rate'].fillna(0.20) # Approx nige win rate
+        df_out['trend_win_fav_rate']   = df_out['trend_win_fav_rate'].fillna(0.33)   # Approx fav win rate
+        
+        logger.info(f"リアルタイム特徴量生成完了: {len(trend_cols)} features added.")
+        return df_out
+

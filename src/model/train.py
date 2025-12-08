@@ -102,7 +102,7 @@ def train_ensemble(train_set, valid_set, model_dir, version):
     # Checking existing EnsembleModel code... I can't see it now but I recall simpler load.
     
     # For now, simply save the meta model with version.
-    model.load_base_models(model_dir) 
+    model.load_base_models(model_dir, version=version) 
     
     # Train meta model
     model.train_meta_model(valid_set)
@@ -131,6 +131,9 @@ def main():
     import mlflow
     mlflow.set_tracking_uri("http://mlflow:5000")
     mlflow.set_experiment(f"keiiba_{args.model}")
+
+    model_dir = os.path.join(os.path.dirname(__file__), '../../models')
+    os.makedirs(model_dir, exist_ok=True)
 
     with mlflow.start_run(run_name=f"{args.version}_train"):
         # パラメータロード & ログ

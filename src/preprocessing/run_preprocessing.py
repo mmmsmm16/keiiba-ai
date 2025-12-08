@@ -13,6 +13,8 @@ from preprocessing.aggregators import HistoryAggregator
 from preprocessing.category_aggregators import CategoryAggregator
 from preprocessing.dataset import DatasetSplitter
 from preprocessing.advanced_features import AdvancedFeatureEngineer
+from preprocessing.disadvantage_detector import DisadvantageDetector
+from preprocessing.relative_features import RelativeFeatureEngineer
 
 # ロガー設定
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -77,6 +79,22 @@ def main():
         logger.info("Step 6: 高度特徴量生成")
         adv_engineer = AdvancedFeatureEngineer()
         df = adv_engineer.add_features(df)
+
+        # 6.5. 不利検出特徴量生成 (Phase 11.1新規)
+        logger.info("Step 6.5: 不利検出特徴量生成")
+        disadv_detector = DisadvantageDetector()
+        df = disadv_detector.add_features(df)
+
+        # 6.6. 相対的特徴量生成 (Phase 11.1新規)
+        logger.info("Step 6.6: 相対的特徴量生成")
+        relative_engineer = RelativeFeatureEngineer()
+        df = relative_engineer.add_features(df)
+
+        # 6.7. リアルタイム特徴量生成 (v9新規 - 当日の傾向)
+        from preprocessing.realtime_features import RealTimeFeatureEngineer
+        logger.info("Step 6.7: リアルタイム特徴量生成 (当日の傾向)")
+        realtime_engineer = RealTimeFeatureEngineer()
+        df = realtime_engineer.add_features(df)
 
         # 7. データの保存 (全データ)
         output_dir = os.path.join(os.path.dirname(__file__), '../../data/processed')

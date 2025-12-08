@@ -77,9 +77,11 @@ class KeibaTabNet:
         if isinstance(y, pd.Series):
             y = y.values
 
-        # 0や負の値がない前提だが、念のためclip
-        y = np.clip(y, 1, 18)
-        return 1.0 / y
+        # 入力 y は DatasetSplitter で作成された "Relevance Score" (3=1着, 2=2着, 1=3着, 0=着外)
+        # つまり「高いほど良い」値になっている。
+        # そのため、逆数変換などの「低いほど良い→高いほど良い」への変換は【不要】であり、むしろ有害（逆転してしまう）。
+        # よって、そのまま float に変換して返す。
+        return y.astype(float)
 
     def train(self, train_set: dict, valid_set: dict):
         """
@@ -135,6 +137,35 @@ class KeibaTabNet:
         if not self.fitted_scaler:
              raise ValueError("モデル（スケーラー）が学習されていません。")
 
+        # Just-In-Time Device Fix (for Streamlit Caching issues)
+        if hasattr(self, 'model') and hasattr(self.model, 'network'):
+             # Check if we expect CPU
+             if getattr(self.model, 'device_name', '') == 'cpu':
+                  # Check explicit params or buffers
+                  # group_attention_matrix is inside encoder
+                  if hasattr(self.model.network, 'tabnet'):
+                       tabnet_module = self.model.network.tabnet
+                       # It might be directly in tabnet or in encoder
+                       modules_to_check = [tabnet_module]
+                       if hasattr(tabnet_module, 'encoder'):
+                           modules_to_check.append(tabnet_module.encoder)
+                       
+                       for mod in modules_to_check:
+                           if hasattr(mod, 'group_attention_matrix'):
+                               buf = mod.group_attention_matrix
+                               if buf.device.type != 'cpu':
+                                   logger.warning(f"JIT Fix: Moving group_attention_matrix from {buf.device} to cpu")
+                                   mod.group_attention_matrix = buf.cpu()
+                  
+                  # Ensure whole network is on CPU
+                  # accessing first param to check
+                  try:
+                      p = next(self.model.network.parameters())
+                      if p.device.type != 'cpu':
+                          logger.warning(f"JIT Fix: Moving whole network from {p.device} to cpu")
+                          self.model.network.cpu()
+                  except: pass
+
         # 特徴量数の整合性チェックとフィルタリング
         if hasattr(self.scaler, 'n_features_in_'):
             expected_features = self.scaler.n_features_in_
@@ -157,6 +188,8 @@ class KeibaTabNet:
         X_scaled = self.scaler.transform(X_values)
 
         # TabNetRegressor returns shape (N, 1)
+        # Ensure input is float32 (torch requirement usually)
+        # self.model.predict handles numpy conversion, but ensures device alignment
         preds = self.model.predict(X_scaled)
         return preds.flatten()
 
@@ -181,11 +214,36 @@ class KeibaTabNet:
 
         logger.info(f"TabNetモデルを保存しました: {model_path}.zip")
 
-    def load_model(self, path: str):
+    def load_model(self, path: str, device_name: str = None):
         """モデルとスケーラーをロードします。"""
         # モデル本体
         model_path = path.replace('.pkl', '') + '.zip'
         self.model.load_model(model_path)
+
+        # デバイスの強制変更 (Inference用)
+        if device_name:
+            self.model.device_name = device_name
+            # Explicitly set device to ensure predict uses correct device for tensors
+            self.model.device = torch.device(device_name)
+            
+            if device_name == 'cpu':
+                self.model.preds_mapper = {k: v.decode("utf-8") for k, v in self.model.preds_mapper.items()} if hasattr(self.model, 'preds_mapper') and self.model.preds_mapper else {}
+            
+            # Move network to device
+            if hasattr(self.model, 'network'):
+                self.model.network.to(torch.device(device_name))
+                param_device = next(self.model.network.parameters()).device
+                logger.debug(f"TabNet Device confirmed: model.device={self.model.device}, network.param={param_device}")
+
+                # Verify group_attention_matrix specifically (buffer)
+                if hasattr(self.model.network, 'tabnet') and hasattr(self.model.network.tabnet, 'group_attention_matrix'):
+                     buf = self.model.network.tabnet.group_attention_matrix
+                     logger.debug(f"DEBUG: Group Attention Matrix Device: {buf.device}")
+                     if device_name == 'cpu' and buf.device.type != 'cpu':
+                         logger.warning("Force moving group_attention_matrix to CPU")
+                         self.model.network.tabnet.group_attention_matrix = buf.cpu()
+
+            logger.info(f"TabNet Device set to: {device_name}")
 
         # スケーラー
         # 1. path + .scaler

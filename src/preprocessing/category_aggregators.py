@@ -60,10 +60,22 @@ class CategoryAggregator:
         if 'sire_id' in df.columns:
             df = self._aggregate_context(df, 'sire_id', 'distance_cat', 'dist')
 
-        # (3) 種牡馬 × 馬場状態 (Sire x Track Condition)
-        # surface: 芝, ダート
         if 'surface' in df.columns and 'sire_id' in df.columns:
              df = self._aggregate_context(df, 'sire_id', 'surface', 'track')
+
+        # NEW: (4) 騎手 × conditions
+        if 'jockey_id' in df.columns:
+            if 'surface' in df.columns:
+                df = self._aggregate_context(df, 'jockey_id', 'surface', 'surface')
+            if 'distance_cat' in df.columns:
+                df = self._aggregate_context(df, 'jockey_id', 'distance_cat', 'dist')
+
+        # NEW: (5) 調教師 × conditions
+        if 'trainer_id' in df.columns:
+            if 'surface' in df.columns:
+                df = self._aggregate_context(df, 'trainer_id', 'surface', 'surface')
+            if 'distance_cat' in df.columns:
+                df = self._aggregate_context(df, 'trainer_id', 'distance_cat', 'dist')
 
         # (4) 騎手 × 調教師 (Jockey x Trainer - Interaction)
         if 'trainer_id' in df.columns and 'jockey_id' in df.columns:
