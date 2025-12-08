@@ -44,8 +44,11 @@ class KeibaLGBM:
         logger.info("LightGBMの学習を開始します...")
 
         # データセットの作成
-        lgb_train = lgb.Dataset(train_set['X'], label=train_set['y'], group=train_set['group'])
-        lgb_valid = lgb.Dataset(valid_set['X'], label=valid_set['y'], group=valid_set['group'], reference=lgb_train)
+        w_train = train_set.get('w')
+        w_valid = valid_set.get('w')
+        
+        lgb_train = lgb.Dataset(train_set['X'], label=train_set['y'], group=train_set['group'], weight=w_train)
+        lgb_valid = lgb.Dataset(valid_set['X'], label=valid_set['y'], group=valid_set['group'], reference=lgb_train, weight=w_valid)
 
         # コールバック設定
         callbacks = [

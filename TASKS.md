@@ -176,3 +176,25 @@
 
 
 
+## Phase 16: 運用パイプラインの自動化 (Systematization & Automation - Priority A)
+- [ ] **統合パイプラインスクリプト** (`src/scripts/run_weekly.py`)
+    - [ ] データ更新 (Data Ingestion)
+    - [ ] 前処理 & 特徴量更新 (Preprocessing)
+    - [ ] 推論実行 (Inference v4)
+    - [ ] 買い目フィルタリング (Betting Strategy)
+    - [ ] レポート出力 (HTML/CSV)
+- [ ] **出力フォーマットの整備**
+    - [ ] スマホで見やすいHTMLレポート作成
+- [ ] **ログ監視**
+    - [ ] 実行ログの保存とエラー通知
+
+## Phase 17: リスク管理UI (Risk Management Dashboard)
+- [ ] **ダッシュボード拡張**
+    - [ ] 資金シミュレーション結果の統合表示
+    - [ ] 「推奨賭け金」計算ツールの実装 (Your Bankroll -> Bet Size)
+
+## Phase 18: リアルタイム・オッズ連携 (Real-time Integration)
+- [ ] **直前オッズ取得**
+    - [ ] リアルタイムオッズ取得スクリプト
+- [ ] **直前GO/NO-GO判定**
+    - [ ] 期待値再計算ロジック

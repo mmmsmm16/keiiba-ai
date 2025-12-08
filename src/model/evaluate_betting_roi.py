@@ -60,8 +60,11 @@ def main():
     parser.add_argument('--kelly_fraction', type=float, default=0.25, help='Fractional Kelly (0.1-1.0)')
     parser.add_argument('--initial_bankroll', type=int, default=1000000, help='Start Bankroll')
     parser.add_argument('--model_type', type=str, default='lgbm', choices=['lgbm', 'catboost'], help='Model Type')
+    parser.add_argument('--model_version', type=str, default=None, help='Model Version (e.g. v5_weighted)')
+    parser.add_argument('--skip_ev', action='store_true', help='Skip EV check')
     args = parser.parse_args()
 
+    # 1. Load Data
     # 1. Load Data
     logger.info(f"Loading data for year {args.year}...")
     df = pd.read_parquet(args.input)
@@ -73,24 +76,39 @@ def main():
         return
 
     # 2. Base Model Predictions
-    logger.info(f"Loading Base Model ({args.model_type}) & Calibrator...")
+    logger.info(f"Loading Base Model ({args.model_type} {args.model_version or ''}) & Calibrator...")
     
+    model_path = None
+    if args.model_version:
+        # Check specific version
+        path = os.path.join(args.model_dir, f'{args.model_type}_{args.model_version}.pkl')
+        if os.path.exists(path):
+            model_path = path
+        else:
+            logger.warning(f"指定されたモデルが見つかりません: {path}。デフォルトロジックに戻ります。")
+            
+    if not model_path:
+        if args.model_type == 'lgbm':
+            if os.path.exists(os.path.join(args.model_dir, 'lgbm_v4_emb.pkl')):
+                 model_path = os.path.join(args.model_dir, 'lgbm_v4_emb.pkl')
+            else:
+                 model_path = os.path.join(args.model_dir, 'lgbm.pkl')
+        elif args.model_type == 'catboost':
+            if os.path.exists(os.path.join(args.model_dir, 'catboost_v9_emb.pkl')):
+                 model_path = os.path.join(args.model_dir, 'catboost_v9_emb.pkl')
+            elif os.path.exists(os.path.join(args.model_dir, 'catboost_v9.pkl')):
+                 model_path = os.path.join(args.model_dir, 'catboost_v9.pkl')
+            else:
+                 model_path = os.path.join(args.model_dir, 'catboost.pkl')
+
     if args.model_type == 'lgbm':
         from model.lgbm import KeibaLGBM
         model = KeibaLGBM()
-        if os.path.exists(os.path.join(args.model_dir, 'lgbm_v4_emb.pkl')):
-             model.load_model(os.path.join(args.model_dir, 'lgbm_v4_emb.pkl'))
-        else:
-             model.load_model(os.path.join(args.model_dir, 'lgbm.pkl'))
-    elif args.model_type == 'catboost':
+    else:
         from model.catboost_model import KeibaCatBoost
         model = KeibaCatBoost()
-        if os.path.exists(os.path.join(args.model_dir, 'catboost_v9_emb.pkl')):
-             model.load_model(os.path.join(args.model_dir, 'catboost_v9_emb.pkl'))
-        elif os.path.exists(os.path.join(args.model_dir, 'catboost_v9.pkl')):
-             model.load_model(os.path.join(args.model_dir, 'catboost_v9.pkl'))
-        else:
-             model.load_model(os.path.join(args.model_dir, 'catboost.pkl'))
+        
+    model.load_model(model_path)
     
     feature_cols = getattr(model.model, 'feature_name', lambda: [])()
     if not feature_cols:
@@ -104,21 +122,44 @@ def main():
     valid_df['prob'] = valid_df.groupby('race_id')['score'].transform(lambda x: softmax(x))
     
     # Calibration
-    calib_path = os.path.join(args.model_dir, 'calibrator.pkl')
+    calib_name = f'calibrator_{args.model_version}.pkl' if args.model_version else 'calibrator.pkl'
+    calib_path = os.path.join(args.model_dir, calib_name)
+    
+    if not os.path.exists(calib_path):
+        # Fallback to default
+        calib_path = os.path.join(args.model_dir, 'calibrator.pkl')
+        
     if os.path.exists(calib_path):
+        logger.info(f"Calibrator loaded from {calib_path}")
         from model.calibration import ProbabilityCalibrator
         calibrator = ProbabilityCalibrator()
         calibrator.load(calib_path)
         valid_df['calibrated_prob'] = calibrator.predict(valid_df['prob'].values)
     else:
+        logger.warning("Calibrator not found, using raw probability.")
         valid_df['calibrated_prob'] = valid_df['prob']
         
     # 3. Betting Models for Thresholding
     # Note: These use 'calibrated_prob' derived features.
-    with open(os.path.join(args.model_dir, 'betting_model_win.pkl'), 'rb') as f:
+    
+    # Determine Betting Model Names
+    suffix = f"_{args.model_version}" if args.model_version else ""
+    path_win = os.path.join(args.model_dir, f'betting_model{suffix}_win.pkl')
+    path_place = os.path.join(args.model_dir, f'betting_model{suffix}_place.pkl')
+    
+    # Fallback
+    if not os.path.exists(path_win):
+        logger.warning(f"Betting Model (Win) not found at {path_win}, using default.")
+        path_win = os.path.join(args.model_dir, 'betting_model_win.pkl')
+    if not os.path.exists(path_place):
+        logger.warning(f"Betting Model (Place) not found at {path_place}, using default.")
+        path_place = os.path.join(args.model_dir, 'betting_model_place.pkl')
+        
+    with open(path_win, 'rb') as f:
         model_win = pickle.load(f)
-    with open(os.path.join(args.model_dir, 'betting_model_place.pkl'), 'rb') as f:
+    with open(path_place, 'rb') as f:
         model_place = pickle.load(f)
+    logger.info(f"Loaded Betting Models: {os.path.basename(path_win)}, {os.path.basename(path_place)}")
     
     clean_valid = valid_df[['race_id', 'odds', 'horse_number', 'calibrated_prob', 'score', 'date']].copy()
     race_feats = calculate_race_features(clean_valid)
@@ -151,7 +192,12 @@ def main():
         axis_horse = sorted_horses.iloc[0]
         
         # EV Check
-        ev_check = (axis_horse['calibrated_prob'] * axis_horse['odds']) > 1.2
+        skip_ev = kwargs.get('skip_ev', False)
+        if skip_ev:
+             ev_check = True
+        else:
+             ev_check = (axis_horse['calibrated_prob'] * axis_horse['odds']) > 1.2
+             
         if not ev_check:
             return [], 0
             
@@ -226,8 +272,10 @@ def main():
         results = []
         
         # Pre-calculate Race Data
+        logger.info(f"Payout Map Size: {len(optimizer.payout_map)}")
         processed_races = {}
-        for race_id, group in clean_valid.groupby('race_id'):
+        for i, (race_id, group) in enumerate(clean_valid.groupby('race_id')):
+            if i == 0: logger.info(f"Scanning Race: {race_id}, In Payouts? {race_id in optimizer.payout_map}")
             sorted_horses = group.sort_values('score', ascending=False)
             if len(sorted_horses) < 6: continue
             
@@ -236,7 +284,10 @@ def main():
             opp_nums = [int(h) for h in sorted_horses.iloc[1:6]['horse_number']]
             
             # EV Check
-            ev_check = (axis_horse['calibrated_prob'] * axis_horse['odds']) > 1.2
+            if args.skip_ev:
+                ev_check = True
+            else:
+                ev_check = (axis_horse['calibrated_prob'] * axis_horse['odds']) > 1.2
             
             payouts = optimizer.payout_map.get(race_id, {})
             # Sanity check if payouts exist
@@ -285,6 +336,11 @@ def main():
                 'conf_win': conf_map[race_id]['conf_win'],
                 'conf_place': conf_map[race_id]['conf_place']
             }
+        
+        logger.info(f"Processed Races: {len(processed_races)}")
+        if len(processed_races) > 0:
+            first_key = list(processed_races.keys())[0]
+            logger.info(f"Sample Race Data: {processed_races[first_key]}")
             
         print(f"{'TH_WIN':<10} {'TH_PLACE':<10} {'ROI':<10} {'BETS':<10} {'PROFIT':<15}")
         print("-" * 60)
@@ -325,7 +381,7 @@ def main():
                 
                 # We need a wrapper to force flat bet
                 def strategy_flat(optimizer, race_id, current_bankroll, **kwargs):
-                    return strategy_two_stage(optimizer, race_id, current_bankroll, mode='flat', ticket_type=args.ticket_type) 
+                    return strategy_two_stage(optimizer, race_id, current_bankroll, mode='flat', ticket_type=args.ticket_type, skip_ev=args.skip_ev) 
                 
                 sorted_races = clean_valid.sort_values(['date', 'race_id'])['race_id'].unique()
                 res = sim.run(sorted_races, strategy_flat)
@@ -341,7 +397,7 @@ def main():
          logger.info(f"Running Bankroll Simulation (Kelly Fraction={args.kelly_fraction})...")
          sim = BankrollSimulator(optimizer, initial_bankroll=args.initial_bankroll)
          sorted_races = clean_valid.sort_values(['date', 'race_id'])['race_id'].unique()
-         res = sim.run(sorted_races, strategy_two_stage, mode='kelly', fraction=args.kelly_fraction, ticket_type=args.ticket_type)
+         res = sim.run(sorted_races, strategy_two_stage, mode='kelly', fraction=args.kelly_fraction, ticket_type=args.ticket_type, skip_ev=args.skip_ev)
          
          print("\n=== Kelly Simulation Results ===")
          print(f"Initial: {args.initial_bankroll:,} Yen")
@@ -349,6 +405,13 @@ def main():
          print(f"Profit:  {res['final_bankroll'] - args.initial_bankroll:,} Yen")
          print(f"ROI:     {res['roi']:.2f}%")
          print(f"Max DD:  {res['max_drawdown']:.2f}%")
+
+         # Save History
+         if 'history' in res and not res['history'].empty:
+             os.makedirs('experiments', exist_ok=True)
+             history_path = f"experiments/simulation_kelly_{args.ticket_type}_{args.model_type}.csv"
+             res['history'].to_csv(history_path, index=False)
+             logger.info(f"Simulation history saved to {history_path}")
 
 if __name__ == "__main__":
     main()

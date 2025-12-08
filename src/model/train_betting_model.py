@@ -127,7 +127,8 @@ def main():
     parser.add_argument('--input', type=str, default='data/processed/preprocessed_data.parquet')
     parser.add_argument('--model_dir', type=str, default='models')
     parser.add_argument('--base_model', type=str, default='lgbm')
-    parser.add_argument('--year_train', type=str, default='2020,2021,2022,2023')
+    parser.add_argument('--model_version', type=str, default=None, help='Specific model version (e.g. v5_weighted)')
+    parser.add_argument('--year_train', type=str, default='2019,2020,2021,2022,2023') # Expanded train years
     parser.add_argument('--year_valid', type=str, default='2024') 
     args = parser.parse_args()
 
@@ -140,11 +141,32 @@ def main():
     valid_years = [int(y) for y in args.year_valid.split(',')]
     
     # Load Base Model
-    logger.info(f"Loading Base Model: {args.base_model}")
+    logger.info(f"Loading Base Model: {args.base_model} {args.model_version or ''}")
     model = None
+    model_path = None
+
     if args.base_model == 'lgbm':
         model = KeibaLGBM()
-        model.load_model(os.path.join(args.model_dir, 'lgbm.pkl'))
+        if args.model_version:
+             p = os.path.join(args.model_dir, f'lgbm_{args.model_version}.pkl')
+             if os.path.exists(p): model_path = p
+        
+        if not model_path:
+             model_path = os.path.join(args.model_dir, 'lgbm.pkl')
+             
+        model.load_model(model_path)
+        
+    elif args.base_model == 'catboost': # Added catboost support
+        from model.catboost_model import KeibaCatBoost
+        model = KeibaCatBoost()
+        if args.model_version:
+             p = os.path.join(args.model_dir, f'catboost_{args.model_version}.pkl')
+             if os.path.exists(p): model_path = p
+        
+        if not model_path:
+             model_path = os.path.join(args.model_dir, 'catboost.pkl')
+        model.load_model(model_path)
+
     elif args.base_model == 'ensemble':
         model = EnsembleModel()
         model.load_model(os.path.join(args.model_dir, 'ensemble_model.pkl'))
@@ -152,11 +174,21 @@ def main():
     # Load Calibrator
     logger.info("Loading Calibrator...")
     calibrator = None
-    calib_path = os.path.join(args.model_dir, 'calibrator.pkl')
+    calib_name = f'calibrator_{args.model_version}.pkl' if args.model_version else 'calibrator.pkl'
+    calib_path = os.path.join(args.model_dir, calib_name)
+    
     if os.path.exists(calib_path):
         from model.calibration import ProbabilityCalibrator
         calibrator = ProbabilityCalibrator()
         calibrator.load(calib_path)
+        logger.info(f"Loaded {calib_path}")
+    else:
+        # Fallback
+        if os.path.exists(os.path.join(args.model_dir, 'calibrator.pkl')):
+            from model.calibration import ProbabilityCalibrator
+            calibrator = ProbabilityCalibrator()
+            calibrator.load(os.path.join(args.model_dir, 'calibrator.pkl'))
+            logger.info("Loaded default calibrator.pkl (versioned one not found)")
     
     # Predict Scores
     feature_cols = None
@@ -207,11 +239,14 @@ def main():
     
     logger.info(f"Final Train Samples: {len(train_data)}")
     
+    # Determine Output Names
+    suffix = f"_{args.model_version}" if args.model_version else ""
+    
     # Train Win Model
-    train_and_save(train_data, valid_data, 'target_win', 'betting_model_win.pkl', args.model_dir)
+    train_and_save(train_data, valid_data, 'target_win', f'betting_model{suffix}_win.pkl', args.model_dir)
     
     # Train Place Model
-    train_and_save(train_data, valid_data, 'target_place', 'betting_model_place.pkl', args.model_dir)
+    train_and_save(train_data, valid_data, 'target_place', f'betting_model{suffix}_place.pkl', args.model_dir)
 
 if __name__ == "__main__":
     main()

@@ -101,6 +101,20 @@ class DatasetSplitter:
             'surface_num',            # 重要度 0
             'day',                    # 重要度 0
         ]
+        # Sample Weights for Odds-Weighted Loss (Phase 15)
+        # Use log1p(odds) to prioritize high-value winners without excessive noise sensitivity
+        # Default weight = 1.0
+        # Winner (Target > 0) weight = 1.0 + np.log1p(odds)
+        w = np.ones(len(df))
+        if 'odds' in df.columns:
+            # fillna(1.0) and use log1p
+            odds = df['odds'].fillna(1.0)
+            # Apply weight only for Top 3 (target > 0)
+            # w[df['target'] > 0] = 1.0 + np.log1p(odds[df['target'] > 0])
+            # Wait, log1p of 1.0 is 0.7. log1p of 100 is 4.6.
+            # Base weight 1.0. Bonus is log1p(odds).
+            is_winner = df['target'] > 0
+            w[is_winner] = 1.0 + np.log1p(odds[is_winner])
 
         # 存在しないカラムをdropしようとしてもエラーにならないように errors='ignore'
         X = df.drop(columns=drop_cols, errors='ignore')
@@ -111,4 +125,4 @@ class DatasetSplitter:
 
         y = df['target']
 
-        return {'X': X, 'y': y, 'group': group}
+        return {'X': X, 'y': y, 'group': group, 'w': w}
