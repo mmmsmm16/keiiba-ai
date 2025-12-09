@@ -13,14 +13,15 @@ from utils.experiment_logger import ExperimentLogger
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-def load_datasets():
-    dataset_path = os.path.join(os.path.dirname(__file__), '../../data/processed/lgbm_datasets.pkl')
+def load_datasets(suffix=""):
+    filename = f'lgbm_datasets{suffix}.pkl'
+    dataset_path = os.path.join(os.path.dirname(__file__), '../../data/processed', filename)
     if not os.path.exists(dataset_path):
         logger.error(f"データセットが見つかりません: {dataset_path}")
         logger.error("先に src/preprocessing/run_preprocessing.py を実行してください。")
         sys.exit(1)
 
-    logger.info("データセットをロード中...")
+    logger.info(f"データセットをロード中... ({filename})")
     with open(dataset_path, 'rb') as f:
         datasets = pickle.load(f)
     
@@ -119,9 +120,10 @@ def main():
                         help='学習するモデルを指定 (lgbm, catboost, tabnet, ensemble)')
     parser.add_argument('--batch_size', type=int, default=None, help='バッチサイズ (TabNet用)')
     parser.add_argument('--version', type=str, default='v1', help='モデルバージョン (例: v1, v2)')
+    parser.add_argument('--dataset_suffix', type=str, default="", help='データセットのサフィックス (例: _jra_v5)')
     args = parser.parse_args()
 
-    train_set, valid_set = load_datasets()
+    train_set, valid_set = load_datasets(suffix=args.dataset_suffix)
 
     if train_set['X'] is None or train_set['X'].empty:
         logger.error("学習データが空です。")
@@ -141,6 +143,7 @@ def main():
         mlflow.log_params(params)
         mlflow.log_param("version", args.version)
         mlflow.log_param("batch_size", args.batch_size)
+        mlflow.log_param("dataset_suffix", args.dataset_suffix)
 
         model = None
         if args.model == 'lgbm':

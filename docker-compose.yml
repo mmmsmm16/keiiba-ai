@@ -7,6 +7,7 @@ services:
     ports:
       - "8888:8888"
       - "8501:8501"
+      - "8000:8000"
     depends_on:
       - db
     environment:
@@ -36,8 +37,6 @@ services:
     ports:
       - "5433:5432"
 
-  mlflow:
-    image: ghcr.io/mlflow/mlflow:v2.7.1
     ports:
       - "5000:5000"
     environment:
@@ -48,4 +47,15 @@ services:
     volumes:
       # 専用ディレクトリをマウント
       - ./mlflow_store:/mlflow_store
+
+  frontend:
+    image: node:20-slim
+    working_dir: /app
+    volumes:
+      - ./web:/app
+    ports:
+      - "3000:3000"
+    environment:
+      - WATCHPACK_POLLING=true
+    command: sh -c "npm install && npm run dev"
     command: mlflow server --backend-store-uri sqlite:////mlflow_store/mlflow.db --default-artifact-root /mlflow_store/artifacts --host 0.0.0.0

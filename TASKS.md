@@ -63,7 +63,8 @@
     - [x] スコア算出とランク付け
 - [x] 予測閲覧簡易ビューア (`src/inference/viewer.py`)
     - [x] CLIまたはシンプルなWebUIでの結果表示
-- [ ] 自動購入連携 (Optional)
+- [x] 自動購入連携 (Optional)
+- [x] **Bug Fix**: `auto_predict.py` の勝率計算ロジック修正 (Softmax -> Calibration)
 
 ## Phase 6: 分析・可視化 (Analysis & Visualization)
 - [x] 実験結果出力の強化 (`src/model/evaluate.py`)
@@ -209,3 +210,17 @@
     - [ ] リアルタイムオッズ取得スクリプト
 - [ ] **直前GO/NO-GO判定**
     - [ ] 期待値再計算ロジック
+
+## Phase 19: リファクタリング・整理 (Refactoring & Cleanup)
+- [x] **ルートディレクトリの整理**
+    - [x] 不要なスクリプトを `src/scripts/adhoc` 等へ移動
+    - [x] ログファイルの整理
+- [x] **`src/scripts` の整理**
+    - [x] `adhoc` (一時的なチェック用), `examples` ディレクトリの作成
+    - [x] スクリプトの分類・移動
+- [x] **モジュールの整理**
+    - [x] `src/preprocessing` 内の実行スクリプトの移動/削除
+    - [x] 重複ファイルの削除 (`regenerate_datasets.py`)
+- [x] **インポートパスの修正**
+    - [x] 移動したスクリプトの `sys.path` 修正
+

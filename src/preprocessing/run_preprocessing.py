@@ -25,12 +25,20 @@ import argparse
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--resume', action='store_true', help='前回のStep 5完了時点から再開します')
+    parser.add_argument('--jra_only', action='store_true', help='JRA会場のみにフィルタリングします (Model v5用)')
     args = parser.parse_args()
 
     try:
         checkpoint_dir = os.path.join(os.path.dirname(__file__), '../../data/interim')
         os.makedirs(checkpoint_dir, exist_ok=True)
-        checkpoint_path = os.path.join(checkpoint_dir, 'step5_checkpoint.parquet')
+        
+        # チェックポイントや出力ファイルのパスをモードによって切り替え
+        suffix = "_jra_v5" if args.jra_only else ""
+        checkpoint_name = f'step5_checkpoint{suffix}.parquet'
+        output_parquet_name = f'preprocessed_data{suffix}.parquet'
+        output_dataset_name = f'lgbm_datasets{suffix}.pkl'
+        
+        checkpoint_path = os.path.join(checkpoint_dir, checkpoint_name)
 
         df = None
 
@@ -40,10 +48,10 @@ def main():
             logger.info("Step 1-5: スキップ (完了済み)")
         else:
             # 1. データのロード
-            logger.info("Step 1: データのロード (JRA-VAN)")
+            logger.info(f"Step 1: データのロード (JRA-VAN) [JRA Only Mode: {args.jra_only}]")
             loader = JraVanDataLoader()
-            df = loader.load() # 全データをロード
-
+            df = loader.load(jra_only=args.jra_only) # 引数を渡す
+ 
             # 2. データクレンジング
             logger.info("Step 2: データクレンジング")
             cleanser = DataCleanser()
@@ -93,6 +101,8 @@ def main():
         # 6.7. リアルタイム特徴量生成 (v9新規 - 当日の傾向)
         from preprocessing.realtime_features import RealTimeFeatureEngineer
         logger.info("Step 6.7: リアルタイム特徴量生成 (当日の傾向)")
+        # JRAのみの場合、リアルタイム特徴量は前レースの結果を使うため
+        # 同じ会場の過去レース数が減るわけではない（同日同会場なので影響なし）
         realtime_engineer = RealTimeFeatureEngineer()
         df = realtime_engineer.add_features(df)
 
@@ -105,7 +115,7 @@ def main():
         # 7. データの保存 (全データ)
         output_dir = os.path.join(os.path.dirname(__file__), '../../data/processed')
         os.makedirs(output_dir, exist_ok=True)
-        output_path = os.path.join(output_dir, 'preprocessed_data.parquet')
+        output_path = os.path.join(output_dir, output_parquet_name)
 
         logger.info(f"Step 7: 中間データの保存 ({output_path})")
         df.to_parquet(output_path, index=False)
@@ -117,7 +127,7 @@ def main():
 
         # 9. データセットの保存 (Pickle)
         # 辞書形式 (X, y, group) を保存
-        dataset_path = os.path.join(output_dir, 'lgbm_datasets.pkl')
+        dataset_path = os.path.join(output_dir, output_dataset_name)
         logger.info(f"Step 9: 学習用データセットの保存 ({dataset_path})")
         pd.to_pickle(datasets, dataset_path)
 

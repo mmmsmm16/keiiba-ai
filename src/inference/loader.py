@@ -225,9 +225,21 @@ class InferenceDataLoader:
                 # (race_idsによる絞り込みは行わず、返り値の全レースから呼び出し元が抽出する想定)
                 pass
             else:
-                 # target_dateがない場合、race_idsから日付を特定するのは困難（別途クエリが必要）
-                 # ここでは簡易的に直近のレースと仮定するか、警告を出す
-                 logger.warning("target_dateが指定されていません。race_idからの日付逆算は現在のスキーマではサポートされていません。正確なデータを取得できない可能性があります。")
+                 # race_ids for filtering without target_date
+                 # Optimized: Use tuple matching instead of CONCAT for index usage
+                 # race_id structure: YYYY(4) + Venue(2) + Kai(2) + Nichi(2) + Race(2)
+                 val_list = []
+                 for rid in race_ids:
+                     if len(rid) == 12:
+                         t = f"('{rid[0:4]}', '{rid[4:6]}', '{rid[6:8]}', '{rid[8:10]}', '{rid[10:12]}')"
+                         val_list.append(t)
+                 
+                 if val_list:
+                     in_clause = ",".join(val_list)
+                     query += f"""
+                     AND (r.kaisai_nen, r.keibajo_code, r.kaisai_kai, r.kaisai_nichime, r.race_bango) IN ({in_clause})
+                     """
+                 logger.info(f"Filtering by {len(race_ids)} race_ids.")
 
 
 
@@ -585,6 +597,68 @@ class InferenceDataLoader:
                 
         return results
 
+
+
+
+    def get_race_schedule(self, start_date: str = None, end_date: str = None, limit: int = 20) -> pd.DataFrame:
+        """
+        開催スケジュールのサマリを取得します。
+        デフォルトでは未来の開催予定または直近の開催を取得します。
+        
+        Args:
+            start_date (str): 'YYYY-MM-DD' (Optional)
+            end_date (str): 'YYYY-MM-DD' (Optional)
+            limit (int): 取得する日数制限 (Descending order of date)
+
+        Returns:
+            pd.DataFrame: columns=['date', 'venue', 'races_count', 'main_race_name']
+        """
+        tbl_race = self._get_table_name(['jvd_race_shosai', 'race_shosai', 'jvd_ra'])
+        is_pckeiba_short = (tbl_race == 'jvd_ra' or tbl_race == 'ra')
+        col_title = "r.kyosomei_hondai" if is_pckeiba_short else "r.race_mei_honbun"
+
+        # Construct Date Filter
+        date_cond = "1=1"
+        if start_date:
+            s_flat = start_date.replace('-', '')
+            date_cond += f" AND (r.kaisai_nen || r.kaisai_tsukihi) >= '{s_flat}'"
+        
+        if end_date:
+            e_flat = end_date.replace('-', '')
+            date_cond += f" AND (r.kaisai_nen || r.kaisai_tsukihi) <= '{e_flat}'"
+            
+        query = f"""
+        WITH daily_venues AS (
+            SELECT
+                TO_DATE(r.kaisai_nen || r.kaisai_tsukihi, 'YYYYMMDD') AS date,
+                r.keibajo_code AS venue_code,
+                COUNT(r.race_bango) AS races_count,
+                -- Main Race (usually 11R) Title
+                MAX(CASE WHEN r.race_bango = '11' THEN {col_title} ELSE NULL END) AS main_race_name
+            FROM {tbl_race} r
+            WHERE {date_cond}
+            GROUP BY date, venue_code
+        )
+        SELECT * FROM daily_venues
+        ORDER BY date DESC, venue_code ASC
+        LIMIT {limit * 3} 
+        """
+        # Limit * 3 because multiple venues per day
+        
+        try:
+            df = pd.read_sql(query, self.engine)
+            
+            # Map codes
+            venue_map = {
+                '01': '札幌', '02': '函館', '03': '福島', '04': '新潟', '05': '東京', 
+                '06': '中山', '07': '中京', '08': '京都', '09': '阪神', '10': '小倉'
+            }
+            df['venue'] = df['venue_code'].map(venue_map).fillna(df['venue_code'])
+            
+            return df
+        except Exception as e:
+            logger.error(f"Schedule Load Error: {e}")
+            return pd.DataFrame()
 
 
 import numpy as np

@@ -57,9 +57,13 @@ class JraVanDataLoader:
             logger.warning(f"テーブル存在確認中にエラーが発生しました: {e}. デフォルトの {candidates[0]} を使用します。")
             return candidates[0]
 
-    def load(self, limit: int = None) -> pd.DataFrame:
+    def load(self, limit: int = None, jra_only: bool = False) -> pd.DataFrame:
         """
         JRA-VANデータをロードし、学習用フォーマットに変換します。
+        
+        Args:
+            limit (int, optional): ロードする件数の上限
+            jra_only (bool, optional): JRA (01-10) のレースのみに限定するかどうか
         """
         # テーブル名の解決 (jvd_プレフィックスの有無、短縮名に対応)
         tbl_race = self._get_table_name(['jvd_race_shosai', 'race_shosai', 'jvd_ra'])
@@ -100,6 +104,15 @@ class JraVanDataLoader:
             # 標準カラム (存在しない場合はエラーになるため、必要に応じて ketto_joho に変更検討)
             col_sire = "uma.fushu_ketto_toroku_bango"
             col_mare = "uma.boshu_ketto_toroku_bango"
+
+        # フィルタリング条件の構築
+        where_clauses = []
+        if jra_only:
+            where_clauses.append("r.keibajo_code BETWEEN '01' AND '10'")
+        
+        where_str = ""
+        if where_clauses:
+            where_str = "WHERE " + " AND ".join(where_clauses)
 
         query = f"""
         SELECT
@@ -160,11 +173,14 @@ class JraVanDataLoader:
         LEFT JOIN {tbl_uma} uma
             ON res.ketto_toroku_bango = uma.ketto_toroku_bango
 
+        {where_str}
+
         ORDER BY date, race_id
         """
 
         if limit:
             query += f" LIMIT {limit}"
+
 
         logger.info("JRA-VANデータをロード中...")
         try:

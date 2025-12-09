@@ -26,7 +26,7 @@ def main():
     parser = argparse.ArgumentParser(description='Run Inference')
     parser.add_argument('--date', type=str, required=True, help='Target Date (YYYY-MM-DD)')
     parser.add_argument('--model', type=str, default='ensemble', choices=['lgbm', 'catboost', 'tabnet', 'ensemble'])
-    parser.add_argument('--version', type=str, default='v1')
+    parser.add_argument('--version', type=str, default='v5')
     args = parser.parse_args()
     
     # 1. データのロード

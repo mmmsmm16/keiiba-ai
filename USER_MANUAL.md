@@ -117,9 +117,33 @@ docker-compose exec app python src/model/evaluate.py --model ensemble --version 
 
 ---
 
-## 5. ステップ 3: 予測と分析 (運用・ダッシュボード)
+## 5. ステップ 3: 予測と分析
+## 6. Dashboard 2.0 (Modern UI) の使い方
+Streamlitダッシュボードが大幅にアップデートされ、分析機能が強化されました。
 
-構築したモデルを使って、実際に開催されるレースの予想や分析を行います。
+### 起動方法
+```bash
+streamlit run src/dashboard/app.py
+```
+
+### 主な機能
+1.  **Home (Predictions)**
+    *   **Hybrid View:** 左側のリストからレースを選択し、右側のカードで詳細分析を行います。
+    *   **Deep Analytics:**
+        *   **Radar Chart:** スピード・スタミナ・騎手などの6軸評価。
+        *   **Position Map:** 展開予想図（逃げ・先行などの位置取り）。
+        *   **Head-to-Head:** 気になる2頭の直接比較。
+    *   **Value Detector:** AIの評価に対してオッズがおいしい馬を「Value」として強調表示します。
+
+2.  **Schedule**
+    *   今後のレース開催予定や、過去の開催日をカレンダー形式で確認できます。
+    *   日付を選択すると、その日のレース一覧へジャンプします。
+
+3.  **Settings**
+    *   サイドバーの「Dark Mode」トグルで、ライトモード/ダークモードを切り替えられます。
+
+---
+、実際に開催されるレースの予想や分析を行います。
 
 ### 5.1 CLIでの予測実行 (Inference)
 
