@@ -38,3 +38,4 @@ models/
 Thumbs.db
 
 mlflow_store/
+*.log

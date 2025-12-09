@@ -10,7 +10,7 @@ class DatasetSplitter:
     データセットを学習用・検証用・テスト用に分割し、
     LightGBM (Ranking) で学習可能な形式に整形するクラス。
     """
-    def split_and_create_dataset(self, df: pd.DataFrame, valid_year: int = 2024) -> Dict[str, Dict]:
+    def split_and_create_dataset(self, df: pd.DataFrame, valid_year: int = 2025) -> Dict[str, Dict]:
         """
         データを分割してデータセットを作成します。
 

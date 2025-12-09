@@ -22,6 +22,11 @@ class EnsembleModel:
         self.tabnet = KeibaTabNet()
 
         self.meta_model = LinearRegression() # シンプルな線形回帰で重み付け
+        
+        # フラグ初期化
+        self.has_lgbm = False
+        self.has_catboost = False
+        self.has_tabnet = False
 
     def load_base_models(self, model_dir: str, version: str = 'v1'):
         """
@@ -153,9 +158,17 @@ class EnsembleModel:
         self.meta_model = loaded.meta_model
         
         # 保存時にhas_lgbm等が保存されているはずだが、念のため復元
-        if hasattr(loaded, 'has_lgbm'): self.has_lgbm = loaded.has_lgbm
-        if hasattr(loaded, 'has_catboost'): self.has_catboost = loaded.has_catboost
-        if hasattr(loaded, 'has_tabnet'): self.has_tabnet = loaded.has_tabnet
+        # 古いモデルファイルで属性がない場合は、存在チェックを行うか、Trueとみなす
+        self.has_lgbm = getattr(loaded, 'has_lgbm', True)
+        self.has_catboost = getattr(loaded, 'has_catboost', True)
+        self.has_tabnet = getattr(loaded, 'has_tabnet', False) # TabNetは以前はなかったのでFalseデフォルトが安全かも?でもv3はあった?
+        # v3まではTabNetはEnsembleに含まれてたか？ -> Ensembleのpredictで使われたならTrueにすべき。
+        # しかし古いpickleにTabNetが含まれてなければエラーになるため、
+        # TabNetについては安全側に倒してFalseにするか、loadedからtabnet属性があるか見る。
+        
+        # 属性としての存在確認 (Noneでないか)
+        if self.lgbm is None: self.has_lgbm = False
+        if self.catboost is None: self.has_catboost = False
 
         # TabNetのロード (GPU利用可, 推論時はCPU強制も可)
         self.tabnet = KeibaTabNet()

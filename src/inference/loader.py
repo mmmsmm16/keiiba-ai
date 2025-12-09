@@ -215,18 +215,20 @@ class InferenceDataLoader:
             query += f" AND (r.kaisai_nen || r.kaisai_tsukihi) = '{flat_date}'"
         
         if race_ids:
-            # リアルタイム特徴量(当日の傾向)計算のため、指定されたレースだけでなく
-            # 「その日の全レース」を取得する必要がある。
-            # race_id (YYYYMMDDJJRRRR) から日付を抽出してフィルタリング条件に追加する。
+            # race_idが指定されている場合でも、リアルタイム特徴量のために「その日の全レース」が必要。
+            # しかし、現在のスキーマのrace_id (YYYYJJNNRR) からは日付(MMDD)を直接抽出できない。
+            # そのため、target_date が指定されている場合はそれを優先し、
+            # target_date がない場合は race_ids からの推測を試みるが、スキーマ的に失敗する可能性が高い。
             
-            # Extract unique dates from race_ids (first 8 chars)
-            target_dates = sorted(list(set([rid[:8] for rid in race_ids])))
-            dates_str = ",".join([f"'{d}'" for d in target_dates])
-            
-            query += f" AND (r.kaisai_nen || r.kaisai_tsukihi) IN ({dates_str})"
-            
-            # 個別の race_id フィルタリングはここでは行わない（文脈が必要なため）
-            # 呼び出し元でフィルタリングするか、全件返す仕様とする。
+            if target_date:
+                # target_dateですでにフィルタされているので、ここでの追加フィルタは不要
+                # (race_idsによる絞り込みは行わず、返り値の全レースから呼び出し元が抽出する想定)
+                pass
+            else:
+                 # target_dateがない場合、race_idsから日付を特定するのは困難（別途クエリが必要）
+                 # ここでは簡易的に直近のレースと仮定するか、警告を出す
+                 logger.warning("target_dateが指定されていません。race_idからの日付逆算は現在のスキーマではサポートされていません。正確なデータを取得できない可能性があります。")
+
 
 
         query += " ORDER BY date, race_id, horse_number"
@@ -319,10 +321,10 @@ class InferenceDataLoader:
             df['state'] = pd.to_numeric(df['state'], errors='coerce').map(state_map).fillna('Unknown')
 
             # Placeholder columns for compatibility with Preprocessing Pipeline
-            # パイプラインが rank などを期待する場合、NaNで埋めておく
-            df['rank'] = np.nan
-            df['time'] = np.nan
-            df['passing_rank'] = None 
+            # パイプラインが rank などを期待する場合、NaNで埋めておく -> RealTimeFeatureのために残す
+            # df['rank'] = np.nan
+            # df['time'] = np.nan
+            # df['passing_rank'] = None 
 
             logger.info(f"推論用データロード完了: {len(df)} 件")
             return df
