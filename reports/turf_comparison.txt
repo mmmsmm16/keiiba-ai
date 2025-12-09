@@ -1,0 +1,22 @@
+Turf Races: 1601
+
+[Rank 1]
+  v4: Win=26.4% Ren=45.5% Fuku=59.2% (N=1597)
+  v5: Win=24.9% Ren=44.9% Fuku=59.6% (N=1622)
+
+[Rank 2]
+  v4: Win=18.8% Ren=33.8% Fuku=46.5% (N=1586)
+  v5: Win=20.4% Ren=34.8% Fuku=46.8% (N=1587)
+
+[Rank 3]
+  v4: Win=13.9% Ren=27.7% Fuku=41.2% (N=1601)
+  v5: Win=12.0% Ren=24.7% Fuku=38.6% (N=1592)
+
+[Rank 4]
+  v4: Win=9.1% Ren=20.6% Fuku=31.9% (N=1588)
+  v5: Win=10.4% Ren=21.9% Fuku=32.9% (N=1581)
+
+[Rank 5]
+  v4: Win=8.3% Ren=16.3% Fuku=28.3% (N=1599)
+  v5: Win=6.8% Ren=16.0% Fuku=27.4% (N=1593)
+

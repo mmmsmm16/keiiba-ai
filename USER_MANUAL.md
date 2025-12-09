@@ -209,3 +209,60 @@ docker-compose exec app streamlit run src/dashboard/app.py
 *   **データがないと言われる:** PC-KEIBAで「データ登録」が正しく完了しているか、日付指定が合っているか確認してください。
 *   **Versionが見つからない:** `models/` ディレクトリに `lgbm_v2.pkl` などのファイルが実際に存在するか確認してください。
 
+*   **Versionが見つからない:** `models/` ディレクトリに `lgbm_v2.pkl` などのファイルが実際に存在するか確認してください。
+
+---
+
+## 8. APIサーバー (FastAPI) の運用管理
+
+Next.jsフロントエンドが利用するバックエンドAPI (uvicorn) は、通常Dockerコンテナ (`app` サービス) 内で稼働しています。
+正常に応答しない場合や、再起動が必要な場合は以下の手順で操作してください。
+
+### ステータス確認
+コンテナ内で `uvicorn` プロセスが起動しているか確認します。
+```bash
+docker exec keiiba-ai-app-1 ps aux | grep uvicorn
+```
+*   正常時: プロセス情報が表示されます。
+*   異常時: 何も表示されない、または `grep` 自体しか表示されません。
+
+### サーバー停止
+プロセスを強制終了します。
+```bash
+docker exec keiiba-ai-app-1 pkill -f uvicorn
+```
+
+### サーバー起動 (再起動)
+バックグラウンドでサーバーを起動します。
+```bash
+docker exec -d keiiba-ai-app-1 uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
+```
+*   `--reload`: コード変更を検知して自動リロードする開発モード用のオプションです。
+
+### コンテナごとの再起動
+上記で改善しない場合、コンテナごと再起動します（Jupyterなども再起動されます）。
+```bash
+docker restart keiiba-ai-app-1
+# 自動起動設定がない場合、再起動後に上記「サーバー起動」コマンドが必要になることがあります。
+```
+
+---
+
+## 9. アクセス情報 (URL)
+
+各サービスへのアクセスURLは以下の通りです。
+
+### 🆕 新ウェブアプリ (Next.js)
+**URL:** [http://localhost:3000](http://localhost:3000)
+*   モダンなUIで高速に動作する新しいダッシュボードです。
+*   **シミュレーター機能:** [http://localhost:3000/simulation](http://localhost:3000/simulation)
+
+### 📊 旧ダッシュボード (Streamlit)
+**URL:** [http://localhost:8501](http://localhost:8501)
+*   探索的データ分析や、詳細なログ確認に使用します。
+
+### ⚙️ バックエンド API (FastAPI)
+**URL:** [http://localhost:8000](http://localhost:8000)
+*   **APIドキュメント (Swagger UI):** [http://localhost:8000/docs](http://localhost:8000/docs)
+    *   APIの仕様確認や、テスト実行がブラウザ上で行えます。
+

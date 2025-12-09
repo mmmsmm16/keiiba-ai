@@ -12,6 +12,12 @@ if PROJECT_ROOT not in sys.path:
 
 app = FastAPI(title="Keiiba-AI API", version="1.0.0")
 
+# Include Routers
+from src.api.routers import races, predictions, simulation
+app.include_router(races.router, prefix="/api")
+app.include_router(predictions.router, prefix="/api")
+app.include_router(simulation.router, prefix="/api/simulation")
+
 # CORS setup for Frontend (localhost:3000)
 origins = [
     "http://localhost:3000",
@@ -21,7 +27,7 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"], # Allow all origins (dev mode)
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

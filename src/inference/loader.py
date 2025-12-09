@@ -49,6 +49,15 @@ class InferenceDataLoader:
         is_pckeiba_short = (tbl_race == 'jvd_ra' or tbl_race == 'ra')
         
         col_title = "r.kyosomei_hondai" if is_pckeiba_short else "r.race_mei_honbun"
+        
+        # State column selection based on schema
+        if is_pckeiba_short:
+            col_state = """CASE
+                WHEN CAST(r.track_code AS INTEGER) BETWEEN 10 AND 22 THEN r.babajotai_code_shiba
+                ELSE r.babajotai_code_dirt
+            END"""
+        else:
+            col_state = "r.baba_jotai_code"
 
         query = f"""
         SELECT
@@ -56,7 +65,11 @@ class InferenceDataLoader:
             r.keibajo_code AS venue,
             r.race_bango::integer AS race_number,
             {col_title} AS title,
-            r.hasso_jikoku AS start_time
+            r.hasso_jikoku AS start_time,
+            r.kyori::integer AS distance,
+            r.track_code AS surface,
+            r.tenko_code AS weather,
+            {col_state} AS state
         FROM {tbl_race} r
         WHERE (r.kaisai_nen || r.kaisai_tsukihi) = '{target_date.replace('-', '')}'
         ORDER BY r.keibajo_code, r.race_bango
@@ -64,6 +77,39 @@ class InferenceDataLoader:
         
         try:
             df = pd.read_sql(query, self.engine)
+            if df.empty:
+                return df
+                
+            # --- Mapping (Copying logic from load method) ---
+            
+            # Weather Mapping
+            weather_map = {1: '晴', 2: '曇', 3: '雨', 4: '小雨', 5: '雪', 6: '雪'}
+            df['weather'] = pd.to_numeric(df['weather'], errors='coerce').map(weather_map).fillna('')
+
+            # Surface (Track Type) Mapping
+            def map_surface(code):
+                try:
+                    c = int(code)
+                    if 10 <= c <= 22: return '芝'
+                    if 23 <= c <= 29: return 'ダート'
+                    if 51 <= c <= 59: return '障害'
+                    return ''
+                except:
+                    return ''
+            df['surface'] = df['surface'].apply(map_surface)
+
+            # Track Condition Mapping
+            state_map = {1: '良', 2: '稍重', 3: '重', 4: '不良'}
+            df['state'] = pd.to_numeric(df['state'], errors='coerce').map(state_map).fillna('')
+            
+            # Format Start Time (HHMM -> HH:MM) if needed, but existing frontend uses raw.
+            # Assuming raw is HHMM string. Let's make it friendly 'HH:MM'
+            def format_time(t):
+                if not t or len(str(t)) < 4: return t
+                s = str(t)
+                return f"{s[:2]}:{s[2:4]}"
+            df['start_time'] = df['start_time'].apply(format_time)
+
             return df
         except Exception as e:
             logger.error(f"レース一覧取得エラー: {e}")

@@ -150,36 +150,46 @@ class EnsembleModel:
         logger.info(f"アンサンブルモデルを保存しました: {path}")
 
     def load_model(self, path: str, device_name: str = None):
-        # メインのロード
-        with open(path, 'rb') as f:
-            loaded = pickle.load(f)
-        self.lgbm = loaded.lgbm
-        self.catboost = loaded.catboost
-        self.meta_model = loaded.meta_model
-        
-        # 保存時にhas_lgbm等が保存されているはずだが、念のため復元
-        # 古いモデルファイルで属性がない場合は、存在チェックを行うか、Trueとみなす
-        self.has_lgbm = getattr(loaded, 'has_lgbm', True)
-        self.has_catboost = getattr(loaded, 'has_catboost', True)
-        self.has_tabnet = getattr(loaded, 'has_tabnet', False) # TabNetは以前はなかったのでFalseデフォルトが安全かも?でもv3はあった?
-        # v3まではTabNetはEnsembleに含まれてたか？ -> Ensembleのpredictで使われたならTrueにすべき。
-        # しかし古いpickleにTabNetが含まれてなければエラーになるため、
-        # TabNetについては安全側に倒してFalseにするか、loadedからtabnet属性があるか見る。
-        
-        # 属性としての存在確認 (Noneでないか)
-        if self.lgbm is None: self.has_lgbm = False
-        if self.catboost is None: self.has_catboost = False
-
-        # TabNetのロード (GPU利用可, 推論時はCPU強制も可)
-        self.tabnet = KeibaTabNet()
-        if hasattr(self, 'has_tabnet') and self.has_tabnet:
-            tabnet_path = path.replace('.pkl', '_tabnet.pkl')
-            # zip拡張子の確認
-            if os.path.exists(tabnet_path.replace('.pkl', '.zip')) or os.path.exists(tabnet_path + '.zip'): 
-                 self.tabnet.load_model(tabnet_path, device_name=device_name)
+        logger.info(f"アンサンブルモデルをロード開始: {path}")
+        try:
+            # メインのロード
+            with open(path, 'rb') as f:
+                loaded = pickle.load(f)
+            
+            # 安全に属性を復元（古いpickle互換性）
+            self.lgbm = getattr(loaded, 'lgbm', None)
+            self.catboost = getattr(loaded, 'catboost', None)
+            self.meta_model = getattr(loaded, 'meta_model', None)
+            
+            # 各モデルインスタンスがない場合は新規作成（あるいはNoneのまま）
+            if self.lgbm is None: 
+                self.lgbm = KeibaLGBM()
+                self.has_lgbm = False
             else:
-                 logger.warning(f"TabNetモデルが見つかりません: {tabnet_path}")
-                 self.has_tabnet = False # ロード失敗したらFalseにする
+                 self.has_lgbm = getattr(loaded, 'has_lgbm', True)
 
+            if self.catboost is None: 
+                self.catboost = KeibaCatBoost()
+                self.has_catboost = False
+            else:
+                self.has_catboost = getattr(loaded, 'has_catboost', True)
 
-        logger.info(f"アンサンブルモデルをロードしました: {path}")
+            # TabNetの復元
+            self.has_tabnet = getattr(loaded, 'has_tabnet', False)
+            
+            # TabNetのロード (GPU利用可, 推論時はCPU強制も可)
+            self.tabnet = KeibaTabNet()
+            if self.has_tabnet:
+                tabnet_path = path.replace('.pkl', '_tabnet.pkl')
+                # zip拡張子の確認
+                if os.path.exists(tabnet_path.replace('.pkl', '.zip')) or os.path.exists(tabnet_path + '.zip') or os.path.exists(tabnet_path): 
+                     self.tabnet.load_model(tabnet_path, device_name=device_name)
+                else:
+                     logger.warning(f"TabNetモデルが見つかりません: {tabnet_path}")
+                     self.has_tabnet = False # ロード失敗したらFalseに
+            
+            logger.info(f"アンサンブルモデルロード完了: {path}")
+            
+        except Exception as e:
+            logger.error(f"モデルロード中にエラーが発生: {e}")
+            raise e
