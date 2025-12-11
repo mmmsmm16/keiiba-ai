@@ -1,0 +1,53 @@
+experiment_name: "v10_optuna_tuning"
+description: "Model v10: Hyperparameter Tuning for new feature set (RealTime+Disadvantage+ClassStats)"
+
+data:
+  features: "v9_full" # Use the same features as v9
+  cache_path: "data/processed/lgbm_datasets_v9.pkl"
+  train_years: [2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024]
+  valid_year: 2025
+  use_cache: true
+  jra_only: false
+
+model:
+  type: "optuna" # This triggers the optimization routine (if implemented in pipeline/run_experiment.py, else we might need a dedicated script)
+  # If pipeline doesn't support 'optuna' type directly yet, we might need to stick to a manual grid search or add support.
+  # Assuming we want to configure the *ranges* here.
+  
+  # For now, let's assume valid 'ensemble' config but with a note that this is for tuning.
+  # Or better: "ensemble" with slightly different base params to test sensitivity.
+  # BUT, the user asked for "experiment settings".
+  
+  # Since standard pipeline expects 'ensemble', 'lgbm', etc.
+  # Let's define this as a standard run but with updated "Best Guess" params if we had them, 
+  # OR set it up for a random search script (feature_selection/tuning).
+  
+  # For this specific file, let's make it a 'lgbm' run with DART (different boosting type) to test diversity.
+  type: "lgbm" 
+  
+  lgbm_params:
+    objective: "regression" # Rank prediction (1-18)
+    metric: "rmse"
+    boosting_type: "dart"
+    num_leaves: 63
+    learning_rate: 0.1
+    min_data_in_leaf: 20
+    feature_fraction: 0.7
+    bagging_fraction: 0.7
+    bagging_freq: 5
+    drop_rate: 0.1
+    skip_drop: 0.5
+    max_drop: 50
+    lambda_l1: 0.1
+    lambda_l2: 0.1
+    verbosity: -1
+
+evaluation:
+  metric: "roi"
+  strategies: ["tansho", "umaren", "sanrentan", "wide"]
+  jra_only: true
+  
+strategy:
+  enabled: true
+  min_roi: 100.0
+  target_bet_types: ["tansho", "sanrentan"]

@@ -1,0 +1,27 @@
+experiment_name: "v6_baseline_test"
+description: "Initial pipeline test reproducing v5 logic"
+base_dir: "experiments"
+
+data:
+  train_years: [2020, 2021, 2022, 2023, 2024]
+  valid_year: 2025
+  features: "v5_default"
+  use_cache: true
+
+model:
+  type: "ensemble"
+  lgbm_params:
+    num_leaves: 31
+    learning_rate: 0.05
+  catboost_params:
+    depth: 6
+    learning_rate: 0.05
+  tabnet_params:
+    # GPUを使用する場合は "cuda", CPUの場合は "cpu"
+    device_name: "cuda"
+    batch_size: 1024
+    max_epochs: 50
+
+evaluation:
+  metric: "roi"
+  strategies: ["umaren", "sanrentan", "wide"]

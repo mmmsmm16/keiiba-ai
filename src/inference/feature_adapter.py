@@ -53,11 +53,18 @@ class FeatureAdapter:
         # 古いモデルが必要としていたが、現在は生成されていない特徴量など
         missing = [c for c in expected_cols if c not in current_cols]
         if missing:
-            logger.info(f"不足特徴量を補完します (0埋め): {len(missing)}個 (例: {missing[:3]})")
+            logger.info(f"不足特徴量を補完します (0埋め): {len(missing)}個")
+            # Log first 10 missing features for debugging
+            logger.debug(f"0埋め特徴量リスト (先頭10件): {missing[:10]}")
             for c in missing:
-                df[c] = 0.0 # とりあえず0で埋める（影響を最小限に）
+                df[c] = 0.0
         
-        # 2. 不要なカラムを削除 & 並び順を統一
+        # 2. 余分なカラムを警告
+        extra = [c for c in current_cols if c not in expected_cols]
+        if extra:
+            logger.debug(f"モデルに不要な特徴量が生成されています: {len(extra)}個 (例: {extra[:5]})")
+        
+        # 3. 不要なカラムを削除 & 並び順を統一
         # モデルが期待する順序で返すことが重要 (特にLightGBM/CatBoostの一部)
         df_adapted = df[expected_cols].copy()
         

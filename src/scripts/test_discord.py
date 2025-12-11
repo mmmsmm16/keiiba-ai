@@ -10,11 +10,11 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 # Import NotificationManager from auto_predict
 # auto_predict.py is in src/scripts, so from scripts.auto_predict ...
 try:
-    from scripts.auto_predict import NotificationManager, DISCORD_WEBHOOK_URL
+    from src.scripts.auto_predict import NotificationManager
 except ImportError:
     # Try relative import if run from different location
     sys.path.append(os.path.dirname(__file__))
-    from auto_predict import NotificationManager, DISCORD_WEBHOOK_URL
+    from auto_predict import NotificationManager
 
 # Logging
 logging.basicConfig(level=logging.INFO)
@@ -38,9 +38,8 @@ def load_env_manual():
 def main():
     load_env_manual()
     # Reload from env
-    from scripts.auto_predict import DISCORD_WEBHOOK_URL as LOADED_URL
-    # If auto_predict already loaded os.environ, it might be None if we loaded env AFTER import.
-    # But since we set os.environ, we can just get it directly.
+    # DISCORD_WEBHOOK_URL is loaded into os.environ by load_env_manual
+    # So we can just get it directly.
     webhook_url = os.environ.get('DISCORD_WEBHOOK_URL')
 
     print(f"Checking Webhook URL in env: {webhook_url}")
@@ -69,7 +68,10 @@ def main():
         'horse_number': [1, 7, 10, 3, 5],
         'horse_name': ['テストワン', 'サンプルトップ', 'モックヒーロー', 'デバッグスター', 'トライアルキング'],
         'expected_value': [1.8, 1.1, 0.7, 0.6, 0.5],
-        'calibrated_prob': [0.45, 0.20, 0.15, 0.10, 0.05]
+        'calibrated_prob': [0.45, 0.20, 0.15, 0.10, 0.05],
+        'score': [2.5, 1.2, 0.8, 0.5, 0.2],
+        'popularity': [1, 2, 3, 4, 5],
+        'odds': [4.0, 5.5, 10.0, 20.0, 50.0]
     })
     
     try:

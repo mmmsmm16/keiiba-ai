@@ -1,0 +1,4 @@
+=== v14 ROI Model vs v12 Ensemble 比較 ===
+
+v12 Ensemble: ROI 87.1%, Acc 28.7%, 3264レース, 利益 -41,970円
+v14 ROI: ROI 79.9%, Acc 9.3%, 3264レース, 利益 -65,560円

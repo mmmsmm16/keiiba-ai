@@ -42,16 +42,23 @@ class KeibaCatBoost:
         """
         logger.info("CatBoostの学習を開始します...")
 
+        # カテゴリ変数の検出
+        cat_features = list(train_set['X'].select_dtypes(include=['category', 'object']).columns)
+        if cat_features:
+            logger.info(f"カテゴリ変数を検出しました: {cat_features}")
+
         # CatBoost Poolの作成 (group_idが必要)
         train_pool = cb.Pool(
             data=train_set['X'],
             label=train_set['y'],
-            group_id=self._create_group_id(train_set['group'])
+            group_id=self._create_group_id(train_set['group']),
+            cat_features=cat_features
         )
         valid_pool = cb.Pool(
             data=valid_set['X'],
             label=valid_set['y'],
-            group_id=self._create_group_id(valid_set['group'])
+            group_id=self._create_group_id(valid_set['group']),
+            cat_features=cat_features
         )
 
         self.model = cb.CatBoostRanker(**self.params)

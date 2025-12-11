@@ -1,0 +1,60 @@
+=== v5_2025モデル × 2025年データ グリッドサーチ ===
+
+--- ROI上位20 ---
+longshot × score_then_ev_5 × umaren_3: ROI 244.1%, 50レース
+midrange × group_top2fix × sanrentan_6: ROI 227.6%, 308レース
+longshot × score × tansho: ROI 223.0%, 50レース
+longshot × group_top2fix × tansho: ROI 223.0%, 50レース
+longshot × weighted_0.7 × tansho: ROI 223.0%, 50レース
+top3_dominant × weighted_0.7 × sanrentan_6: ROI 212.3%, 149レース
+longshot × score_then_ev_5 × tansho: ROI 196.8%, 50レース
+top3_dominant × weighted_0.7 × sanrenpuku: ROI 195.6%, 149レース
+top3_dominant × score_then_ev_5 × sanrentan_20: ROI 170.8%, 149レース
+balanced × score_then_ev_5 × umaren_3: ROI 166.4%, 56レース
+top3_dominant × score × sanrenpuku: ROI 164.7%, 149レース
+top3_dominant × group_top2fix × sanrenpuku: ROI 164.7%, 149レース
+balanced × score_then_ev_5 × sanrentan_20: ROI 161.9%, 56レース
+balanced × score_then_ev_5 × tansho: ROI 147.0%, 56レース
+small_gap × score × sanrentan_6: ROI 146.3%, 554レース
+small_gap × group_top2fix × sanrentan_6: ROI 141.0%, 554レース
+top3_dominant × weighted_0.7 × sanrentan_20: ROI 120.4%, 149レース
+longshot × score × umaren_3: ROI 119.1%, 50レース
+top3_dominant × score_then_ev_5 × sanrenpuku: ROI 112.7%, 149レース
+top3_dominant × group_top2fix × umaren_3: ROI 112.4%, 149レース
+
+--- ROI 100%以上: 24件 ---
+longshot × score_then_ev_5 × umaren_3: ROI 244.1%, 50レース
+midrange × group_top2fix × sanrentan_6: ROI 227.6%, 308レース
+longshot × score × tansho: ROI 223.0%, 50レース
+longshot × group_top2fix × tansho: ROI 223.0%, 50レース
+longshot × weighted_0.7 × tansho: ROI 223.0%, 50レース
+top3_dominant × weighted_0.7 × sanrentan_6: ROI 212.3%, 149レース
+longshot × score_then_ev_5 × tansho: ROI 196.8%, 50レース
+top3_dominant × weighted_0.7 × sanrenpuku: ROI 195.6%, 149レース
+top3_dominant × score_then_ev_5 × sanrentan_20: ROI 170.8%, 149レース
+balanced × score_then_ev_5 × umaren_3: ROI 166.4%, 56レース
+top3_dominant × score × sanrenpuku: ROI 164.7%, 149レース
+top3_dominant × group_top2fix × sanrenpuku: ROI 164.7%, 149レース
+balanced × score_then_ev_5 × sanrentan_20: ROI 161.9%, 56レース
+balanced × score_then_ev_5 × tansho: ROI 147.0%, 56レース
+small_gap × score × sanrentan_6: ROI 146.3%, 554レース
+small_gap × group_top2fix × sanrentan_6: ROI 141.0%, 554レース
+top3_dominant × weighted_0.7 × sanrentan_20: ROI 120.4%, 149レース
+longshot × score × umaren_3: ROI 119.1%, 50レース
+top3_dominant × score_then_ev_5 × sanrenpuku: ROI 112.7%, 149レース
+top3_dominant × group_top2fix × umaren_3: ROI 112.4%, 149レース
+midrange × score × sanrentan_20: ROI 103.6%, 308レース
+midrange × group_top2fix × sanrentan_20: ROI 103.6%, 308レース
+small_gap × score × umaren_3: ROI 102.9%, 554レース
+medium_gap × score_then_ev_5 × umaren_3: ROI 102.8%, 1405レース
+
+--- 条件別ベスト ---
+longshot: score_then_ev_5 × umaren_3 → ROI 244.1%
+midrange: group_top2fix × sanrentan_6 → ROI 227.6%
+top3_dominant: weighted_0.7 × sanrentan_6 → ROI 212.3%
+balanced: score_then_ev_5 × umaren_3 → ROI 166.4%
+small_gap: score × sanrentan_6 → ROI 146.3%
+medium_gap: score_then_ev_5 × umaren_3 → ROI 102.8%
+large_gap: score × sanrenpuku → ROI 93.6%
+favorite: score_then_ev_5 × umaren_3 → ROI 93.1%
+all: score_then_ev_5 × umaren_3 → ROI 92.0%

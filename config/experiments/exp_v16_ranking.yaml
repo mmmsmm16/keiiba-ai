@@ -1,0 +1,31 @@
+# v16: ランキング損失（ListNet風）
+
+experiment_name: "v16_ranking"
+description: "v16: ランキング損失 (RankingLoss)"
+
+data:
+  features: "v9_full"
+  cache_path: "experiments/v14_roi/data/lgbm_datasets.pkl"
+  train_years: [2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024]
+  valid_year: 2025
+  use_cache: true
+  jra_only: false
+  target_type: "ranking"
+
+model:
+  type: "roi"
+  roi_params:
+    model_type: "simple"
+    loss_type: "ranking"
+    hidden_dim: 512
+    num_layers: 4
+    dropout: 0.3
+    epochs: 300
+    patience: 30
+    batch_size: 128
+    lr: 0.0005
+
+evaluation:
+  metric: "roi"
+  strategies: ["tansho", "umaren", "wide"]
+  jra_only: true

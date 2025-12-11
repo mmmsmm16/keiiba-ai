@@ -1,0 +1,51 @@
+experiment_name: "v12_tabnet_revival"
+description: "Model v12: Ensemble with TabNet enabled (Deep Learning component)"
+
+data:
+  features: "v9_full"
+  cache_path: "data/processed/lgbm_datasets_v9.pkl"
+  train_years: [2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024]
+  valid_year: 2025
+  use_cache: true
+  jra_only: false
+
+model:
+  type: "ensemble"
+  
+  # v9 params for tree models
+  lgbm_params:
+    num_leaves: 76
+    learning_rate: 0.1576
+    n_estimators: 1000
+    min_data_in_leaf: 53
+    feature_fraction: 0.802
+    bagging_fraction: 0.562
+    bagging_freq: 7
+    lambda_l1: 1.57e-05
+    lambda_l2: 0.05
+  
+  catboost_params:
+    iterations: 1000
+    learning_rate: 0.0758
+    depth: 10
+    l2_leaf_reg: 0.000143
+    bagging_temperature: 0.5
+
+  # Enable TabNet
+  tabnet_params:
+    enabled: true
+    max_epochs: 50
+    batch_size: 1024
+    device_name: "cpu" # Safest for now, change to 'cuda' if GPU issues resolved
+    optimizer_params:
+      lr: 0.02
+
+evaluation:
+  metric: "roi"
+  strategies: ["tansho", "umaren", "sanrentan", "wide"]
+  jra_only: true
+  
+strategy:
+  enabled: true
+  min_roi: 100.0
+  target_bet_types: ["tansho", "sanrentan"]

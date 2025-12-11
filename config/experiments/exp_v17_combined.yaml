@@ -1,0 +1,30 @@
+# v17: 複合損失（精度+ROI）
+
+experiment_name: "v17_combined"
+description: "v17: 複合損失 (CombinedROILoss)"
+
+data:
+  features: "v9_full"
+  cache_path: "experiments/v14_roi/data/lgbm_datasets.pkl"
+  train_years: [2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024]
+  valid_year: 2025
+  use_cache: true
+  jra_only: false
+  target_type: "ranking"
+
+model:
+  type: "roi"
+  roi_params:
+    model_type: "simple"
+    loss_type: "combined"
+    hidden_dim: 512
+    num_layers: 4
+    dropout: 0.3
+    epochs: 50
+    batch_size: 128
+    lr: 0.0005
+
+evaluation:
+  metric: "roi"
+  strategies: ["tansho", "umaren", "wide"]
+  jra_only: true

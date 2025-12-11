@@ -1,0 +1,50 @@
+experiment_name: "v7_ensemble_full"
+description: "v7 Feature Engineering - Train all models with new features (impost, experience, momentum, etc.)"
+base_dir: "experiments"
+
+data:
+  train_years: [2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024]
+  valid_year: 2025
+  features: "v7"
+  use_cache: true
+  jra_only: false
+
+# 2. モデル設定
+model:
+  type: "ensemble"  # 全モデルを再学習
+  
+  # 各モデルのハイパーパラメータ (最適化済みパラメータを適用)
+  lgbm_params:
+    num_leaves: 76
+    learning_rate: 0.1576
+    n_estimators: 1000
+    min_data_in_leaf: 53
+    feature_fraction: 0.802
+    bagging_fraction: 0.562
+    bagging_freq: 7
+    lambda_l1: 1.57e-05
+    lambda_l2: 0.05
+    
+  catboost_params:
+    iterations: 1000
+    learning_rate: 0.0758
+    depth: 10
+    l2_leaf_reg: 0.000143
+    bagging_temperature: 0.5
+    
+  tabnet_params:
+    enabled: false  # CUDA エラー回避のため一時的に無効化
+    max_epochs: 50
+    batch_size: 1024
+    device_name: "cuda" # GPUを使用しない場合は "cpu"
+
+# 3. 評価設定
+evaluation:
+  metric: "roi" # 評価指標
+  strategies: ["tansho", "umaren", "sanrentan", "wide"] # シミュレーション対象の券種 (単勝・ワイドも追加)
+
+# 4. 戦略最適化設定
+strategy:
+  enabled: true       # 戦略最適化を実行
+  min_roi: 100.0      # レポート抽出する最低ROI
+  target_bet_types: ["tansho", "umaren", "sanrentan", "wide"] # 最適化対象の券種 (全種類対象)

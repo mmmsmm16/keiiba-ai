@@ -1,0 +1,34 @@
+experiment_name: "v14_roi"
+description: "v14: ROI最適化モデル (期待値最大化損失)"
+
+data:
+  features: "v9_full"
+  cache_path: "data/processed/lgbm_datasets_v9.pkl"
+  train_years: [2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024]
+  valid_year: 2025
+  use_cache: true  # NARデータ含むため再生成
+  jra_only: false   # NARも学習に含める
+  target_type: "ranking"
+
+model:
+  type: "roi"  # ROIモデルタイプ
+  
+  roi_params:
+    model_type: "simple"  # "simple" or "attention"
+    loss_type: "evmax"    # "evmax", "odds_bce", "roi_proxy"
+    hidden_dim: 512       # 128 → 512 に増加
+    num_layers: 4         # 2 → 4層に増加
+    dropout: 0.3
+    epochs: 50            # 30 → 50に増加
+    batch_size: 128       # 64 → 128に増加
+    lr: 0.0005            # 学習率を下げる
+
+evaluation:
+  metric: "roi"
+  strategies: ["tansho", "umaren", "wide"]
+  jra_only: true
+  
+strategy:
+  enabled: true
+  min_roi: 100.0
+  target_bet_types: ["tansho", "umaren", "wide"]

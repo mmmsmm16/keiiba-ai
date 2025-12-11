@@ -1,0 +1,61 @@
+experiment_name: "v11_jra_specialized"
+description: "Model v11: JRA-Only Training (filtering out NAR noise)"
+
+data:
+  features: "v9_full"
+  cache_path: "data/processed/lgbm_datasets_v9.pkl" # This dataset has NAR.
+  # We can force filtering in the pipeline or need a new dataset.
+  # 'jra_only: true' in config.data dictates loading/filtering.
+  # The cache `lgbm_datasets_v9.pkl` (created for v9) contains NAR if v9 ran with jra_only=False.
+  # If we want strict JRA-only training, we should probably generate a JRA-only cache or rely on pipeline to filter.
+  # JraVanDataLoader handles JRA-only loading.
+  # Let's assume pipeline filters it if we say jra_only: true
+  jra_only: true 
+  
+  train_years: [2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024]
+  valid_year: 2025
+  use_cache: false # Force simple reload/filter to ensure high purity
+  
+model:
+  type: "ensemble"
+  
+  # Same params as v9 to isolate data effect
+  lgbm_params:
+    objective: "lambdarank"
+    metric: "ndcg"
+    ndcg_eval_at: [1, 3, 5]
+    boosting_type: "gbdt"
+    num_leaves: 76
+    learning_rate: 0.1576
+    min_data_in_leaf: 53
+    feature_fraction: 0.802
+    bagging_fraction: 0.562
+    bagging_freq: 7
+    lambda_l1: 1.57e-05
+    lambda_l2: 0.05
+    verbosity: -1
+    label_gain: [0, 1, 3, 7]
+  
+  catboost_params:
+    loss_function: "YetiRank"
+    eval_metric: "NDCG"
+    iterations: 1000
+    learning_rate: 0.0758
+    depth: 10
+    l2_leaf_reg: 0.000143
+    bagging_temperature: 0.5
+    early_stopping_rounds: 50
+    task_type: "CPU"
+
+  tabnet_params:
+    enabled: false
+
+evaluation:
+  metric: "roi"
+  strategies: ["tansho", "umaren", "sanrentan", "wide"]
+  jra_only: true
+  
+strategy:
+  enabled: true
+  min_roi: 100.0
+  target_bet_types: ["tansho", "sanrentan"]

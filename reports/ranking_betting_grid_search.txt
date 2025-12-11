@@ -1,0 +1,59 @@
+=== ランキング方法 × 馬券戦略 グリッドサーチ (2024+2025年) ===
+
+--- ROI上位30 ---
+group_top2fix × umaren_3: ROI 93.7%, 6695レース, Hit 20.3%
+group_top2fix × sanrentan_6: ROI 93.4%, 6695レース, Hit 3.5%
+score_then_ev_5 × sanrenpuku: ROI 92.3%, 6695レース, Hit 14.0%
+weighted_0.7 × sanrentan_20: ROI 92.1%, 6695レース, Hit 11.5%
+score × sanrenpuku: ROI 91.3%, 6695レース, Hit 34.0%
+group_ev_456 × sanrenpuku: ROI 91.3%, 6695レース, Hit 34.0%
+group_top1fix × sanrenpuku: ROI 91.3%, 6695レース, Hit 34.0%
+group_top2fix × sanrenpuku: ROI 91.3%, 6695レース, Hit 34.0%
+score_then_ev_5 × umaren_3: ROI 91.0%, 6695レース, Hit 5.8%
+group_top2fix × sanrentan_box3: ROI 90.5%, 6695レース, Hit 2.4%
+boost_ev_1.5 × sanrenpuku: ROI 89.6%, 6695レース, Hit 10.1%
+boost_ev_1.2 × sanrenpuku: ROI 89.5%, 6695レース, Hit 12.3%
+weighted_0.7 × sanrenpuku: ROI 89.4%, 6695レース, Hit 25.8%
+group_ev_456 × umaren_3: ROI 89.0%, 6695レース, Hit 24.6%
+group_top1fix × umaren_3: ROI 89.0%, 6695レース, Hit 24.6%
+score × sanrentan_20: ROI 88.9%, 6695レース, Hit 15.4%
+group_ev_456 × sanrentan_20: ROI 88.9%, 6695レース, Hit 15.4%
+group_top1fix × sanrentan_20: ROI 88.9%, 6695レース, Hit 15.4%
+group_top2fix × sanrentan_20: ROI 88.9%, 6695レース, Hit 15.4%
+score × umaren_5: ROI 88.6%, 6695レース, Hit 37.6%
+group_ev_456 × umaren_5: ROI 88.6%, 6695レース, Hit 37.6%
+group_top1fix × umaren_5: ROI 88.6%, 6695レース, Hit 37.6%
+group_top2fix × umaren_5: ROI 88.6%, 6695レース, Hit 37.6%
+score_then_ev_5 × umaren_5: ROI 88.0%, 6695レース, Hit 10.3%
+boost_ev_1.2 × sanrentan_6: ROI 87.7%, 6695レース, Hit 0.9%
+score × umaren_3: ROI 86.4%, 6695レース, Hit 28.7%
+exclude_pop1 × umaren_5: ROI 86.2%, 6695レース, Hit 27.2%
+weighted_0.7 × umaren_5: ROI 86.1%, 6695レース, Hit 32.0%
+boost_ev_1.5 × tansho: ROI 86.0%, 6695レース, Hit 2.9%
+boost_ev_1.2 × sanrentan_20: ROI 85.6%, 6695レース, Hit 2.0%
+
+--- ROI 100%以上: 0件 ---
+
+--- ランキング方法別ベスト ---
+group_top2fix: umaren_3 → ROI 93.7%
+score_then_ev_5: sanrenpuku → ROI 92.3%
+weighted_0.7: sanrentan_20 → ROI 92.1%
+score: sanrenpuku → ROI 91.3%
+group_ev_456: sanrenpuku → ROI 91.3%
+group_top1fix: sanrenpuku → ROI 91.3%
+boost_ev_1.5: sanrenpuku → ROI 89.6%
+boost_ev_1.2: sanrenpuku → ROI 89.5%
+exclude_pop1: umaren_5 → ROI 86.2%
+group_ev: umaren_3 → ROI 85.3%
+score_then_ev_3: sanrenpuku → ROI 84.0%
+group_ev_top3: sanrenpuku → ROI 84.0%
+weighted_0.5: tansho → ROI 69.3%
+weighted_0.3: tansho → ROI 54.7%
+ev: tansho → ROI 43.2%
+
+--- 現行(score)との比較 ---
+tansho: score=82.2% → boost_ev_1.5=86.0% (+3.7%)
+umaren_3: score=86.4% → group_top2fix=93.7% (+7.3%)
+sanrenpuku: score=91.3% → score_then_ev_5=92.3% (+1.0%)
+sanrentan_6: score=73.0% → group_top2fix=93.4% (+20.4%)
+sanrentan_20: score=88.9% → weighted_0.7=92.1% (+3.2%)

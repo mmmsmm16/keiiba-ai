@@ -15,6 +15,8 @@ from preprocessing.dataset import DatasetSplitter
 from preprocessing.advanced_features import AdvancedFeatureEngineer
 from preprocessing.disadvantage_detector import DisadvantageDetector
 from preprocessing.relative_features import RelativeFeatureEngineer
+from preprocessing.experience_features import ExperienceFeatureEngineer
+from preprocessing.race_level_features import RaceLevelFeatureEngineer
 
 # ロガー設定
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -26,6 +28,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--resume', action='store_true', help='前回のStep 5完了時点から再開します')
     parser.add_argument('--jra_only', action='store_true', help='JRA会場のみにフィルタリングします (Model v5用)')
+    parser.add_argument('--suffix', type=str, default='', help='出力ファイル名のサフィックス (例: _v8)')
     args = parser.parse_args()
 
     try:
@@ -33,10 +36,14 @@ def main():
         os.makedirs(checkpoint_dir, exist_ok=True)
         
         # チェックポイントや出力ファイルのパスをモードによって切り替え
-        suffix = "_jra_v5" if args.jra_only else ""
-        checkpoint_name = f'step5_checkpoint{suffix}.parquet'
-        output_parquet_name = f'preprocessed_data{suffix}.parquet'
-        output_dataset_name = f'lgbm_datasets{suffix}.pkl'
+        # suffix優先、なければjra_onlyチェック
+        file_suffix = args.suffix
+        if not file_suffix and args.jra_only:
+            file_suffix = "_jra_v5"
+            
+        checkpoint_name = f'step5_checkpoint{file_suffix}.parquet'
+        output_parquet_name = f'preprocessed_data{file_suffix}.parquet'
+        output_dataset_name = f'lgbm_datasets{file_suffix}.pkl'
         
         checkpoint_path = os.path.join(checkpoint_dir, checkpoint_name)
 
@@ -111,6 +118,16 @@ def main():
         logger.info("Step 6.8: Embedding特徴量生成 (Entity Embeddings)")
         emb_engineer = EmbeddingFeatureEngineer()
         df = emb_engineer.add_features(df)
+
+        # 6.9. 経験特徴量生成 (v7新規 - コース経験・距離経験・騎手乗り替わり)
+        logger.info("Step 6.9: 経験特徴量生成 (コース経験・距離経験・初条件フラグ)")
+        exp_engineer = ExperienceFeatureEngineer()
+        df = exp_engineer.add_features(df)
+
+        # 6.10. レースレベル特徴量生成 (v7新規 - 前走レースの強さ評価)
+        logger.info("Step 6.10: レースレベル特徴量生成 (メンバー強度・パフォーマンス価値)")
+        race_level_engineer = RaceLevelFeatureEngineer()
+        df = race_level_engineer.add_features(df)
 
         # 7. データの保存 (全データ)
         output_dir = os.path.join(os.path.dirname(__file__), '../../data/processed')

@@ -1,0 +1,2 @@
+Hold-out Validation 2025 (Jan-Sep Train -> Oct-Dec Test)
+Overall Test ROI: 81.5%

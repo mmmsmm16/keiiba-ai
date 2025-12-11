@@ -10,23 +10,55 @@ class DatasetSplitter:
     データセットを学習用・検証用・テスト用に分割し、
     LightGBM (Ranking) で学習可能な形式に整形するクラス。
     """
-    def split_and_create_dataset(self, df: pd.DataFrame, valid_year: int = 2025) -> Dict[str, Dict]:
+    
+    @staticmethod
+    def _create_ranking_target(rank: int) -> int:
+        """v12互換: ランキング用ターゲット (1着=3, 2着=2, 3着=1, 着外=0)"""
+        if rank == 1:
+            return 3
+        elif rank == 2:
+            return 2
+        elif rank == 3:
+            return 1
+        else:
+            return 0
+    
+    @staticmethod
+    def _create_v13_graded_target(rank: int) -> float:
+        """v13用: 複勝圏グレード付きターゲット (1着=1.0, 2着=0.5, 3着=0.25, 着外=0)"""
+        if rank == 1:
+            return 1.0
+        elif rank == 2:
+            return 0.5
+        elif rank == 3:
+            return 0.25
+        else:
+            return 0.0
+    
+    def split_and_create_dataset(self, df: pd.DataFrame, valid_year: int = 2025,
+                                  target_type: str = "ranking") -> Dict[str, Dict]:
         """
         データを分割してデータセットを作成します。
 
         Args:
             df (pd.DataFrame): 前処理済みの全データ。
             valid_year (int): 検証に使用する年。Trainはこれより前の年、Testはこれより後の年になる。
+            target_type (str): ターゲット種別 ("ranking" or "v13_graded")
 
         Returns:
             Dict: train, valid, test それぞれの {'X', 'y', 'group'} を含む辞書。
         """
-        logger.info(f"データセットの分割と作成を開始 (Valid Year: {valid_year})...")
+        logger.info(f"データセットの分割と作成を開始 (Valid Year: {valid_year}, Target Type: {target_type})...")
 
-        # ターゲット変数の作成 (Relevance Score)
-        # 1着=3, 2着=2, 3着=1, 着外=0
+        # ターゲット変数の作成
         if 'target' not in df.columns:
-            df['target'] = df['rank'].apply(lambda x: 3 if x == 1 else (2 if x == 2 else (1 if x == 3 else 0)))
+            if target_type == "v13_graded":
+                # v13堅実モデル用: 複勝圏グレード付き
+                logger.info("📊 v13用ターゲット生成: 1着=1.0, 2着=0.5, 3着=0.25, 着外=0")
+                df['target'] = df['rank'].apply(self._create_v13_graded_target)
+            else:
+                # v12互換: ランキング用 (1着=3, 2着=2, 3着=1, 着外=0)
+                df['target'] = df['rank'].apply(self._create_ranking_target)
 
         # 時系列分割
         # Train: 2010 ~ valid_year - 1 (Expanded start range)
@@ -85,23 +117,26 @@ class DatasetSplitter:
             'odds_deviation', 'popularity_deviation',
             
             # --- Low Impact Features to Drop (v5 Feature Selection) ---
-            # 重要度 0 または極めて低い特徴量を削除
-            'race_avg_prize',         # 重要度 0
-            'race_pace_cat',          # 重要度 0
-            'total_prize',            # 重要度 0
-            'is_long_break',          # 重要度 0
-            'race_nige_horse_count',  # 重要度 9
-            'race_nige_bias',         # 重要度 46
-            'horse_pace_disadv_rate', # 重要度 74
-            'weather_num',            # 重要度 92
-            'weekday',                # 重要度 119
+            # 今回(v8)は再評価のため残す
+            # 'race_avg_prize',         # 重要度 0
+            # 'race_pace_cat',          # 重要度 0
+            # 'total_prize',            # 重要度 0
+            # 'is_long_break',          # 重要度 0
+            # 'race_nige_horse_count',  # 重要度 9
+            # 'race_nige_bias',         # 重要度 46
+            # 'horse_pace_disadv_rate', # 重要度 74
+            # 'weather_num',            # 重要度 92
+            # 'weekday',                # 重要度 119
             
             # --- v6 Ineffective Features (重要度 0) ---
-            'frame_zone',             # 重要度 0
-            'distance_category',      # 重要度 0
-            'state_num',              # 重要度 0
-            'surface_num',            # 重要度 0
-            'day',                    # 重要度 0
+            # 'frame_zone',             # 重要度 0
+            # 'distance_category',      # 重要度 0
+            # 'state_num',              # 重要度 0
+            # 'surface_num',            # 重要度 0
+            
+            # --- v7 Market Features (馬の能力と無関係) ---
+            'lag1_odds',              # 前走オッズ（市場評価）
+            'lag1_popularity',        # 前走人気（市場評価）
         ]
         # Sample Weights for Odds-Weighted Loss (Phase 15)
         # Use log1p(odds) to prioritize high-value winners without excessive noise sensitivity

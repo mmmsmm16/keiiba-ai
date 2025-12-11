@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ModeToggle } from "@/components/mode-toggle";
 
 interface Race {
   race_id: string;
@@ -35,10 +36,14 @@ const VENUE_MAP: Record<string, string> = {
 export default function Home() {
   const [races, setRaces] = useState<Race[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedDate, setSelectedDate] = useState("2024-12-07"); // Updated default to generic date or today
+  const [selectedDate, setSelectedDate] = useState<string>(""); // Will be set from API
+  const [prevDate, setPrevDate] = useState<string | null>(null);
+  const [nextDate, setNextDate] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [dailyRoi, setDailyRoi] = useState<any>(null);
 
   const fetchRaces = async (date: string) => {
+    if (!date) return;
     setLoading(true);
     setError(null);
     try {
@@ -56,11 +61,55 @@ export default function Home() {
   };
 
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
-    // If user wants to default to today, uncomment next line. 
-    // Keeping hardcoded for demo consistency unless requested.
-    // fetchRaces(today);
-    fetchRaces(selectedDate);
+    // Fetch the latest race date from API
+    const fetchLatestDate = async () => {
+      try {
+        const res = await fetch("http://localhost:8000/api/races/latest-date");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.latest_date) {
+            setSelectedDate(data.latest_date);
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn("Failed to fetch latest date, using fallback");
+      }
+      // Fallback to a known date with data
+      setSelectedDate("2024-12-07");
+    };
+
+    fetchLatestDate();
+  }, []);
+
+  useEffect(() => {
+    if (selectedDate) {
+      fetchRaces(selectedDate);
+
+      // Fetch adjacent dates
+      fetch(`http://localhost:8000/api/races/adjacent-dates?date=${selectedDate}`)
+        .then(res => res.json())
+        .then(data => {
+          setPrevDate(data.prev_date || null);
+          setNextDate(data.next_date || null);
+        })
+        .catch(() => {
+          setPrevDate(null);
+          setNextDate(null);
+        });
+
+      // Fetch daily ROI
+      fetch(`http://localhost:8000/api/daily-roi?date=${selectedDate}`)
+        .then(res => res.json())
+        .then(data => {
+          if (!data.error) {
+            setDailyRoi(data);
+          } else {
+            setDailyRoi(null);
+          }
+        })
+        .catch(() => setDailyRoi(null));
+    }
   }, [selectedDate]);
 
   // Group races by venue (Filtering out non-JRA/unmapped venues)
@@ -104,6 +153,7 @@ export default function Home() {
 
           {/* Actions & Date Selector */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <ModeToggle />
             <Button
               onClick={() => window.location.href = '/simulation'}
               variant="outline"
@@ -113,19 +163,85 @@ export default function Home() {
             </Button>
 
             <div className="flex items-center gap-2 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700">
-              <span className="text-sm font-bold text-slate-500 px-2">DATE</span>
+              {/* Previous Date Button */}
+              <Button
+                onClick={() => prevDate && setSelectedDate(prevDate)}
+                size="sm"
+                variant="ghost"
+                disabled={!prevDate}
+                title={prevDate ? `前の開催日: ${prevDate}` : "前の開催日なし"}
+              >
+                ←
+              </Button>
+
+              <span className="text-sm font-bold text-slate-500">DATE</span>
               <input
                 type="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
                 className="px-3 py-1 bg-transparent border-none focus:ring-0 font-mono text-sm"
               />
-              <Button onClick={() => fetchRaces(selectedDate)} size="sm" variant="default">
-                Refresh
+
+              {/* Next Date Button */}
+              <Button
+                onClick={() => nextDate && setSelectedDate(nextDate)}
+                size="sm"
+                variant="ghost"
+                disabled={!nextDate}
+                title={nextDate ? `次の開催日: ${nextDate}` : "次の開催日なし"}
+              >
+                →
               </Button>
             </div>
           </div>
         </div>
+
+        {/* Daily ROI Summary */}
+        {dailyRoi && dailyRoi.total && (
+          <div className="mb-6 p-4 bg-white dark:bg-slate-800 rounded-lg border shadow-sm">
+            <div className="flex flex-wrap items-center gap-6">
+              {/* Total ROI */}
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-bold text-slate-500">📊 当日推奨買い目</span>
+                <div className={`px-3 py-1 rounded-full font-bold ${dailyRoi.total.roi >= 100
+                  ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                  : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                  }`}>
+                  ROI {dailyRoi.total.roi}%
+                </div>
+                <span className="text-sm">
+                  投資 ¥{dailyRoi.total.cost.toLocaleString()} →
+                  払戻 ¥{dailyRoi.total.return.toLocaleString()}
+                  <span className={dailyRoi.total.profit >= 0 ? 'text-green-600' : 'text-red-600'}>
+                    {' '}({dailyRoi.total.profit >= 0 ? '+' : ''}¥{dailyRoi.total.profit.toLocaleString()})
+                  </span>
+                </span>
+                <span className="text-xs text-slate-400">
+                  {dailyRoi.total.races}R / 的中率 {dailyRoi.total.hit_rate}%
+                </span>
+              </div>
+
+              {/* Per Venue */}
+              {dailyRoi.by_venue && dailyRoi.by_venue.length > 0 && (
+                <div className="flex items-center gap-2 border-l pl-4 border-slate-200 dark:border-slate-700">
+                  <span className="text-xs text-slate-400">競馬場別:</span>
+                  {dailyRoi.by_venue.map((v: any) => (
+                    <span
+                      key={v.venue}
+                      className={`text-xs px-2 py-0.5 rounded ${v.roi >= 100
+                        ? 'bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400'
+                        : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400'
+                        }`}
+                      title={`¥${v.cost.toLocaleString()} → ¥${v.return.toLocaleString()} (${v.hit_rate}%的中)`}
+                    >
+                      {VENUE_MAP[v.venue]?.split(' ')[0] || v.venue} {v.roi}%
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Race List */}
         {loading && (
@@ -151,13 +267,35 @@ export default function Home() {
           <div className="flex flex-col md:flex-row gap-6 overflow-x-auto pb-8 snap-x">
             {sortedVenueNames.map((venueName) => (
               <div key={venueName} className="flex-1 min-w-[280px] max-w-sm flex flex-col gap-4 snap-start">
-                {/* Venue Header */}
-                <div className="sticky top-0 z-10 bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur-sm py-2 border-b-2 border-indigo-500">
-                  <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                    <span className="inline-block w-2 h-2 rounded-full bg-indigo-500"></span>
-                    {venueName}
-                  </h2>
-                </div>
+                {/* Venue Header with ROI */}
+                {(() => {
+                  // Find venue code from name
+                  const venueCode = Object.keys(VENUE_MAP).find(k => VENUE_MAP[k] === venueName) || '';
+                  const venueRoi = dailyRoi?.by_venue?.find((v: any) => v.venue === venueCode);
+                  return (
+                    <div className="sticky top-0 z-10 bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur-sm py-2 border-b-2 border-indigo-500">
+                      <div className="flex justify-between items-center">
+                        <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                          <span className="inline-block w-2 h-2 rounded-full bg-indigo-500"></span>
+                          {venueName}
+                        </h2>
+                        {venueRoi && (
+                          <div className="flex items-center gap-2 text-xs">
+                            <span className={`px-2 py-0.5 rounded font-bold ${venueRoi.roi >= 100
+                              ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                              : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                              }`}>
+                              {venueRoi.roi}%
+                            </span>
+                            <span className="text-slate-400">
+                              ¥{venueRoi.cost.toLocaleString()}→¥{venueRoi.return.toLocaleString()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Race Cards for this Venue */}
                 <div className="flex flex-col gap-3">
@@ -210,6 +348,24 @@ export default function Home() {
                             </span>
                           )}
                         </div>
+
+                        {/* ROI per race */}
+                        {dailyRoi?.by_race?.[race.race_id] && (
+                          <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-700 flex justify-between items-center text-xs">
+                            <span className="text-slate-400">
+                              {dailyRoi.by_race[race.race_id].bet_type}
+                            </span>
+                            <span className={dailyRoi.by_race[race.race_id].hit
+                              ? 'text-green-600 font-bold'
+                              : 'text-slate-400'
+                            }>
+                              ¥{dailyRoi.by_race[race.race_id].cost.toLocaleString()} →
+                              ¥{dailyRoi.by_race[race.race_id].return.toLocaleString()}
+                              {dailyRoi.by_race[race.race_id].hit && ' ◎'}
+                            </span>
+                          </div>
+                        )}
+
                         <div className="mt-3 flex justify-end">
                           <span className="text-xs font-semibold text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
                             View Analysis <span className="text-lg leading-none">›</span>

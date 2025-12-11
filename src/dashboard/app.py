@@ -144,7 +144,7 @@ def render_sidebar():
             st.rerun()
 
         st.markdown("---")
-        st.caption(f"v5.0.0 | Theme: {st.session_state['theme'].title()}")
+        st.caption(f"v12.0.0 | Model: Ensemble v12 | Theme: {st.session_state['theme'].title()}")
         # Debug Indicator
         # st.code(f"Current State: {st.session_state['theme']}")
 
@@ -153,16 +153,34 @@ def render_home():
     st.header("🏁 Predictions (Today)")
     
     # 1. Load Latest Predictions
-    # Logic: Look for latest prediction parquet file
+    # Logic: Look for latest prediction parquet file (including v7)
     pred_files = sorted(glob.glob(os.path.join(EXPERIMENTS_DIR, 'predictions_*.parquet')), reverse=True)
+    
+    # Also check v12 experiment directory (Priority)
+    v12_pred = os.path.join(EXPERIMENTS_DIR, 'v12_tabnet_revival', 'reports', 'predictions.parquet')
+    if os.path.exists(v12_pred) and v12_pred not in pred_files:
+        pred_files.insert(0, v12_pred)
+    
+    # Also check v7 experiment directory
+    v7_pred = os.path.join(EXPERIMENTS_DIR, 'v7_ensemble_full', 'reports', 'predictions.parquet')
+    if os.path.exists(v7_pred) and v7_pred not in pred_files:
+        pred_files.append(v7_pred)
     
     if not pred_files:
         st.info("予測データが見つかりません。まずは 'run_weekly.py' または 'predict.py' を実行してください。")
         return
 
     # Selector for Model/Date
-    options = {os.path.basename(f): f for f in pred_files[:5]} # Top 5 recent
-    selected_file_name = st.selectbox("Select Prediction File", list(options.keys()))
+    options = {}
+    for f in pred_files[:10]:  # Top 10 recent
+        if 'v12_tabnet_revival' in f:
+            options['🏆 v12 (High ROI Strategy)'] = f
+        elif 'v7_ensemble_full' in f:
+            options['v7 (2025 Optimized)'] = f
+        else:
+            options[os.path.basename(f)] = f
+    
+    selected_file_name = st.selectbox("📦 Select Model/Prediction", list(options.keys()))
     selected_file_path = options[selected_file_name]
     
     try:
@@ -307,16 +325,45 @@ def render_race_detail(df_race):
 
     st.markdown("### 📋 全頭リスト (Ranking)")
     
+    # Check if we have actual results (rank column with valid data)
+    has_results = 'rank' in df_race.columns and df_race['rank'].notna().any()
+    
     # Display Table with Styler
-    display_cols = ['rank', 'horse_number', 'horse_name', 'jockey_id', 'odds', 'prob', 'score']
+    display_cols = ['horse_number', 'horse_name', 'jockey_id', 'odds', 'prob', 'score']
+    if has_results:
+        display_cols.insert(0, 'rank')  # Add actual rank first
+    
     # Filter existing cols
     display_cols = [c for c in display_cols if c in df_race.columns]
     
-    st.dataframe(
-        df_race[display_cols].style.background_gradient(subset=['score'], cmap='Blues'),
-        use_container_width=True,
-        hide_index=True
-    )
+    # Create display dataframe with prediction rank
+    df_display = df_race[display_cols].copy()
+    df_display.insert(0, '予測順位', range(1, len(df_display) + 1))
+    
+    # Style based on whether we have results
+    if has_results:
+        # Calculate prediction accuracy
+        top3_pred = df_race.head(3)['horse_number'].tolist()
+        top3_actual = df_race[df_race['rank'] <= 3]['horse_number'].tolist() if len(df_race[df_race['rank'] <= 3]) > 0 else []
+        hits = len(set(top3_pred) & set(top3_actual))
+        
+        st.info(f"📊 予測結果: 上位3頭中 **{hits}頭** 的中 {'✅' if hits >= 2 else '⚠️' if hits == 1 else '❌'}")
+        
+        # Rename 'rank' to '着順' for display
+        df_display = df_display.rename(columns={'rank': '着順'})
+        
+        st.dataframe(
+            df_display.style.background_gradient(subset=['score'], cmap='Blues'),
+            use_container_width=True,
+            hide_index=True
+        )
+    else:
+        st.caption("📌 このレースはまだ結果が確定していません")
+        st.dataframe(
+            df_display.style.background_gradient(subset=['score'], cmap='Blues'),
+            use_container_width=True,
+            hide_index=True
+        )
     
     st.markdown("---")
     st.markdown("### 🧠 Deep Analytics")

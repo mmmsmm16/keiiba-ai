@@ -42,7 +42,7 @@ class CategoryAggregator:
         # ----------------------------------------------------------------
         # 1. 基本集計 (Overall Stats)
         # ----------------------------------------------------------------
-        targets = ['jockey_id', 'trainer_id', 'sire_id']
+        targets = ['jockey_id', 'trainer_id', 'sire_id', 'class_level']
         for col in targets:
             df = self._aggregate_basic(df, col)
 
@@ -80,6 +80,17 @@ class CategoryAggregator:
         # (4) 騎手 × 調教師 (Jockey x Trainer - Interaction)
         if 'trainer_id' in df.columns and 'jockey_id' in df.columns:
             df = self._aggregate_context(df, 'jockey_id', 'trainer_id', 'trainer')
+            
+            # v7新規: 騎手×調教師の騎乗回数 (trainer_jockey_count)
+            # 既存のjockey_trainer_n_racesと同じだが、より直感的な名前で追加
+            df['trainer_jockey_count'] = df['jockey_trainer_n_races'].copy() if 'jockey_trainer_n_races' in df.columns else 0
+
+        # ----------------------------------------------------------------
+        # v7 新規: 母父 (BMS) × 距離区分
+        # ----------------------------------------------------------------
+        if 'bms_id' in df.columns and 'distance_cat' in df.columns:
+            logger.info("v7: 母父(BMS) × 距離 の集計...")
+            df = self._aggregate_context(df, 'bms_id', 'distance_cat', 'dist')
 
         logger.info("カテゴリ集計特徴量の生成完了")
         # 一時カラム削除

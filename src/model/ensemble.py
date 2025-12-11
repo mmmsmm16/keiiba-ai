@@ -5,9 +5,9 @@ from sklearn.linear_model import LinearRegression
 import pickle
 import os
 
-from model.lgbm import KeibaLGBM
-from model.catboost_model import KeibaCatBoost
-from model.tabnet_model import KeibaTabNet
+from src.model.lgbm import KeibaLGBM
+from src.model.catboost_model import KeibaCatBoost
+from src.model.tabnet_model import KeibaTabNet
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +38,16 @@ class EnsembleModel:
         logger.info(f"Base Models (Version: {version}) をロードします: {model_dir}")
         self.version = version
         
+        if version:
+            lgbm_path = os.path.join(model_dir, f'lgbm_{version}.pkl')
+            catboost_path = os.path.join(model_dir, f'catboost_{version}.pkl')
+            tabnet_path = os.path.join(model_dir, f'tabnet_{version}.zip')
+        else:
+            lgbm_path = os.path.join(model_dir, 'lgbm.pkl')
+            catboost_path = os.path.join(model_dir, 'catboost.pkl')
+            tabnet_path = os.path.join(model_dir, 'tabnet.zip')
+
         # LightGBM
-        lgbm_path = os.path.join(model_dir, f'lgbm_{version}.pkl')
         if os.path.exists(lgbm_path):
             self.lgbm.load_model(lgbm_path)
             self.has_lgbm = True
@@ -48,7 +56,6 @@ class EnsembleModel:
             self.has_lgbm = False
 
         # CatBoost
-        catboost_path = os.path.join(model_dir, f'catboost_{version}.pkl')
         if os.path.exists(catboost_path):
             self.catboost.load_model(catboost_path)
             self.has_catboost = True
@@ -57,8 +64,6 @@ class EnsembleModel:
             self.has_catboost = False
 
         # TabNet
-        # v7ではTabNet最適化を行っていないためスキップされる可能性がある
-        tabnet_path = os.path.join(model_dir, f'tabnet_{version}.zip')
         if os.path.exists(tabnet_path):
             self.tabnet.load_model(tabnet_path.replace('.zip', ''), device_name='cpu')
             self.has_tabnet = True
@@ -88,7 +93,7 @@ class EnsembleModel:
             raise ValueError("有効なBase Modelが1つもありません。")
 
         X_meta = pd.DataFrame(preds)
-        y_meta = valid_set['y']
+        y_meta = np.array(valid_set['y']).copy()  # Make a writeable copy
 
         # Metaモデル学習
         self.meta_model.fit(X_meta, y_meta)

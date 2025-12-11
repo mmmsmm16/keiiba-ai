@@ -126,6 +126,14 @@ class InferenceDataLoader:
         Returns:
             pd.DataFrame: 推論用データフレーム (結果系カラムはNaN/Noneで埋められます)
         """
+        # Validate race_ids - must be exactly 12 digits
+        if race_ids:
+            valid_race_ids = [rid for rid in race_ids if rid and len(rid) == 12 and rid.isdigit()]
+            if not valid_race_ids:
+                logger.warning(f"無効なrace_id形式です: {race_ids}. 12桁の数字が必要です。")
+                return pd.DataFrame()
+            race_ids = valid_race_ids
+            
         # テーブル名の解決
 
         # 出馬表データは jvd_uma_race (または uma_race, jvd_ur) に格納されていると想定
@@ -223,6 +231,9 @@ class InferenceDataLoader:
             {col_sex} AS sex,
             {col_sire} AS sire_id,
             {col_mare} AS mare_id,
+
+            -- 斤量 (Impost) - v7新規
+            ur.futan_juryo AS impost,
 
             NULL AS pass_1,
             NULL AS pass_2,
@@ -343,6 +354,11 @@ class InferenceDataLoader:
             # tansho_odds は '0037' = 3.7倍 のように10倍されているので10で割る
             # lag1_odds 生成のため、数値型である必要がある
             df['odds'] = pd.to_numeric(df['odds'], errors='coerce') / 10.0
+            
+            # 斤量 (Impost) の変換 - v7新規
+            # JRA-VANは10倍値で格納 (550 = 55.0kg)
+            if 'impost' in df.columns:
+                df['impost'] = pd.to_numeric(df['impost'], errors='coerce') / 10.0
 
             def convert_weight_diff(row):
                 try:

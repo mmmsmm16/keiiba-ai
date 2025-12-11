@@ -157,6 +157,9 @@ class JraVanDataLoader:
             {col_sire} AS sire_id,
             {col_mare} AS mare_id,
 
+            -- 斤量 (Impost/Weight Carried)
+            res.futan_juryo AS impost,
+
             -- Passing Rank Columns
             {col_pass[0]} AS pass_1,
             {col_pass[1]} AS pass_2,
@@ -211,6 +214,9 @@ class JraVanDataLoader:
             
             df['popularity'] = pd.to_numeric(df['popularity'], errors='coerce')
             df['weight'] = pd.to_numeric(df['weight'], errors='coerce')
+            
+            # 斤量 (Impost) の変換 - JRA-VANは10倍値で格納 (550 = 55.0kg)
+            df['impost'] = pd.to_numeric(df['impost'], errors='coerce') / 10.0
 
             def convert_time(t):
                 if pd.isna(t): return None

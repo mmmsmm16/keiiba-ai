@@ -18,10 +18,9 @@ WORKDIR /workspace
 # pipのアップグレード
 RUN pip install --no-cache-dir --upgrade pip
 
-# PyTorch Nightly のインストール (RTX 50シリーズ/sm_120 対応の CUDA 12.6+ 版)
-# requirements.txt より先にインストールすることで、NumPy 2.x 環境を構築し、
-# 後続のライブラリが NumPy 2.x 対応版を選択できるようにする。
-RUN pip install --no-cache-dir --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu128
+# PyTorch 2.7.0 安定版のインストール (Blackwell/RTX 50シリーズ/sm_120 公式対応)
+# cu128 = CUDA 12.8 対応
+RUN pip install --no-cache-dir torch==2.7.0 torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
 
 # Python依存パッケージのインストール
 COPY requirements.txt /tmp/requirements.txt

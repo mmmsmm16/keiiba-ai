@@ -40,8 +40,9 @@
 - [x] アンサンブル学習
     - [x] CatBoost モデルの実装 (`src/model/catboost_model.py`)
     - [x] Stacking / Blending の実装 (`src/model/ensemble.py`)
-- [ ] 自動運用パイプライン構築 (MLOps)
-    - [ ] 定期実行スクリプトの整備
+- [x] 自動運用パイプライン構築 (MLOps)
+    - [x] 定期実行スクリプトの整備 (`src/scripts/run_auto_predict_loop.py`)
+    - [x] 自動起動設定 (`start_auto_service.bat`)
 
 ## Phase 4.5: モデル完成と高度機能 (現在進行中)
 - [x] `CatBoost v3` & `TabNet v3` の最適化と学習 (最適化完了/中断, 学習進行中)
@@ -65,6 +66,10 @@
     - [x] CLIまたはシンプルなWebUIでの結果表示
 - [x] 自動購入連携 (Optional)
 - [x] **Bug Fix**: `auto_predict.py` の勝率計算ロジック修正 (Softmax -> Calibration)
+- [x] **自動通知システム**:
+    - [x] Discord通知実装
+    - [x] ループ実行スクリプト (`src/scripts/run_auto_predict_loop.py`)
+    - [x] Windowsスタートアップ自動化 (`start_auto_service.bat`)
 
 ## Phase 6: 分析・可視化 (Analysis & Visualization)
 - [x] 実験結果出力の強化 (`src/model/evaluate.py`)
@@ -223,4 +228,3 @@
     - [x] 重複ファイルの削除 (`regenerate_datasets.py`)
 - [x] **インポートパスの修正**
     - [x] 移動したスクリプトの `sys.path` 修正
-

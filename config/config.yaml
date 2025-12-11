@@ -9,4 +9,4 @@ betting:
 pipeline:
   update_data: true
   retrain_model: true
-  valid_year: 2024
+  valid_year: 2025

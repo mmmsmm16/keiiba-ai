@@ -59,6 +59,9 @@ class KeibaTabNet:
 
         self.params = init_params # self.paramsを更新して保持
 
+        # TabNetRegressorのinitに渡さないパラメータを除去
+        self.params.pop('enabled', None)
+
         self.model = TabNetRegressor(**self.params)
         self.scaler = StandardScaler()
         self.fitted_scaler = False
@@ -93,20 +96,49 @@ class KeibaTabNet:
             torch.cuda.empty_cache()
 
         # 特徴量名を保持
+        logger.info("Step 1/5: 特徴量名の保持...")
         if isinstance(train_set['X'], pd.DataFrame):
             self.feature_names = train_set['X'].columns.tolist()
+            logger.info(f"  特徴量数: {len(self.feature_names)}, Train行数: {len(train_set['X'])}")
+            X_train_df = train_set['X'].copy()
+            X_valid_df = valid_set['X'].copy()
+            
+            # カテゴリ/オブジェクト型の処理 (簡易的にコード化)
+            cat_cols = X_train_df.select_dtypes(include=['object', 'category']).columns
+            if len(cat_cols) > 0:
+                logger.info(f"Step 2/5: カテゴリ変数の変換 ({len(cat_cols)}列)...")
+                for col in cat_cols:
+                    logger.info(f"  Converting column '{col}' to numeric codes.")
+                    combined = pd.concat([X_train_df[col], X_valid_df[col]], axis=0).astype('category')
+                    X_train_df[col] = combined.iloc[:len(X_train_df)].cat.codes
+                    X_valid_df[col] = combined.iloc[len(X_train_df):].cat.codes
+            else:
+                logger.info("Step 2/5: カテゴリ変数なし（スキップ）")
 
-        X_train = train_set['X'].values
+            logger.info("Step 3/5: NumPy配列への変換...")
+            X_train = X_train_df.values
+            X_valid = X_valid_df.values
+        else:
+            X_train = train_set['X']
+            X_valid = valid_set['X']
+
         y_train_raw = train_set['y']
-
-        X_valid = valid_set['X'].values
         y_valid_raw = valid_set['y']
 
         # ターゲット変換
-        y_train = self._preprocess_target(y_train_raw).reshape(-1, 1)
-        y_valid = self._preprocess_target(y_valid_raw).reshape(-1, 1)
+        logger.info("Step 4/5: ターゲット変換とfloat32キャスト...")
+        y_train = self._preprocess_target(y_train_raw).reshape(-1, 1).astype(np.float32)
+        y_valid = self._preprocess_target(y_valid_raw).reshape(-1, 1).astype(np.float32)
 
-        # 特徴量のスケーリング (TabNetはNNなのでスケール感重要)
+        # 特徴量のスケーリング
+        try:
+            X_train = np.array(X_train, dtype=np.float32)
+            X_valid = np.array(X_valid, dtype=np.float32)
+        except Exception as e:
+            logger.error(f"TabNet: Failed to convert data to float32. Check for non-numeric values. Error: {e}")
+            raise e
+
+        logger.info("Step 5/5: スケーリングとNaN処理...")
         X_train = np.nan_to_num(X_train, nan=0.0)
         X_valid = np.nan_to_num(X_valid, nan=0.0)
 
@@ -114,6 +146,23 @@ class KeibaTabNet:
         X_train_scaled = self.scaler.transform(X_train)
         X_valid_scaled = self.scaler.transform(X_valid)
         self.fitted_scaler = True
+        
+        max_epochs = self.fit_params['max_epochs']
+        logger.info(f"データ準備完了。TabNet学習を開始します... (max_epochs={max_epochs})")
+
+        # プログレスバー用カスタムコールバック
+        from pytorch_tabnet.callbacks import Callback
+        
+        class EpochProgressCallback(Callback):
+            def __init__(self, max_epochs):
+                super().__init__()
+                self.max_epochs = max_epochs
+                
+            def on_epoch_end(self, epoch, logs=None):
+                logs = logs or {}
+                train_loss = logs.get('loss', 0)
+                valid_rmse = logs.get('valid_rmse', 0)
+                print(f"Epoch {epoch+1}/{self.max_epochs} | loss: {train_loss:.5f} | valid_rmse: {valid_rmse:.5f}", flush=True)
 
         self.model.fit(
             X_train=X_train_scaled,
@@ -121,12 +170,13 @@ class KeibaTabNet:
             eval_set=[(X_train_scaled, y_train), (X_valid_scaled, y_valid)],
             eval_name=['train', 'valid'],
             eval_metric=['rmse', 'mae'],
-            max_epochs=self.fit_params['max_epochs'],
+            max_epochs=max_epochs,
             patience=self.fit_params['patience'],
             batch_size=self.fit_params['batch_size'],
             virtual_batch_size=self.fit_params['virtual_batch_size'],
             num_workers=self.fit_params['num_workers'],
-            drop_last=self.fit_params['drop_last']
+            drop_last=self.fit_params['drop_last'],
+            callbacks=[EpochProgressCallback(max_epochs)]
         )
         logger.info("学習が完了しました。")
 
@@ -183,7 +233,13 @@ class KeibaTabNet:
                 else:
                     raise ValueError(f"Feature count mismatch (Expected: {expected_features}, Got: {X.shape[1]}) and simpler slicing impossible.")
 
-        X_values = X.values
+        # カテゴリ変数を数値に変換 (train()と同様)
+        X_converted = X.copy()
+        for col in X_converted.columns:
+            if X_converted[col].dtype == 'object' or X_converted[col].dtype.name == 'category':
+                X_converted[col] = X_converted[col].astype('category').cat.codes
+
+        X_values = X_converted.values.astype(np.float32)
         X_values = np.nan_to_num(X_values, nan=0.0)
         X_scaled = self.scaler.transform(X_values)
 
@@ -197,18 +253,18 @@ class KeibaTabNet:
         """モデルとスケーラーを保存します。"""
         os.makedirs(os.path.dirname(path), exist_ok=True)
 
-        # モデル本体
-        model_path = path.replace('.pkl', '')
+        # モデル本体 (.zip拡張子はTabNetが自動追加するので除去)
+        model_path = path.replace('.pkl', '').replace('.zip', '')
         self.model.save_model(model_path) # saves as model_path.zip
 
         # スケーラー
-        scaler_path = path + '.scaler'
+        scaler_path = model_path + '.scaler'
         with open(scaler_path, 'wb') as f:
             pickle.dump(self.scaler, f)
             
         # 特徴量名 (あれば保存)
         if self.feature_names:
-            feature_path = path + '.features.json'
+            feature_path = model_path + '.features.json'
             with open(feature_path, 'w') as f:
                 json.dump(self.feature_names, f)
 
@@ -216,8 +272,9 @@ class KeibaTabNet:
 
     def load_model(self, path: str, device_name: str = None):
         """モデルとスケーラーをロードします。"""
-        # モデル本体
-        model_path = path.replace('.pkl', '') + '.zip'
+        # モデル本体 (.zip拡張子を正しく処理)
+        base_path = path.replace('.pkl', '').replace('.zip', '')
+        model_path = base_path + '.zip'
         self.model.load_model(model_path)
 
         # デバイスの強制変更 (Inference用)
@@ -246,11 +303,11 @@ class KeibaTabNet:
             logger.info(f"TabNet Device set to: {device_name}")
 
         # スケーラー
-        # 1. path + .scaler
-        scaler_path = path + '.scaler'
-        # 2. path + .pkl.scaler (saved by train.py using default path convention)
+        scaler_path = base_path + '.scaler'
         if not os.path.exists(scaler_path):
-             scaler_path = path + '.pkl.scaler'
+             scaler_path = path + '.scaler'  # 古い形式のフォールバック
+        if not os.path.exists(scaler_path):
+             scaler_path = path + '.pkl.scaler'  # さらに古い形式
 
         if os.path.exists(scaler_path):
             with open(scaler_path, 'rb') as f:

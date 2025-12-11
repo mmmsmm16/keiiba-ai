@@ -1,0 +1,52 @@
+=== スコア分布パターン別 グリッドサーチ (2024+2025年) ===
+
+--- ROI上位30 ---
+sanrenpuku x Top3優勢・下位団子: ROI 119.6%, 266レース, Hit 27.8%
+sanrentan x 小差 (0.15-0.3): ROI 112.6%, 1150レース, Hit 8.5%
+umaren x Top3優勢・下位団子: ROI 104.6%, 266レース, Hit 39.8%
+umaren x 小差 (0.15-0.3): ROI 98.3%, 1150レース, Hit 25.5%
+sanrentan x 全体均衡: ROI 97.1%, 3976レース, Hit 12.7%
+umaren_top3 x 小差 (0.15-0.3): ROI 96.7%, 1150レース, Hit 13.5%
+sanrenpuku x 小差 (0.15-0.3): ROI 95.4%, 1150レース, Hit 21.2%
+sanrenpuku x 大差 (range≥0.5): ROI 94.4%, 2617レース, Hit 47.0%
+tansho x 小差 (0.15-0.3): ROI 93.0%, 1150レース, Hit 20.6%
+umaren_top3 x Top3団子・下位離散: ROI 92.9%, 625レース, Hit 19.4%
+wide x Top3優勢・下位団子: ROI 92.9%, 266レース, Hit 59.8%
+sanrenpuku x 全体離散: ROI 92.3%, 1828レース, Hit 48.8%
+sanrenpuku x 全体均衡: ROI 92.0%, 3976レース, Hit 28.4%
+umaren_top3 x Top3優勢・下位団子: ROI 91.9%, 266レース, Hit 22.6%
+tansho x 均衡 (range<0.15): ROI 90.8%, 112レース, Hit 17.0%
+umaren x 全体均衡: ROI 89.5%, 3976レース, Hit 32.3%
+wide x 大差 (range≥0.5): ROI 89.2%, 2617レース, Hit 70.8%
+sanrentan_top3 x Top3団子・下位離散: ROI 88.7%, 625レース, Hit 3.5%
+sanrentan x 中差 (0.3-0.5): ROI 88.7%, 2816レース, Hit 12.2%
+sanrenpuku x 中差 (0.3-0.5): ROI 88.6%, 2816レース, Hit 28.2%
+wide x 全体離散: ROI 88.6%, 1828レース, Hit 71.4%
+wide x 全体均衡: ROI 87.5%, 3976レース, Hit 51.7%
+umaren x 中差 (0.3-0.5): ROI 87.4%, 2816レース, Hit 32.2%
+wide x 小差 (0.15-0.3): ROI 87.3%, 1150レース, Hit 41.9%
+sanrentan x 全体離散: ROI 87.2%, 1828レース, Hit 23.7%
+wide x 中差 (0.3-0.5): ROI 86.7%, 2816レース, Hit 52.2%
+sanrentan_top3 x Top3優勢・下位団子: ROI 86.4%, 266レース, Hit 2.6%
+umaren x 全体離散: ROI 86.4%, 1828レース, Hit 50.9%
+umaren x 大差 (range≥0.5): ROI 85.9%, 2617レース, Hit 49.6%
+tansho x Top3団子・下位離散: ROI 84.6%, 625レース, Hit 21.1%
+
+--- ROI 100%以上: 3件 ---
+sanrenpuku x Top3優勢・下位団子: ROI 119.6%, 266レース
+sanrentan x 小差 (0.15-0.3): ROI 112.6%, 1150レース
+umaren x Top3優勢・下位団子: ROI 104.6%, 266レース
+
+--- 仮説検証 ---
+【大差/Top3優勢レースでのベスト】
+  sanrenpuku: ROI 119.6%
+  umaren: ROI 104.6%
+  sanrenpuku: ROI 94.4%
+  wide: ROI 92.9%
+  umaren_top3: ROI 91.9%
+【均衡レースでのベスト】
+  sanrentan: ROI 97.1%
+  sanrenpuku: ROI 92.0%
+  tansho: ROI 90.8%
+  umaren: ROI 89.5%
+  wide: ROI 87.5%

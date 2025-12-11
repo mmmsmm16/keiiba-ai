@@ -1,0 +1,32 @@
+experiment_name: "v12_tabnet_revival"
+description: "Model v12: Ensemble Meta-Model Training Only"
+
+data:
+  features: "v9_full"
+  cache_path: "data/processed/lgbm_datasets_v9.pkl"
+  train_years: [2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024]
+  valid_year: 2025
+  use_cache: true
+  jra_only: false
+
+model:
+  type: "ensemble_only" # Train Meta Model ONLY (skips lgbm/catboost/tabnet training)
+  
+  tabnet_params:
+    enabled: true
+    device_name: "cuda"
+  
+  lgbm_params:
+    objective: "lambdarank"
+    metric: "ndcg"
+
+  catboost_params:
+    loss_function: "YetiRank"
+
+evaluation:
+  metric: "roi"
+  strategies: ["tansho", "umaren", "sanrentan", "option_c"]
+  jra_only: true
+  
+strategy:
+  enabled: true # Enable strategy calc for final report

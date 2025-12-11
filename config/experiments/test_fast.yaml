@@ -1,0 +1,29 @@
+experiment_name: "pipeline_fast_test"
+description: "Pipeline connectivity test with minimal iterations"
+base_dir: "experiments"
+
+data:
+  train_years: [2024]
+  valid_year: 2025
+  features: "v5_default"
+  use_cache: true
+  jra_only: true
+
+model:
+  type: "ensemble"
+  lgbm_params:
+    num_leaves: 31
+    learning_rate: 0.05
+    n_estimators: 1  # Super fast
+  catboost_params:
+    depth: 6
+    learning_rate: 0.05
+    iterations: 1    # Super fast
+  tabnet_params:
+    max_epochs: 1    # Super fast
+    batch_size: 1024
+    device_name: "cpu"
+
+evaluation:
+  metric: "roi"
+  strategies: ["umaren"]

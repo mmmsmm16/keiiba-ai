@@ -20,6 +20,7 @@ from src.model.ensemble import EnsembleModel
 from src.inference.preprocessor import InferencePreprocessor
 from src.inference.loader import InferenceDataLoader
 from src.model.calibration import ProbabilityCalibrator
+from src.inference.optimal_strategy import OptimalStrategy
 
 # ロギング設定
 logging.basicConfig(
@@ -103,10 +104,8 @@ class NotificationManager:
         description = "**🏆 本命予測 (スコア順)**\n"
         
         # ヘッダーなし、リスト形式で見やすく
-        marks = ["◎", "〇", "▲", "△", "△", "△"]
         
         for i, (_, row) in enumerate(top_picks.iterrows()):
-            mark = marks[i] if i < len(marks) else "  "
             h_num = str(int(row['horse_number'])).zfill(2)
             h_name = row['horse_name']
             
@@ -114,8 +113,8 @@ class NotificationManager:
             prob = f"{row['calibrated_prob']*100:.0f}%"
             score = f"{row['score']:.2f}"
             
-            # Simple list format with Score
-            description += f"`{mark}` `{h_num}` **{h_name}** (勝率:{prob}, EV:{ev}, Sc:{score})\n"
+            # Simple list format without Mark
+            description += f"`{h_num}` **{h_name}** (勝率:{prob}, EV:{ev}, Sc:{score})\n"
 
         # 推奨買い目 (Smart Value Logic)
         bet_strategy = self._generate_betting_strategy(df)
@@ -162,45 +161,134 @@ class NotificationManager:
         else:
             return s
 
+    def _calculate_betting_data(self, df: pd.DataFrame) -> dict:
+        """推奨買い目のデータを計算して返す (シミュレーション用)"""
+        # スコア順にソート (基本データとして使用)
+        sorted_df = df.sort_values('score', ascending=False)
+        top1 = sorted_df.iloc[0]
+        
+        # 基本情報
+        top1_ev = top1.get('expected_value', 0)
+        h_num = int(top1['horse_number'])
+        h_str = f"{h_num:02}"
+        
+        # 相手馬 (Rank 2-6)
+        opps = sorted_df.iloc[1:6] 
+        opp_nums = [f"{int(x):02}" for x in opps['horse_number']]
+        
+        strategy_data = {
+            "top1": top1,
+            "sorted_df": sorted_df,
+            "ev": top1_ev,
+            "bets": [],
+            "strategy_type": "Low",
+            "is_strong": False
+        }
+        
+        # 戦略判定
+        if top1_ev >= 1.2:
+            # High Value
+            strategy_data["strategy_type"] = "High"
+            # 三連複 1頭軸流し (Rank 2,3,4)
+            strategy_data["bets"].append({
+                "type": "sanrenpuku",
+                "axis": [h_num],
+                "partners": [int(x) for x in opps.iloc[:3]['horse_number']],
+                "points": 3
+            })
+            
+        elif top1_ev >= 0.8:
+            # Mid Value
+            strategy_data["strategy_type"] = "Mid"
+            # 三連単 1着固定流し (Rank 2,3,4)
+            strategy_data["bets"].append({
+                "type": "sanrentan_1fix",
+                "axis": [h_num],
+                "partners": [int(x) for x in opps.iloc[:3]['horse_number']],
+                "points": 6
+            })
+            # (参考) 馬連 1頭軸流し (Rank 2,3,4,5)
+            # strategy_data["bets"].append({
+            #     "type": "umaren",
+            #     "axis": [h_num],
+            #     "partners": [int(x) for x in opps.iloc[:4]['horse_number']],
+            #     "points": 4
+            # })
+            
+        else:
+            # Low Value (見送り)
+            strategy_data["strategy_type"] = "Low"
+        
+        # 強気馬券判定 (7番人気以上)
+        axis_pop = int(top1['popularity']) if pd.notna(top1['popularity']) else 99
+        if axis_pop >= 7:
+            strategy_data["is_strong"] = True
+            # 三連単 1着固定流し (Rank 2,3,4,5) -> Opps has 5 horses (Rank 2-6). 
+            # Original code said: {','.join(opp_nums[:4])} which is Rank 2,3,4,5.
+            strategy_data["bets"].append({
+                "type": "sanrentan_1fix_strong",
+                "axis": [h_num],
+                "partners": [int(x) for x in opps.iloc[:4]['horse_number']],
+                "points": 12
+            })
+            
+        return strategy_data
+
     def _generate_betting_strategy(self, df: pd.DataFrame) -> str:
-        """推奨買い目のテキスト生成 (Smart Value Logic)"""
-        # 1. スコア上位6頭を抽出 (安定群)
-        top_prob_df = df.sort_values('score', ascending=False).head(6)
+        """推奨買い目のテキスト生成 (v12 最適戦略)"""
+        data = self._calculate_betting_data(df)
+        sorted_df = data["sorted_df"]
         
-        # 2. その中で最もEVが高い馬を「狙い目」とする
-        best_smart_horse = top_prob_df.sort_values('expected_value', ascending=False).iloc[0]
+        # --- 1. AI本命予想リスト ---
+        msg = "**🤖 AI本命予想 (Ranked v12)**\n"
+        symbols = ['◎', '〇', '▲', '△', '△', '△', '注']
         
-        # 3. 純粋な勝率1位 (本命)
-        best_prob_horse = top_prob_df.iloc[0]
-        
-        msg = "**🎫 推奨買い目**\n"
-        
-        # A. 本命 (勝率 1位)
-        p_num = int(best_prob_horse['horse_number'])
-        p_name = best_prob_horse['horse_name']
-        p_prob = best_prob_horse['calibrated_prob']
-        p_ev = best_prob_horse['expected_value']
-        
-        msg += f"👑 **本命 (堅実)**: {p_num} {p_name}\n"
-        msg += f"   (勝率: {p_prob*100:.1f}%, EV: {p_ev:.2f}) -> 単勝/連軸\n"
-        
-        # B. 狙い目 (上位5頭の中でBest EV)
-        # 本命と異なる場合のみ表示
-        if int(best_smart_horse['horse_number']) != p_num:
-            v_num = int(best_smart_horse['horse_number'])
-            v_name = best_smart_horse['horse_name']
-            v_prob = best_smart_horse['calibrated_prob']
-            v_ev = best_smart_horse['expected_value']
+        # 上位7頭を表示
+        for i, (idx, row) in enumerate(sorted_df.head(7).iterrows()):
+            h_num = str(int(row['horse_number'])).zfill(2)
+            ev = row.get('expected_value', 0)
+            score = row.get('score', 0)
+            pop = int(row['popularity']) if pd.notna(row['popularity']) else 99
+            short_name = str(row['horse_name'])[:5]
+            symbol = symbols[i] if i < len(symbols) else '  '
+            msg += f"`{symbol}{h_num} {short_name:<5}({pop}人) S{score:.2f} E{ev:.2f}`\n"
             
-            # EVが1.0を超えている場合のみ推奨
-            if v_ev > 1.0:
-                msg += f"💰 **狙い目 (高期待値)**: {v_num} {v_name}\n"
-                msg += f"   (勝率: {v_prob*100:.1f}%, EV: {v_ev:.2f}) -> 単複/ワイド相手\n"
+        msg += "\n"
         
-        # 全体的なコメント
-        if p_ev < 1.0 and best_smart_horse['expected_value'] < 1.0:
-            msg += "\n⚠️ **全体的に期待値低め (見送り推奨)**\n"
+        # --- 2. 推奨買い目 (v12 Logic) ---
+        msg += "**📈 推奨買い目 (v12戦略)**\n"
+        
+        top1 = data["top1"]
+        h_str = f"{int(top1['horse_number']):02}"
+        # Rank 2-6 IDs for display
+        opps = sorted_df.iloc[1:6]
+        opp_nums = [f"{int(x):02}" for x in opps['horse_number']]
+        
+        if data["strategy_type"] == "High":
+            msg += f"🔥 **High Value (EV {data['ev']:.2f})** - 鉄板/高妙味\n"
+            msg += f"✅ **推奨: 三連複 1頭軸流し (3点)**\n"
+            msg += f"`{h_str} - {','.join(opp_nums[:3])}` (相手: 2,3,4位)\n"
+            msg += "※期待値が高いため、三連複3点で高回収(142%)を狙います。\n"
             
+        elif data["strategy_type"] == "Mid":
+            msg += f"✨ **Mid Value (EV {data['ev']:.2f})** - 中妙味\n"
+            msg += f"✅ **推奨: 三連単 1着固定流し (6点)**\n"
+            msg += f"`{h_str} -> {','.join(opp_nums[:3])}` (相手: 2,3,4位)\n"
+            msg += f"💡 (安定) 馬連 1頭軸流し (4点): `{h_str} - {','.join(opp_nums[:4])}`\n"
+            
+        else:
+            msg += f"⚠️ **Low Value (EV {data['ev']:.2f})** - 低妙味 (見送り推奨)\n"
+            msg += "過剰人気のため、期待値が低いです。基本はケン(見送り)してください。\n"
+            msg += f"(参考) 三連単 1着固定流し (6点): `{h_str} -> {','.join(opp_nums[:3])}`\n"
+        
+        # --- 3. 強気馬券 ---
+        if data["is_strong"]:
+            axis_pop = int(top1['popularity']) if pd.notna(top1['popularity']) else 99
+            msg += "\n"
+            msg += f"🔥 **強気馬券** (Top1が{axis_pop}番人気)\n"
+            msg += f"✅ **三連単 1着固定流し: {h_str}→{','.join(opp_nums[:4])}** (12点)\n"
+            msg += "※穴狙いで高配当を狙える条件です。\n"
+        
         return msg
 
 class AutoPredictor:
@@ -215,6 +303,9 @@ class AutoPredictor:
         self.preprocessor = InferencePreprocessor()
         self.calibrator = self._load_calibrator()
         self.model = self._load_model() # Ensemble
+        
+        # v12特徴量リストのロード
+        self.expected_features = self._load_feature_list()
         
         # Load env vars manually to ensure Webhook URL is present
         load_env_manual()
@@ -243,18 +334,51 @@ class AutoPredictor:
             json.dump(list(self.notified_races), f)
 
     def _load_model(self):
-        logger.info("モデル(Ensemble)をロード中...")
+        logger.info("モデル(Ensemble v12: TabNet Revival)をロード中...")
         model = EnsembleModel()
-        model_dir = os.path.join(os.path.dirname(__file__), '../../models')
-        # 優先順位: v5 (JRA Specialist)
-        path = os.path.join(model_dir, 'ensemble_v5.pkl')
+        # v12モデルパス (experiments配下)
+        model_path = os.path.join(os.path.dirname(__file__), '../../experiments/v12_tabnet_revival/models/ensemble.pkl')
         
-        if os.path.exists(path):
-            model.load_model(path)
+        if os.path.exists(model_path):
+            model.load_model(model_path, device_name='cpu') # 推論はCPUで安全に
             return model
         else:
-            logger.error(f"モデルファイルが見つかりません: {path}")
+            logger.error(f"モデルファイルが見つかりません: {model_path}")
+            # フォールバック (models/ensemble_v7.pkl)
+            fallback_path = os.path.join(os.path.dirname(__file__), '../../models/ensemble_v7.pkl')
+            if os.path.exists(fallback_path):
+                 logger.warning("フォールバックモデル(v7)を使用します。")
+                 model.load_model(fallback_path)
+                 return model
             return None
+
+    def _load_feature_list(self):
+        """v12モデルの特徴量リストをロード (フォールバック: LightGBMモデルから取得)"""
+        import json
+        features_path = os.path.join(os.path.dirname(__file__), 
+            '../../experiments/v12_tabnet_revival/models/tabnet.features.json')
+        if os.path.exists(features_path):
+            try:
+                with open(features_path, 'r', encoding='utf-8') as f:
+                    features = json.load(f)
+                logger.info(f"v12特徴量リストをロード (JSON): {len(features)}個")
+                return features
+            except Exception as e:
+                logger.warning(f"特徴量JSONのロード失敗: {e}. LightGBMからフォールバックします。")
+        
+        # Fallback: LightGBM model's feature_name()
+        if self.model and hasattr(self.model, 'lgbm') and self.model.lgbm:
+            try:
+                lgbm_booster = self.model.lgbm.model  # lightgbm.Booster
+                if hasattr(lgbm_booster, 'feature_name'):
+                    features = lgbm_booster.feature_name()
+                    logger.info(f"v12特徴量リストをロード (LightGBM): {len(features)}個")
+                    return features
+            except Exception as e:
+                logger.warning(f"LightGBMからの特徴量リスト取得失敗: {e}")
+        
+        logger.warning("特徴量リストが見つかりませんでした。特徴量適合なしで推論します。")
+        return None
 
     def _load_calibrator(self):
         model_dir = os.path.join(os.path.dirname(__file__), '../../models')
@@ -297,6 +421,9 @@ class AutoPredictor:
                 
             start_time_str = row['start_time']
             if not start_time_str: continue
+            
+            # コロンを除去 ("09:45" → "0945")
+            start_time_str = str(start_time_str).replace(':', '')
 
             try:
                 race_dt = datetime.strptime(f"{today_str}{start_time_str}", "%Y%m%d%H%M")
@@ -333,6 +460,16 @@ class AutoPredictor:
         # 前処理
         X, ids = self.preprocessor.preprocess(raw_df)
         
+        # 特徴量アダプテーション (v12モデル用)
+        if self.expected_features:
+            missing = set(self.expected_features) - set(X.columns)
+            if missing:
+                logger.warning(f"不足特徴量を0で補完: {len(missing)}個")
+                for col in missing:
+                    X[col] = 0.0
+            # 特徴量の順序を揃える
+            X = X[[c for c in self.expected_features if c in X.columns]]
+        
         # 予測 (Score)
         try:
             scores = self.model.predict(X)
@@ -359,10 +496,13 @@ class AutoPredictor:
         result_df = ids.copy()
         result_df['score'] = scores
         
-        # 1. Softmax (Group by Race)
-        # scipy.special.softmax handles array, but we need group-wise
+        # 1. Softmax (Group by Race) with Temperature to avoid extreme probabilities
+        # Temperature > 1.0 makes distribution more uniform
         from scipy.special import softmax
-        result_df['prob'] = result_df.groupby('race_id')['score'].transform(lambda x: softmax(x))
+        SOFTMAX_TEMPERATURE = 3.0  # スコア差が極端な場合の緩和用
+        result_df['prob'] = result_df.groupby('race_id')['score'].transform(
+            lambda x: softmax(x / SOFTMAX_TEMPERATURE)
+        )
 
         # 2. Calibration
         if self.calibrator:

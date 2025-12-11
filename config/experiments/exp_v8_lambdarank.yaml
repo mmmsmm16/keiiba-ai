@@ -1,0 +1,39 @@
+experiment_name: "v8_lambdarank_baseline"
+description: "Model v8: LambdaRank + RealTime + Disadvantage + ClassStats"
+
+data:
+  features: "v8_new"
+  cache_path: "data/processed/lgbm_datasets_v8_new.pkl" # 新規特徴量を含むデータセット
+  train_years: [2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024]
+  valid_year: 2025 # 検証用（実際は2025年データをテストに使用）
+  use_cache: true
+  jra_only: true
+  drop_features: [] # dataset.py側で制御済みだが、念のため空リスト
+
+model:
+  type: "lgbm"
+  lgbm_params:
+    objective: "lambdarank"
+    metric: "ndcg"
+    ndcg_eval_at: [1, 3, 5]
+    boosting_type: "gbdt"
+    learning_rate: 0.05
+    num_leaves: 63
+    min_data_in_leaf: 20
+    feature_fraction: 0.8
+    bagging_fraction: 0.8
+    bagging_freq: 5
+    lambda_l1: 0.1
+    lambda_l2: 0.1
+    verbosity: -1
+    label_gain: [0, 1, 3, 7] # 0, 1(3rd), 2(2nd), 3(1st) -> Gain mapping (Custom)
+
+evaluation:
+  metric: "roi"
+  strategies: ["tansho", "umaren", "sanrentan"]
+  jra_only: true
+  
+strategy:
+  enabled: true
+  min_roi: 100.0
+  target_bet_types: ["tansho", "sanrentan"]

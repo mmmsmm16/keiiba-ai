@@ -1,0 +1,110 @@
+=== V13 堅実戦略グリッドサーチ (2024年) ===
+対象: Option C対象外レース (pop < 7 AND gap >= 0.3)
+レース数: 3091
+
+--- ROI上位30 ---
+umaren_box_3 x 1番人気 x gap 0.3-0.5 x odds≤3.0: ROI 146.7%, Hit 23.3%, 120races, Profit +16,810円
+umaren_box_3 x 1-2番人気 x gap 0.3-0.5 x odds≤3.0: ROI 140.3%, Hit 24.6%, 138races, Profit +16,670円
+umaren_box_3 x 1-3番人気 x gap 0.3-0.5 x odds≤3.0: ROI 140.3%, Hit 24.6%, 138races, Profit +16,670円
+umaren_box_3 x 全体 x gap 0.3-0.5 x odds≤3.0: ROI 137.3%, Hit 24.1%, 141races, Profit +15,770円
+tansho x 4-6番人気 x gap≥0.6 x 全odds: ROI 133.4%, Hit 13.5%, 245races, Profit +8,190円
+tansho x 4-6番人気 x gap≥0.6 x odds>3.0: ROI 133.4%, Hit 13.5%, 245races, Profit +8,190円
+umaren_box_4 x 4-6番人気 x gap≥0.5 x 全odds: ROI 119.9%, Hit 30.4%, 339races, Profit +40,430円
+umaren_box_4 x 4-6番人気 x gap≥0.5 x odds>3.0: ROI 119.9%, Hit 30.4%, 339races, Profit +40,430円
+umaren_2 x 4-6番人気 x gap≥0.5 x 全odds: ROI 119.5%, Hit 11.8%, 339races, Profit +13,250円
+umaren_2 x 4-6番人気 x gap≥0.5 x odds>3.0: ROI 119.5%, Hit 11.8%, 339races, Profit +13,250円
+umaren_2 x 1-2番人気 x gap 0.3-0.5 x odds≤3.0: ROI 117.2%, Hit 20.3%, 138races, Profit +4,740円
+umaren_2 x 1-3番人気 x gap 0.3-0.5 x odds≤3.0: ROI 117.2%, Hit 20.3%, 138races, Profit +4,740円
+wide_2 x 1番人気 x gap 0.3-0.5 x odds>3.0: ROI 116.7%, Hit 25.0%, 68races, Profit +2,270円
+umaren_box_3 x 4-6番人気 x gap≥0.5 x 全odds: ROI 116.1%, Hit 18.6%, 339races, Profit +16,420円
+umaren_box_3 x 4-6番人気 x gap≥0.5 x odds>3.0: ROI 116.1%, Hit 18.6%, 339races, Profit +16,420円
+umaren_2 x 全体 x gap 0.3-0.5 x odds≤3.0: ROI 114.7%, Hit 19.9%, 141races, Profit +4,140円
+umaren_box_4 x 4-6番人気 x gap≥0.6 x 全odds: ROI 113.1%, Hit 30.6%, 245races, Profit +19,190円
+umaren_box_4 x 4-6番人気 x gap≥0.6 x odds>3.0: ROI 113.1%, Hit 30.6%, 245races, Profit +19,190円
+umaren_2 x 1番人気 x gap 0.3-0.5 x odds≤3.0: ROI 112.8%, Hit 18.3%, 120races, Profit +3,080円
+umaren_box_3 x 1-2番人気 x gap 0.3-0.5 x 全odds: ROI 111.8%, Hit 18.5%, 308races, Profit +10,890円
+umaren_box_3 x 1番人気 x gap 0.3-0.5 x odds≤5.0: ROI 110.6%, Hit 17.6%, 187races, Profit +5,920円
+umaren_box_3 x 1-2番人気 x gap 0.3-0.5 x odds≤5.0: ROI 110.4%, Hit 18.6%, 291races, Profit +9,040円
+umaren_box_3 x 4-6番人気 x gap≥0.6 x 全odds: ROI 110.3%, Hit 18.0%, 245races, Profit +7,560円
+umaren_box_3 x 4-6番人気 x gap≥0.6 x odds>3.0: ROI 110.3%, Hit 18.0%, 245races, Profit +7,560円
+umaren_3 x 4-6番人気 x gap≥0.5 x 全odds: ROI 110.1%, Hit 15.6%, 339races, Profit +10,300円
+umaren_3 x 4-6番人気 x gap≥0.5 x odds>3.0: ROI 110.1%, Hit 15.6%, 339races, Profit +10,300円
+umaren_box_3 x 1番人気 x gap 0.3-0.5 x 全odds: ROI 110.0%, Hit 17.6%, 188races, Profit +5,620円
+umaren_3 x 2-3番人気 x gap≥0.6 x odds≤3.0: ROI 107.9%, Hit 32.7%, 104races, Profit +2,450円
+umaren_box_4 x 2-3番人気 x gap 0.3-0.5 x odds≤5.0: ROI 107.7%, Hit 30.7%, 137races, Profit +6,360円
+tansho x 4-6番人気 x gap≥0.5 x 全odds: ROI 107.2%, Hit 11.2%, 339races, Profit +2,440円
+
+--- 堅実戦略候補 (ROI≥90% & 的中率≥25%) ---
+umaren_box_4 x 4-6番人気 x gap≥0.5 x 全odds: ROI 119.9%, Hit 30.4%, 339races
+umaren_box_4 x 4-6番人気 x gap≥0.5 x odds>3.0: ROI 119.9%, Hit 30.4%, 339races
+wide_2 x 1番人気 x gap 0.3-0.5 x odds>3.0: ROI 116.7%, Hit 25.0%, 68races
+umaren_box_4 x 4-6番人気 x gap≥0.6 x 全odds: ROI 113.1%, Hit 30.6%, 245races
+umaren_box_4 x 4-6番人気 x gap≥0.6 x odds>3.0: ROI 113.1%, Hit 30.6%, 245races
+umaren_3 x 2-3番人気 x gap≥0.6 x odds≤3.0: ROI 107.9%, Hit 32.7%, 104races
+umaren_box_4 x 2-3番人気 x gap 0.3-0.5 x odds≤5.0: ROI 107.7%, Hit 30.7%, 137races
+wide_3 x 1番人気 x gap 0.3-0.5 x odds>3.0: ROI 105.8%, Hit 29.4%, 68races
+wide_2 x 1番人気 x gap 0.3-0.5 x odds≤5.0: ROI 105.3%, Hit 33.7%, 187races
+wide_2 x 1番人気 x gap 0.3-0.5 x 全odds: ROI 104.8%, Hit 33.5%, 188races
+umaren_3 x 2-3番人気 x gap≥0.4 x odds≤3.0: ROI 104.6%, Hit 32.3%, 127races
+umaren_3 x 2-3番人気 x 全gap x odds≤3.0: ROI 103.1%, Hit 33.3%, 132races
+umaren_3 x 2-3番人気 x gap≥0.5 x odds≤3.0: ROI 102.6%, Hit 32.5%, 114races
+umaren_box_4 x 4-6番人気 x gap≥0.4 x 全odds: ROI 101.0%, Hit 28.2%, 444races
+umaren_box_4 x 4-6番人気 x gap≥0.4 x odds>3.0: ROI 101.0%, Hit 28.2%, 444races
+wide_2 x 1-2番人気 x gap 0.3-0.5 x odds≤5.0: ROI 99.2%, Hit 33.0%, 291races
+wide_box_3 x 1番人気 x gap 0.3-0.5 x odds≤3.0: ROI 98.7%, Hit 43.3%, 120races
+tansho x 1番人気 x gap 0.3-0.5 x odds>3.0: ROI 98.2%, Hit 26.5%, 68races
+wide_2 x 1番人気 x gap 0.3-0.5 x odds≤3.0: ROI 98.0%, Hit 38.3%, 120races
+wide_box_3 x 1番人気 x gap 0.3-0.5 x odds≤5.0: ROI 97.2%, Hit 38.5%, 187races
+
+--- ROI 100%以上: 51件 ---
+umaren_box_3 x 1番人気 x gap 0.3-0.5 x odds≤3.0: ROI 146.7%, 120races
+umaren_box_3 x 1-2番人気 x gap 0.3-0.5 x odds≤3.0: ROI 140.3%, 138races
+umaren_box_3 x 1-3番人気 x gap 0.3-0.5 x odds≤3.0: ROI 140.3%, 138races
+umaren_box_3 x 全体 x gap 0.3-0.5 x odds≤3.0: ROI 137.3%, 141races
+tansho x 4-6番人気 x gap≥0.6 x 全odds: ROI 133.4%, 245races
+tansho x 4-6番人気 x gap≥0.6 x odds>3.0: ROI 133.4%, 245races
+umaren_box_4 x 4-6番人気 x gap≥0.5 x 全odds: ROI 119.9%, 339races
+umaren_box_4 x 4-6番人気 x gap≥0.5 x odds>3.0: ROI 119.9%, 339races
+umaren_2 x 4-6番人気 x gap≥0.5 x 全odds: ROI 119.5%, 339races
+umaren_2 x 4-6番人気 x gap≥0.5 x odds>3.0: ROI 119.5%, 339races
+umaren_2 x 1-2番人気 x gap 0.3-0.5 x odds≤3.0: ROI 117.2%, 138races
+umaren_2 x 1-3番人気 x gap 0.3-0.5 x odds≤3.0: ROI 117.2%, 138races
+wide_2 x 1番人気 x gap 0.3-0.5 x odds>3.0: ROI 116.7%, 68races
+umaren_box_3 x 4-6番人気 x gap≥0.5 x 全odds: ROI 116.1%, 339races
+umaren_box_3 x 4-6番人気 x gap≥0.5 x odds>3.0: ROI 116.1%, 339races
+umaren_2 x 全体 x gap 0.3-0.5 x odds≤3.0: ROI 114.7%, 141races
+umaren_box_4 x 4-6番人気 x gap≥0.6 x 全odds: ROI 113.1%, 245races
+umaren_box_4 x 4-6番人気 x gap≥0.6 x odds>3.0: ROI 113.1%, 245races
+umaren_2 x 1番人気 x gap 0.3-0.5 x odds≤3.0: ROI 112.8%, 120races
+umaren_box_3 x 1-2番人気 x gap 0.3-0.5 x 全odds: ROI 111.8%, 308races
+umaren_box_3 x 1番人気 x gap 0.3-0.5 x odds≤5.0: ROI 110.6%, 187races
+umaren_box_3 x 1-2番人気 x gap 0.3-0.5 x odds≤5.0: ROI 110.4%, 291races
+umaren_box_3 x 4-6番人気 x gap≥0.6 x 全odds: ROI 110.3%, 245races
+umaren_box_3 x 4-6番人気 x gap≥0.6 x odds>3.0: ROI 110.3%, 245races
+umaren_3 x 4-6番人気 x gap≥0.5 x 全odds: ROI 110.1%, 339races
+umaren_3 x 4-6番人気 x gap≥0.5 x odds>3.0: ROI 110.1%, 339races
+umaren_box_3 x 1番人気 x gap 0.3-0.5 x 全odds: ROI 110.0%, 188races
+umaren_3 x 2-3番人気 x gap≥0.6 x odds≤3.0: ROI 107.9%, 104races
+umaren_box_4 x 2-3番人気 x gap 0.3-0.5 x odds≤5.0: ROI 107.7%, 137races
+tansho x 4-6番人気 x gap≥0.5 x 全odds: ROI 107.2%, 339races
+tansho x 4-6番人気 x gap≥0.5 x odds>3.0: ROI 107.2%, 339races
+umaren_4 x 1番人気 x gap 0.3-0.5 x odds>3.0: ROI 106.2%, 68races
+wide_3 x 1番人気 x gap 0.3-0.5 x odds>3.0: ROI 105.8%, 68races
+wide_2 x 1番人気 x gap 0.3-0.5 x odds≤5.0: ROI 105.3%, 187races
+umaren_box_3 x 1番人気 x gap≥0.6 x odds>3.0: ROI 105.0%, 138races
+wide_2 x 1番人気 x gap 0.3-0.5 x 全odds: ROI 104.8%, 188races
+umaren_3 x 2-3番人気 x gap≥0.4 x odds≤3.0: ROI 104.6%, 127races
+umaren_2 x 4-6番人気 x gap≥0.6 x 全odds: ROI 104.6%, 245races
+umaren_2 x 4-6番人気 x gap≥0.6 x odds>3.0: ROI 104.6%, 245races
+umaren_box_3 x 1-3番人気 x gap 0.3-0.5 x odds≤5.0: ROI 104.2%, 324races
+umaren_box_3 x 全体 x gap 0.3-0.5 x odds≤5.0: ROI 103.3%, 330races
+umaren_3 x 2-3番人気 x 全gap x odds≤3.0: ROI 103.1%, 132races
+umaren_3 x 2-3番人気 x gap≥0.5 x odds≤3.0: ROI 102.6%, 114races
+umaren_box_3 x 4-6番人気 x gap≥0.4 x 全odds: ROI 101.4%, 444races
+umaren_box_3 x 4-6番人気 x gap≥0.4 x odds>3.0: ROI 101.4%, 444races
+umaren_2 x 4-6番人気 x gap≥0.4 x 全odds: ROI 101.2%, 444races
+umaren_2 x 4-6番人気 x gap≥0.4 x odds>3.0: ROI 101.2%, 444races
+umaren_box_4 x 4-6番人気 x gap≥0.4 x 全odds: ROI 101.0%, 444races
+umaren_box_4 x 4-6番人気 x gap≥0.4 x odds>3.0: ROI 101.0%, 444races
+tansho x 4-6番人気 x 全gap x 全odds: ROI 100.9%, 501races
+tansho x 4-6番人気 x 全gap x odds>3.0: ROI 100.9%, 501races

@@ -26,10 +26,10 @@ wheels/
 
 # Docker
 db/data/
-data/
-experiments/
-!experiments/LEADERBOARD.md
-models/
+/data/
+/experiments/
+!/experiments/LEADERBOARD.md
+/models/
 
 .env
 
@@ -39,3 +39,4 @@ Thumbs.db
 
 mlflow_store/
 *.log
+*.csv

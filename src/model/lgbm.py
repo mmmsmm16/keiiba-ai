@@ -47,8 +47,19 @@ class KeibaLGBM:
         w_train = train_set.get('w')
         w_valid = valid_set.get('w')
         
-        lgb_train = lgb.Dataset(train_set['X'], label=train_set['y'], group=train_set['group'], weight=w_train)
-        lgb_valid = lgb.Dataset(valid_set['X'], label=valid_set['y'], group=valid_set['group'], reference=lgb_train, weight=w_valid)
+        # 回帰モード (v13) か ランキングモード (v12) かを判定
+        is_ranking = self.params.get('objective') == 'lambdarank'
+        
+        if is_ranking:
+            # ランキングモード: groupが必要
+            lgb_train = lgb.Dataset(train_set['X'], label=train_set['y'], group=train_set['group'], weight=w_train)
+            lgb_valid = lgb.Dataset(valid_set['X'], label=valid_set['y'], group=valid_set['group'], reference=lgb_train, weight=w_valid)
+            logger.info("📊 LambdaRank モードで学習します")
+        else:
+            # 回帰モード: groupは不要
+            lgb_train = lgb.Dataset(train_set['X'], label=train_set['y'], weight=w_train)
+            lgb_valid = lgb.Dataset(valid_set['X'], label=valid_set['y'], reference=lgb_train, weight=w_valid)
+            logger.info(f"📊 {self.params.get('objective', 'regression')} モードで学習します")
 
         # コールバック設定
         callbacks = [

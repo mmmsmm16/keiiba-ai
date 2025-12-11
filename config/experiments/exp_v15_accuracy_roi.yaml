@@ -1,0 +1,35 @@
+# v15: 的中率+ROI組み合わせ損失
+
+experiment_name: "v15_accuracy_roi"
+description: "v15: 的中率+ROI組み合わせ損失 (AccuracyROILoss)"
+
+data:
+  features: "v9_full"
+  cache_path: "experiments/v14_roi/data/lgbm_datasets.pkl"
+  train_years: [2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024]
+  valid_year: 2025
+  use_cache: true
+  jra_only: false
+  target_type: "ranking"
+
+model:
+  type: "roi"
+  roi_params:
+    model_type: "simple"
+    loss_type: "accuracy_roi"
+    # ROI重視設定 (的中率:ROI = 3:7)
+    loss_params:
+      accuracy_weight: 0.3
+      roi_weight: 0.7
+    hidden_dim: 512
+    num_layers: 4
+    dropout: 0.3
+    epochs: 300
+    patience: 30  # Early Stopping (30 epoch更新なしで停止)
+    batch_size: 128
+    lr: 0.0005
+
+evaluation:
+  metric: "roi"
+  strategies: ["tansho", "umaren", "wide"]
+  jra_only: true

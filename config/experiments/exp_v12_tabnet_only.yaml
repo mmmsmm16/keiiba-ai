@@ -1,0 +1,38 @@
+experiment_name: "v12_tabnet_revival"
+description: "Model v12: TabNet Standalone Training (Debug)"
+
+data:
+  features: "v9_full"
+  cache_path: "data/processed/lgbm_datasets_v9.pkl"
+  train_years: [2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024]
+  valid_year: 2025
+  use_cache: true
+  jra_only: false
+
+model:
+  type: "tabnet" # Run TabNet ONLY
+  
+  # Params copied from v12 config
+  tabnet_params:
+    enabled: true
+    max_epochs: 50
+    batch_size: 512 # Reduced for safety
+    device_name: "cuda"
+    optimizer_params:
+      lr: 0.02
+  
+  lgbm_params:
+    objective: "lambdarank"
+    metric: "ndcg"
+    # ... dummy params ...
+
+  catboost_params:
+    # ... dummy params ...
+
+evaluation:
+  metric: "roi"
+  strategies: ["tansho"]
+  jra_only: true
+  
+strategy:
+  enabled: false

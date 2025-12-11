@@ -15,6 +15,8 @@ from preprocessing.disadvantage_detector import DisadvantageDetector
 from preprocessing.relative_features import RelativeFeatureEngineer
 from preprocessing.embedding_features import EmbeddingFeatureEngineer
 from preprocessing.cleansing import DataCleanser
+from preprocessing.race_level_features import RaceLevelFeatureEngineer
+from preprocessing.experience_features import ExperienceFeatureEngineer
 from scipy.stats import entropy
 
 logger = logging.getLogger(__name__)
@@ -114,7 +116,14 @@ class InferencePreprocessor:
         # =================================================================
         relevant_history = history_df[history_df['horse_id'].isin(target_horse_ids)].copy()
         
-        # 重複防止: 履歴データから今回の予測対象日のデータを除外
+        # Date filtering to prevent leakage (if running valid/test simulation)
+        # Assuming new_df contains data for a specific race date(s)
+        if not new_df.empty:
+             min_date = new_df['date'].min()
+             # Filter history strictly before the race date
+             relevant_history = relevant_history[relevant_history['date'] < min_date]
+        
+        # 重複防止: 履歴データから今回の予測対象日のデータを除外 (Deprecated logic but kept for safety if leakage filter above is not hit)
         # new_dfと同じ日付のデータが履歴に含まれている場合、concat後に重複してしまう
         target_dates = new_df['date'].unique()
         relevant_history = relevant_history[~relevant_history['date'].isin(target_dates)]
@@ -126,6 +135,11 @@ class InferencePreprocessor:
         
         # 必要なカラムに絞って結合することでメモリ節約
         # rank, last_3f などのraw columnsが必要
+        
+        # new_df に rank がない場合、ダミー値(NaN)を追加 (特徴量生成で必要)
+        if 'rank' not in new_df.columns:
+            new_df['rank'] = np.nan
+            
         combined_horse_df = pd.concat([relevant_history, new_df], axis=0, ignore_index=True)
         
         # 過去走集計実行 (対象馬のみなので高速)
@@ -187,9 +201,23 @@ class InferencePreprocessor:
         # Helper: Generic Lookup & Update
         # -----------------------------------------------------
         def update_incremental_stats(target_df, source_history, keys, prefix, metrics, is_bloodline=False):
+            # Optimize: Filter source_history to only include relevant root keys
+            # This significantly reduces the size of dataframe for drop_duplicates
+            temp_history = source_history
+            if len(keys) > 0:
+                 root_key = keys[0]
+                 if root_key in target_df.columns and root_key in source_history.columns:
+                      relevant_ids = target_df[root_key].unique()
+                      temp_history = source_history[source_history[root_key].isin(relevant_ids)]
+
+            # Date filtering (Optimization + Leakage Prevention)
+            if not target_df.empty:
+                 min_date = target_df['date'].min()
+                 if 'date' in temp_history.columns:
+                     temp_history = temp_history[temp_history['date'] < min_date]
+
             # 必要なキーがソースにあるか確認
             # distance_catなどの動的カラム対応
-            temp_history = source_history
             
             # distance_cat がキーに含まれていて、ソースにない場合は一時的に作成
             if 'distance_cat' in keys and 'distance_cat' not in source_history.columns:
@@ -282,6 +310,17 @@ class InferencePreprocessor:
              
         # (4) Jockey x Trainer
         update_incremental_stats(new_df, history_df, ['jockey_id', 'trainer_id'], 'jockey_trainer', ['n_races', 'win_rate', 'top3_rate'])
+        
+        # v12: trainer_jockey_count (jockey_trainer_n_racesのコピー)
+        if 'jockey_trainer_n_races' in new_df.columns:
+            new_df['trainer_jockey_count'] = new_df['jockey_trainer_n_races'].copy()
+        else:
+            new_df['trainer_jockey_count'] = 0
+            
+        # (5) Class Level (v12必須)
+        # class_levelカラムを生成 (FeatureEngineerで生成されているはず)
+        if 'class_level' in new_df.columns:
+            update_incremental_stats(new_df, history_df, ['class_level'], 'class_level', ['n_races', 'win_rate', 'top3_rate'])
 
         # 3. Bloodline Features
         # Sire, BMS
@@ -322,6 +361,9 @@ class InferencePreprocessor:
         # Bloodline
         for p in ['sire', 'bms']:
              cols_to_merge.extend([f'{p}_avg_rank', f'{p}_win_rate', f'{p}_roi_rate', f'{p}_count'])
+
+        # Class Level (v12)
+        cols_to_merge.extend(['class_level_n_races', 'class_level_win_rate', 'class_level_top3_rate'])
              
         # Only existing ones
         cols_to_merge = [c for c in cols_to_merge if c in new_df.columns]
@@ -358,6 +400,18 @@ class InferencePreprocessor:
         # =================================================================
         relative_engineer = RelativeFeatureEngineer()
         combined_horse_df = relative_engineer.add_features(combined_horse_df)
+
+        # =================================================================
+        # 3.7. レースレベル特徴量生成 (v12新規)
+        # =================================================================
+        race_level_engineer = RaceLevelFeatureEngineer()
+        combined_horse_df = race_level_engineer.add_features(combined_horse_df)
+
+        # =================================================================
+        # 3.8. 経験値特徴量生成 (v12新規)
+        # =================================================================
+        experience_engineer = ExperienceFeatureEngineer()
+        combined_horse_df = experience_engineer.add_features(combined_horse_df)
 
         # =================================================================
         # 3.7. リアルタイム特徴量生成 (v9新規 - 当日の傾向)
@@ -418,5 +472,43 @@ class InferencePreprocessor:
         
         # カテゴリ変数の除外 (数値のみ)
         X = X.select_dtypes(exclude=['object'])
+        
+        # v12モデルが必要とするが生成されていない可能性のある特徴量をダミー値で補完
+        # Note: These are features that may be missing due to:
+        #   1. No history data for the horse (new horse debut)
+        #   2. RealTimeFeatureEngineer requires earlier race results (first race of day)
+        #   3. ExperienceFeatureEngineer or RaceLevelFeatureEngineer edge cases
+        missing_features = [
+            # Class level stats (if class info unavailable)
+            'class_level', 'class_level_n_races', 'class_level_win_rate', 'class_level_top3_rate', 
+            # Trainer-Jockey combo
+            'trainer_jockey_count',
+            # Lag1 features (if no prior race for horse)
+            'lag1_rank', 'lag1_last_3f_rank', 'lag1_race_member_strength', 
+            'lag1_performance_value', 'lag1_n_horses',
+            # Experience features
+            'course_experience', 'course_best_rank', 'distance_experience', 'distance_best_rank',
+            'first_distance_cat', 'first_turf', 'first_dirt', 'jockey_change_flag', 'is_career_high_impost',
+            # Race level features
+            'race_member_strength', 'relative_strength',
+            # Realtime trend features (if no earlier races on day)
+            'trend_win_inner_rate', 'trend_win_mid_rate', 'trend_win_outer_rate',
+            'trend_win_front_rate', 'trend_win_fav_rate',
+            # Disadvantage features
+            'horse_slow_start_rate', 'horse_pace_disadv_rate', 'horse_wide_run_rate', 
+            'horse_track_bias_rate', 'prev_disadvantage_score', 'avg_disadvantage_score_3races',
+            # Embedding features (if new entity IDs)
+            'horse_id_emb_0', 'horse_id_emb_1', 'horse_id_emb_2', 'horse_id_emb_3',
+            'horse_id_emb_4', 'horse_id_emb_5', 'horse_id_emb_6', 'horse_id_emb_7',
+            'jockey_id_emb_0', 'jockey_id_emb_1', 'jockey_id_emb_2', 'jockey_id_emb_3',
+            'jockey_id_emb_4', 'jockey_id_emb_5', 'jockey_id_emb_6', 'jockey_id_emb_7',
+            'trainer_id_emb_0', 'trainer_id_emb_1', 'trainer_id_emb_2', 'trainer_id_emb_3',
+            'trainer_id_emb_4', 'trainer_id_emb_5', 'trainer_id_emb_6', 'trainer_id_emb_7',
+            'sire_id_emb_0', 'sire_id_emb_1', 'sire_id_emb_2', 'sire_id_emb_3',
+            'sire_id_emb_4', 'sire_id_emb_5', 'sire_id_emb_6', 'sire_id_emb_7',
+        ]
+        for feat in missing_features:
+            if feat not in X.columns:
+                X[feat] = 0.0
 
         return X, ids

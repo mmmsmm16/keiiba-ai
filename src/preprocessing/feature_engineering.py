@@ -46,5 +46,27 @@ class FeatureEngineer:
         df['day'] = df['date'].dt.day
         df['weekday'] = df['date'].dt.weekday # 0:Monday, 6:Sunday
 
+        # 6. クラスレベルの推定 (Class Level)
+        # v8: 集計特徴量(CategoryAggregator)でも使用するため、ここで生成する
+        def parse_class_level(title):
+            if pd.isna(title): return 5 
+            title = str(title)
+            if 'G1' in title or 'ＧⅠ' in title or 'GⅠ' in title: return 9
+            elif 'G2' in title or 'ＧⅡ' in title or 'GⅡ' in title: return 8
+            elif 'G3' in title or 'ＧⅢ' in title or 'GⅢ' in title: return 7
+            elif 'オープン' in title or 'OP' in title or 'L' in title: return 6
+            elif '3勝' in title or '1600万' in title: return 5
+            elif '2勝' in title or '1000万' in title: return 4
+            elif '1勝' in title or '500万' in title: return 3
+            elif '未勝利' in title: return 2
+            elif '新馬' in title: return 1
+            else: return 5
+
+        if 'title' in df.columns:
+            df['class_level'] = df['title'].apply(parse_class_level).astype('int8')
+        else:
+            logger.warning("titleカラムがないため、class_levelをデフォルト値(5)で埋めます")
+            df['class_level'] = 5
+
         logger.info("基本特徴量の生成完了")
         return df

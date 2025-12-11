@@ -69,6 +69,10 @@ class RelativeFeatureEngineer:
         if 'trainer_id_win_rate' in df.columns:
             deviation_cols.append('trainer_id_win_rate')
         
+        # 斤量 (Impost) - ハンデ戦で重要
+        if 'impost' in df.columns:
+            deviation_cols.append('impost')
+        
         # 偏差値計算
         for col in deviation_cols:
             df[f'{col}_deviation'] = df.groupby('race_id')[col].transform(
@@ -130,6 +134,10 @@ class RelativeFeatureEngineer:
         # 過去走数
         if 'horse_n_races' in df.columns:
             relative_cols.append('horse_n_races')
+        
+        # 斤量 (Impost) - レース平均との差
+        if 'impost' in df.columns:
+            relative_cols.append('impost')
         
         # 相対値計算（レース平均との差）
         for col in relative_cols:

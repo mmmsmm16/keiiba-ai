@@ -190,6 +190,40 @@ def main():
     print("\n--- 推奨馬 (EV Top 5) ---")
     picks = processed_df.sort_values('expected_value', ascending=False).head(5)
     print(picks[['race_id', 'horse_number', 'horse_name', 'calibrated_prob', 'odds', 'expected_value']])
+    
+    # 最適戦略による買い目推奨
+    print("\n" + "="*60)
+    print("🎯 最適戦略による買い目推奨")
+    print("="*60)
+    
+    try:
+        from inference.optimal_strategy import OptimalStrategy
+        strategy = OptimalStrategy()
+        
+        for race_id, group in processed_df.groupby('race_id'):
+            sorted_g = group.sort_values('score', ascending=False)
+            
+            horse_numbers = sorted_g['horse_number'].astype(int).tolist()
+            scores = sorted_g['score'].tolist()
+            popularities = sorted_g['popularity'].fillna(99).astype(int).tolist()
+            odds = sorted_g['odds'].fillna(0).tolist()
+            
+            if len(horse_numbers) < 6:
+                continue
+            
+            race_info = {
+                'venue': sorted_g.iloc[0].get('venue', ''),
+                'race_number': sorted_g.iloc[0].get('race_number', ''),
+                'title': sorted_g.iloc[0].get('title', '')
+            }
+            
+            rec = strategy.analyze_race(horse_numbers, scores, popularities, odds)
+            
+            # 推奨がある場合のみ表示
+            if rec.bet_type != "skip" or rec.confidence == "warning":
+                print(f"\n{strategy.format_notification(rec, race_info)}")
+    except Exception as e:
+        logger.warning(f"最適戦略の計算に失敗: {e}")
 
 if __name__ == "__main__":
     main()

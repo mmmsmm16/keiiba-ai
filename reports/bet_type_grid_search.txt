@@ -1,0 +1,40 @@
+=== 馬券種類×条件 グリッドサーチ (2024+2025年) ===
+
+--- ROI上位30 ---
+tansho x 7-10番人気: ROI 208.7%, 94レース, Hit 11.7%
+wide x 7-10番人気: ROI 158.0%, 94レース, Hit 26.6%
+umaren x 7-10番人気: ROI 147.9%, 94レース, Hit 12.8%
+sanrentan x 4-6番人気: ROI 123.9%, 630レース, Hit 4.6%
+sanrenpuku x Gap≥0.3: ROI 117.3%, 688レース, Hit 43.0%
+sanrenpuku x 4-6番人気: ROI 99.3%, 630レース, Hit 18.9%
+sanrentan x Gap<0.1: ROI 97.0%, 3185レース, Hit 12.3%
+sanrenpuku x 7-10番人気: ROI 95.0%, 94レース, Hit 10.6%
+sanrentan x 7-10番人気: ROI 94.3%, 94レース, Hit 2.1%
+wide x Gap≥0.3: ROI 94.0%, 688レース, Hit 73.8%
+sanrenpuku x 全体: ROI 91.3%, 6695レース, Hit 34.0%
+sanrenpuku x 2-3番人気: ROI 91.3%, 2184レース, Hit 30.9%
+sanrentan x 2-3番人気: ROI 90.8%, 2184レース, Hit 11.3%
+umaren x 2-3番人気: ROI 90.6%, 2184レース, Hit 30.9%
+sanrenpuku x 1番人気: ROI 90.2%, 3775レース, Hit 39.1%
+umaren x Gap<0.1: ROI 90.1%, 3185レース, Hit 32.5%
+umaren x 4-6番人気: ROI 90.1%, 630レース, Hit 15.7%
+sanrenpuku x Gap<0.1: ROI 89.3%, 3185レース, Hit 30.1%
+sanrentan x 全体: ROI 88.9%, 6695レース, Hit 15.4%
+umaren x 全体: ROI 88.6%, 6695レース, Hit 37.6%
+wide x 4-6番人気: ROI 87.8%, 630レース, Hit 32.1%
+wide x Gap 0.1-0.3: ROI 87.6%, 2822レース, Hit 60.4%
+wide x 全体: ROI 87.5%, 6695レース, Hit 57.3%
+tansho x Gap<0.1: ROI 87.3%, 3196レース, Hit 23.9%
+sanrenpuku x Gap 0.1-0.3: ROI 87.3%, 2822レース, Hit 36.3%
+umaren x Gap 0.1-0.3: ROI 87.3%, 2822レース, Hit 39.8%
+umaren x Gap≥0.3: ROI 87.3%, 688レース, Hit 52.2%
+wide x 1番人気: ROI 86.6%, 3775レース, Hit 66.5%
+wide x Gap<0.1: ROI 86.1%, 3185レース, Hit 51.0%
+wide x 2-3番人気: ROI 86.0%, 2184レース, Hit 50.3%
+
+--- ROI 100%以上: 5件 ---
+tansho x 7-10番人気: ROI 208.7%, 94レース
+wide x 7-10番人気: ROI 158.0%, 94レース
+umaren x 7-10番人気: ROI 147.9%, 94レース
+sanrentan x 4-6番人気: ROI 123.9%, 630レース
+sanrenpuku x Gap≥0.3: ROI 117.3%, 688レース
