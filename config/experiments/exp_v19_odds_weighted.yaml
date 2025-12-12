@@ -1,11 +1,9 @@
-# v16: ランキング損失（ListNet風）
-
-experiment_name: "v16_ranking"
-description: "v16: ランキング損失 (RankingLoss)"
+experiment_name: "v19_odds_weighted"
+description: "v19: オッズ加重損失関数によるROI最適化モデル"
 
 data:
   features: "v9_full"
-  cache_path: "experiments/v14_roi/data/lgbm_datasets.pkl"
+  cache_path: "data/processed/lgbm_datasets_v9.pkl"
   train_years: [2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024]
   valid_year: 2025
   use_cache: true
@@ -14,9 +12,12 @@ data:
 
 model:
   type: "roi"
+  
   roi_params:
     model_type: "simple"
-    loss_type: "ranking"
+    loss_type: "odds_bce"  # オッズ加重BCE損失関数
+    loss_params:
+      odds_weight_scale: 0.15  # デフォルト0.1から少し強調
     hidden_dim: 1024        # 512 → 1024 に増加
     num_layers: 6           # 4 → 6層に増加
     dropout: 0.3
@@ -29,3 +30,8 @@ evaluation:
   metric: "roi"
   strategies: ["tansho", "umaren", "wide", "sanrentan", "option_c"]
   jra_only: true
+  
+strategy:
+  enabled: true
+  min_roi: 100.0
+  target_bet_types: ["tansho", "sanrentan"]

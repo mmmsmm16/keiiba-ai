@@ -17,14 +17,15 @@ model:
   roi_params:
     model_type: "simple"
     loss_type: "combined"
-    hidden_dim: 512
-    num_layers: 4
+    hidden_dim: 1024        # 512 → 1024 に増加
+    num_layers: 6           # 4 → 6層に増加
     dropout: 0.3
-    epochs: 50
+    epochs: 300             # 100 → 200 に増加 (Early Stoppingで早期終了可能)
     batch_size: 128
-    lr: 0.0005
+    lr: 0.0002              # 大きいモデルなので学習率を少し下げる
+    patience: 30            # Early Stopping
 
 evaluation:
   metric: "roi"
-  strategies: ["tansho", "umaren", "wide"]
+  strategies: ["tansho", "umaren", "wide", "sanrentan", "option_c"]
   jra_only: true

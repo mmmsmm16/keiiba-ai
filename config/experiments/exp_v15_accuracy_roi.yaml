@@ -31,5 +31,5 @@ model:
 
 evaluation:
   metric: "roi"
-  strategies: ["tansho", "umaren", "wide"]
+  strategies: ["tansho", "umaren", "wide", "sanrentan", "option_c"]
   jra_only: true
