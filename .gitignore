@@ -40,3 +40,6 @@ Thumbs.db
 mlflow_store/
 *.log
 *.csv
+*.db
+*.pkl
+*.parquet

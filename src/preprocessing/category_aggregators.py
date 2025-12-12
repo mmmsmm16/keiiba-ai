@@ -7,6 +7,11 @@ class CategoryAggregator:
     """
     カテゴリ変数（騎手、調教師、種牡馬など）の過去成績を集計するクラス。
     ターゲットエンコーディングに近いですが、リークを防ぐために過去データのみを使用します。
+    
+    [2025-12-12 リファクタリング]
+    同一レース内のリーク問題を修正。race_id単位で事前集約することで、
+    同じレースに出走する同カテゴリの馬の結果が特徴量に含まれることを防止。
+    詳細: docs/refactoring_log/2025-12-12_data_leakage_fix/CHANGELOG.md
     """
     def aggregate(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -21,7 +26,10 @@ class CategoryAggregator:
         logger.info("カテゴリ集計特徴量の生成を開始...")
 
         # 時系列順であることを保証
-        df = df.sort_values(['date', 'race_id'])
+        df = df.sort_values(['date', 'race_id']).reset_index(drop=True)
+        
+        # 元のインデックスを保持(マージ用)
+        df['_original_idx'] = df.index
 
         # ----------------------------------------------------------------
         # 0. 準備: 条件カラムの作成
@@ -96,38 +104,85 @@ class CategoryAggregator:
         # 一時カラム削除
         if 'distance_cat' in df.columns:
             df.drop(columns=['distance_cat'], inplace=True)
+        if '_original_idx' in df.columns:
+            df.drop(columns=['_original_idx'], inplace=True)
             
         return df
 
     def _aggregate_basic(self, df: pd.DataFrame, col: str) -> pd.DataFrame:
+        """
+        基本的なカテゴリ集計（リークなし版）
+        
+        [修正ポイント]
+        1. まず race_id × カテゴリ で集約し、1レースにつき1レコードにする
+        2. その上で shift(1) + expanding() で累積統計を計算
+        3. 元のDataFrameにマージして戻す
+        
+        これにより、同一レース内の複数馬（同じ騎手等）が互いの結果を参照することを防ぐ
+        """
         if col not in df.columns:
             return df
 
         if df[col].isnull().any():
             df[col] = df[col].fillna('unknown')
 
-        grouped = df.groupby(col)
-
-        # shift(1)してexpanding集計 (リーク防止)
-        # race_idカウントで出走回数
-        # rank=1で勝利数、rank<=3で複勝数
+        # ----------------------------------------------------------------
+        # Step 1: レース単位で集約（同一レース内の重複を排除）
+        # ----------------------------------------------------------------
+        # 同じレースに同じ騎手が複数騎乗している場合、1レコードにまとめる
+        race_agg = df.groupby(['race_id', col, 'date'], observed=True).agg({
+            'rank': [
+                ('wins', lambda x: (x == 1).sum()),      # 勝利数
+                ('top3', lambda x: (x <= 3).sum()),      # 複勝数
+                ('count', 'count')                       # 出走頭数
+            ]
+        }).reset_index()
+        race_agg.columns = ['race_id', col, 'date', 'wins', 'top3', 'count']
+        race_agg = race_agg.sort_values('date')
         
-        # transform内でshift(1) -> expandingを使う
-        history_count = grouped['race_id'].transform(lambda x: x.shift(1).expanding().count()).fillna(0)
-        wins = grouped['rank'].transform(lambda x: (x == 1).astype(int).shift(1).expanding().sum()).fillna(0)
-        top3 = grouped['rank'].transform(lambda x: (x <= 3).astype(int).shift(1).expanding().sum()).fillna(0) # bugfix: rank <= 3
-
-        df[f'{col}_n_races'] = history_count
-        # 0除算回避
-        df[f'{col}_win_rate'] = (wins / (history_count + 1e-5))
-        df[f'{col}_top3_rate'] = (top3 / (history_count + 1e-5))
+        # ----------------------------------------------------------------
+        # Step 2: カテゴリごとの累積統計（shift(1)でリーク防止）
+        # ----------------------------------------------------------------
+        grouped = race_agg.groupby(col, observed=True)
+        race_agg['cum_races'] = grouped['count'].transform(
+            lambda x: x.shift(1).expanding().sum()
+        ).fillna(0)
+        race_agg['cum_wins'] = grouped['wins'].transform(
+            lambda x: x.shift(1).expanding().sum()
+        ).fillna(0)
+        race_agg['cum_top3'] = grouped['top3'].transform(
+            lambda x: x.shift(1).expanding().sum()
+        ).fillna(0)
+        
+        # ----------------------------------------------------------------
+        # Step 3: 元のDataFrameにマージ
+        # ----------------------------------------------------------------
+        merge_cols = ['race_id', col]
+        stats_df = race_agg[['race_id', col, 'cum_races', 'cum_wins', 'cum_top3']].copy()
+        
+        # マージ前に既存の列があれば削除
+        for c in [f'{col}_n_races', f'{col}_win_rate', f'{col}_top3_rate']:
+            if c in df.columns:
+                df.drop(columns=[c], inplace=True)
+        
+        df = df.merge(stats_df, on=merge_cols, how='left')
+        
+        df[f'{col}_n_races'] = df['cum_races'].fillna(0)
+        df[f'{col}_win_rate'] = df['cum_wins'].fillna(0) / (df['cum_races'].fillna(0) + 1e-5)
+        df[f'{col}_top3_rate'] = df['cum_top3'].fillna(0) / (df['cum_races'].fillna(0) + 1e-5)
+        
+        # 一時列を削除
+        df.drop(columns=['cum_races', 'cum_wins', 'cum_top3'], inplace=True)
         
         return df
 
     def _aggregate_context(self, df: pd.DataFrame, target_col: str, cond_col: str, suffix: str) -> pd.DataFrame:
         """
-        target_col x cond_col の組み合わせで集計
+        target_col x cond_col の組み合わせで集計（リークなし版）
         例: jockey_id x keibajo_code -> jockey_course_win_rate
+        
+        [2025-12-12 修正]
+        _aggregate_basicと同様、race_id単位で事前集約してからマージする方式に変更。
         """
         if target_col not in df.columns or cond_col not in df.columns:
             return df
@@ -138,18 +193,55 @@ class CategoryAggregator:
         if df[cond_col].isnull().any():
             df[cond_col] = df[cond_col].fillna('unknown')
 
-        grouped = df.groupby([target_col, cond_col])
+        feature_prefix = f"{target_col.replace('_id', '')}_{suffix}"  # jockey_course
+
+        # ----------------------------------------------------------------
+        # Step 1: レース単位で集約
+        # ----------------------------------------------------------------
+        race_agg = df.groupby(['race_id', target_col, cond_col, 'date'], observed=True).agg({
+            'rank': [
+                ('wins', lambda x: (x == 1).sum()),
+                ('top3', lambda x: (x <= 3).sum()),
+                ('count', 'count')
+            ]
+        }).reset_index()
+        race_agg.columns = ['race_id', target_col, cond_col, 'date', 'wins', 'top3', 'count']
+        race_agg = race_agg.sort_values('date')
         
-        feature_prefix = f"{target_col.replace('_id', '')}_{suffix}" # jockey_course
-
-        history_count = grouped['race_id'].transform(lambda x: x.shift(1).expanding().count()).fillna(0)
-        wins = grouped['rank'].transform(lambda x: (x == 1).astype(int).shift(1).expanding().sum()).fillna(0)
-        top3 = grouped['rank'].transform(lambda x: (x <= 3).astype(int).shift(1).expanding().sum()).fillna(0)
-
+        # ----------------------------------------------------------------
+        # Step 2: カテゴリ×条件ごとの累積統計
+        # ----------------------------------------------------------------
+        grouped = race_agg.groupby([target_col, cond_col], observed=True)
+        race_agg['cum_races'] = grouped['count'].transform(
+            lambda x: x.shift(1).expanding().sum()
+        ).fillna(0)
+        race_agg['cum_wins'] = grouped['wins'].transform(
+            lambda x: x.shift(1).expanding().sum()
+        ).fillna(0)
+        race_agg['cum_top3'] = grouped['top3'].transform(
+            lambda x: x.shift(1).expanding().sum()
+        ).fillna(0)
+        
+        # ----------------------------------------------------------------
+        # Step 3: 元のDataFrameにマージ
+        # ----------------------------------------------------------------
+        merge_cols = ['race_id', target_col, cond_col]
+        stats_df = race_agg[['race_id', target_col, cond_col, 'cum_races', 'cum_wins', 'cum_top3']].copy()
+        
+        # マージ前に既存の列があれば削除
+        for c in [f'{feature_prefix}_n_races', f'{feature_prefix}_win_rate', f'{feature_prefix}_top3_rate']:
+            if c in df.columns:
+                df.drop(columns=[c], inplace=True)
+        
+        df = df.merge(stats_df, on=merge_cols, how='left')
+        
         # 出走回数が少ないとノイズになるので、信頼度のようなものを考慮したいが、
         # ここでは生の率を出す。モデルが回数(n_races)も見て判断することを期待。
-        df[f'{feature_prefix}_n_races'] = history_count
-        df[f'{feature_prefix}_win_rate'] = (wins / (history_count + 1e-5))
-        df[f'{feature_prefix}_top3_rate'] = (top3 / (history_count + 1e-5))
+        df[f'{feature_prefix}_n_races'] = df['cum_races'].fillna(0)
+        df[f'{feature_prefix}_win_rate'] = df['cum_wins'].fillna(0) / (df['cum_races'].fillna(0) + 1e-5)
+        df[f'{feature_prefix}_top3_rate'] = df['cum_top3'].fillna(0) / (df['cum_races'].fillna(0) + 1e-5)
+        
+        # 一時列を削除
+        df.drop(columns=['cum_races', 'cum_wins', 'cum_top3'], inplace=True)
 
         return df

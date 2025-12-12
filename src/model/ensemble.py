@@ -5,9 +5,14 @@ from sklearn.linear_model import LinearRegression
 import pickle
 import os
 
-from src.model.lgbm import KeibaLGBM
-from src.model.catboost_model import KeibaCatBoost
-from src.model.tabnet_model import KeibaTabNet
+try:
+    from model.lgbm import KeibaLGBM
+    from model.catboost_model import KeibaCatBoost
+    from model.tabnet_model import KeibaTabNet
+except ImportError:
+    from src.model.lgbm import KeibaLGBM
+    from src.model.catboost_model import KeibaCatBoost
+    from src.model.tabnet_model import KeibaTabNet
 
 logger = logging.getLogger(__name__)
 

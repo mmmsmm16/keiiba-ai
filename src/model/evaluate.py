@@ -69,10 +69,11 @@ def main():
     parser.add_argument('--model', type=str, default='ensemble', choices=['lgbm', 'catboost', 'tabnet', 'ensemble'], help='評価するモデル')
     parser.add_argument('--version', type=str, default='v1', help='モデルバージョン')
     parser.add_argument('--years', type=str, default='2024', help='評価対象年 (カンマ区切り, e.g. "2024,2025")')
+    parser.add_argument('--dataset_suffix', type=str, default='', help='データセットのサフィックス (例: _v10_leakfix)')
     args = parser.parse_args()
 
     # 1. データのロード (Parquetから元データを取得)
-    data_path = os.path.join(os.path.dirname(__file__), '../../data/processed/preprocessed_data.parquet')
+    data_path = os.path.join(os.path.dirname(__file__), f'../../data/processed/preprocessed_data{args.dataset_suffix}.parquet')
     if not os.path.exists(data_path):
         logger.error(f"データファイルがありません: {data_path}")
         return
@@ -149,7 +150,7 @@ def main():
         
     # モデルから取得できない場合は最新の学習データセット情報を使用
     if feature_cols is None:
-        dataset_path = os.path.join(os.path.dirname(__file__), '../../data/processed/lgbm_datasets.pkl')
+        dataset_path = os.path.join(os.path.dirname(__file__), f'../../data/processed/lgbm_datasets{args.dataset_suffix}.pkl')
         with open(dataset_path, 'rb') as f:
             datasets = pickle.load(f)
 
