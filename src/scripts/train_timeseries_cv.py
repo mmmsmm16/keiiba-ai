@@ -93,27 +93,46 @@ def create_fold_dataset(df: pd.DataFrame, feature_cols: list, train_end: int, va
     
     logger.info(f"Fold: Train={len(X_train)} ({len(train_group_sizes)} races, 2013-{train_end}), Valid={len(X_valid)} ({len(valid_group_sizes)} races, {valid_year})")
     
-    return fold_train, fold_valid
+    # 評価用にvalid_dfも返す（race_id等が必要）
+    return fold_train, fold_valid, valid_df
 
-def train_fold(fold_train: dict, fold_valid: dict, fold_name: str, output_dir: str, version: str):
-    """1つのFoldを学習"""
-    logger.info(f"=== {fold_name} 学習開始 ===")
-    
+def train_fold(fold_train: dict, fold_valid: dict, fold_name: str, output_dir: str, version: str, skip_existing: bool = True):
+    """1つのFoldを学習（既存モデルがあればスキップ）"""
     fold_dir = os.path.join(output_dir, fold_name)
     os.makedirs(fold_dir, exist_ok=True)
+    
+    lgbm_path = os.path.join(fold_dir, f'lgbm_{version}.pkl')
+    catboost_path = os.path.join(fold_dir, f'catboost_{version}.pkl')
+    ensemble_path = os.path.join(fold_dir, f'ensemble_{version}.pkl')
+    
+    # 既存モデルチェック
+    if skip_existing and os.path.exists(ensemble_path):
+        logger.info(f"=== {fold_name} 既存モデルをロード（学習スキップ） ===")
+        lgbm = KeibaLGBM()
+        lgbm.load_model(lgbm_path)
+        catboost = KeibaCatBoost()
+        catboost.load_model(catboost_path)
+        ensemble = EnsembleModel()
+        ensemble.load_model(ensemble_path)
+        return {
+            'lgbm': lgbm,
+            'catboost': catboost,
+            'ensemble': ensemble,
+            'paths': {'lgbm': lgbm_path, 'catboost': catboost_path, 'ensemble': ensemble_path}
+        }
+    
+    logger.info(f"=== {fold_name} 学習開始 ===")
     
     # LightGBM
     logger.info(f"[{fold_name}] LightGBM学習中...")
     lgbm = KeibaLGBM()
     lgbm.train(fold_train, fold_valid)
-    lgbm_path = os.path.join(fold_dir, f'lgbm_{version}.pkl')
     lgbm.save_model(lgbm_path)
     
     # CatBoost
     logger.info(f"[{fold_name}] CatBoost学習中...")
     catboost = KeibaCatBoost()
     catboost.train(fold_train, fold_valid)
-    catboost_path = os.path.join(fold_dir, f'catboost_{version}.pkl')
     catboost.save_model(catboost_path)
     
     # Ensemble Meta-Model
@@ -125,7 +144,6 @@ def train_fold(fold_train: dict, fold_valid: dict, fold_name: str, output_dir: s
     ensemble.has_catboost = True
     ensemble.has_tabnet = False
     ensemble.train_meta_model(fold_valid)
-    ensemble_path = os.path.join(fold_dir, f'ensemble_{version}.pkl')
     ensemble.save_model(ensemble_path)
     
     logger.info(f"=== {fold_name} 学習完了 ===")
@@ -141,25 +159,20 @@ def train_fold(fold_train: dict, fold_valid: dict, fold_name: str, output_dir: s
         }
     }
 
-def evaluate_fold(models: dict, fold_valid: dict, fold_name: str, output_dir: str):
+def evaluate_fold(models: dict, valid_df: pd.DataFrame, feature_cols: list, fold_name: str, output_dir: str):
     """Foldの評価を実行"""
     from scipy.special import softmax
     
     logger.info(f"=== {fold_name} 評価中 ===")
     
-    X_valid = fold_valid['X']
-    y_valid = fold_valid['y']
-    group_valid = fold_valid['group']
+    X_valid = valid_df[feature_cols]
     
     # 予測
     scores = models['ensemble'].predict(X_valid)
     
     # DataFrameにまとめる
-    eval_df = pd.DataFrame({
-        'race_id': group_valid,
-        'rank': y_valid,
-        'score': scores
-    })
+    eval_df = valid_df[['race_id', 'rank']].copy()
+    eval_df['score'] = scores
     
     # レースごとのTop1的中率
     def calc_top1_accuracy(df):
@@ -219,13 +232,13 @@ def main():
         valid_year = fold['valid_year']
         
         # Fold用データセット作成
-        fold_train, fold_valid = create_fold_dataset(df, feature_cols, train_end, valid_year)
+        fold_train, fold_valid, valid_df_fold = create_fold_dataset(df, feature_cols, train_end, valid_year)
         
         # 学習
         models = train_fold(fold_train, fold_valid, fold_name, args.output_dir, args.version)
         
         # 評価
-        results = evaluate_fold(models, fold_valid, fold_name, args.output_dir)
+        results = evaluate_fold(models, valid_df_fold, feature_cols, fold_name, args.output_dir)
         all_results.append(results)
     
     # 全Fold結果サマリー

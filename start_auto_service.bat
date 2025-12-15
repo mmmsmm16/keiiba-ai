@@ -11,7 +11,7 @@ docker-compose up -d
 
 echo [2/2] Starting Auto Predict Loop in background...
 REM -d for detached mode (runs in background inside the container)
-docker-compose exec -d app python src/scripts/run_auto_predict_loop.py
+docker-compose exec -d app python src/scripts/run_scheduler.py
 
 echo.
 echo Success! The auto-prediction service is running in the background.

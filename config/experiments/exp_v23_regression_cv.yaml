@@ -1,0 +1,53 @@
+# v23: 時系列CV用 回帰モデル（v13ベース）
+# グレード付きターゲット: 1着=1.0, 2着=0.5, 3着=0.25
+# リーク修正データセット使用
+
+experiment_name: "v23_regression_cv"
+description: "v23: 回帰モデル（グレード付きターゲット）- 時系列CV用"
+
+data:
+  features: "v10_leakfix"
+  cache_path: "data/processed/lgbm_datasets_v10_leakfix.pkl"
+  train_years: [2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023]
+  valid_year: 2024
+  test_year: 2025
+  use_cache: true
+  jra_only: false
+  target_type: "v13_graded"  # 1着=1.0, 2着=0.5, 3着=0.25
+
+model:
+  type: "ensemble"
+  
+  lgbm_params:
+    objective: "regression"  # ランキングではなく回帰
+    metric: "mse"
+    num_leaves: 76
+    learning_rate: 0.1576
+    n_estimators: 1000
+    min_data_in_leaf: 53
+    feature_fraction: 0.802
+    bagging_fraction: 0.562
+    bagging_freq: 7
+    lambda_l1: 1.57e-05
+    lambda_l2: 0.05
+  
+  catboost_params:
+    loss_function: "RMSE"  # 回帰用
+    iterations: 1000
+    learning_rate: 0.0758
+    depth: 10
+    l2_leaf_reg: 0.000143
+    bagging_temperature: 0.5
+    
+  tabnet_params:
+    enabled: false  # 高速化のため無効
+
+evaluation:
+  metric: "roi"
+  strategies: ["tansho", "umaren", "sanrentan", "sanrenpuku"]
+  jra_only: true
+  
+strategy:
+  enabled: true
+  min_roi: 80.0
+  target_bet_types: ["tansho", "umaren", "sanrentan"]

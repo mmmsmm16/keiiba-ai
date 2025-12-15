@@ -1,3 +1,4 @@
+# ... (Imports remain mostly the same, ensuring all needed are present)
 import os
 import sys
 import json
@@ -7,20 +8,20 @@ import argparse
 import pandas as pd
 import numpy as np
 import logging
+import pickle
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
+from scipy.special import softmax
 from scipy.stats import entropy
-import pickle
+from itertools import combinations, permutations
 
 # プロジェクトルートをパスに追加
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-from src.model.ensemble import EnsembleModel
 from src.inference.preprocessor import InferencePreprocessor
 from src.inference.loader import InferenceDataLoader
 from src.model.calibration import ProbabilityCalibrator
-from src.inference.optimal_strategy import OptimalStrategy
 
 # ロギング設定
 logging.basicConfig(
@@ -32,7 +33,6 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
-
 
 # .env 手動読み込み
 def load_env_manual():
@@ -51,93 +51,78 @@ def load_env_manual():
 
 # 定数
 STATE_FILE_PATH = os.path.join(os.path.dirname(__file__), '../../data/state/notified_races.json')
+RULES_PATH = os.path.join(os.path.dirname(__file__), '../../experiments/v23_regression_cv/final_rules_v23.json')
+MODEL_DIR = os.path.join(os.path.dirname(__file__), '../../experiments/v23_regression_cv/fold4')
 
 class NotificationManager:
     """Discord通知を管理するクラス"""
-    def __init__(self, webhook_url: str):
+    def __init__(self, webhook_url: str, rules: list):
         self.webhook_url = webhook_url
+        self.rules = rules
 
     def _calculate_confidence(self, df: pd.DataFrame) -> tuple[str, str]:
         """ハザード(波乱度)と自信度を判定"""
-        # 勝率分布のエントロピー
-        probs = df['calibrated_prob'].values
+        probs = df['prob'].values 
         ent = entropy(probs)
         
         top_horse = df.sort_values('score', ascending=False).iloc[0]
-        top_prob = top_horse['calibrated_prob']
-        top_score = top_horse['score']
+        # v23 score is regression (race normalized?) No, raw score.
+        # But we calculate prob using softmax.
+        top_prob = top_horse['prob']
         
-        # 判定ロジック
-        if top_prob >= 0.40 or top_score >= 1.5:
+        if top_prob >= 0.40:
             return "S", "鉄板 (Ironclad)"
-        elif top_prob >= 0.25 or top_score >= 0.8:
+        elif top_prob >= 0.25:
             return "A", "安定 (Stable)"
         elif ent > 2.0 or top_prob < 0.20:
              return "C", "波乱 (High Chaos)"
         else:
              return "B", "混戦 (Confusion)"
 
-    def send_prediction(self, race_meta: Dict, df: pd.DataFrame):
-        """
-        予測結果をDiscordに送信します。
-        Args:
-            race_meta: レース情報
-            df: 予測結果DataFrame
-        Returns:
-            bool: 送信成功ならTrue
-        """
+    def send_prediction(self, race_meta: Dict, df: pd.DataFrame, race_features: Dict):
+        """予測結果をDiscordに送信"""
         if not self.webhook_url:
-            logger.warning("Discord Webhook URLが設定されていません。通知をスキップします。")
             return False
 
-        # タイトル整形
         date_str = race_meta.get('date', '')
-        
-        # 波乱度判定
         chart_rank, chart_desc = self._calculate_confidence(df)
         
         title_str = f"🎯 [{date_str}] {race_meta['venue_name']}{race_meta['race_number']}R {race_meta['title']} ({race_meta['start_time']}) - [{chart_rank}] {chart_desc}"
 
-        # 予測テーブル作成 (全頭: スコア順 -> 最も純粋な強さ評価)
+        # 1. 予測テーブル
         top_picks = df.sort_values('score', ascending=False)
-        
-        description = "**🏆 本命予測 (スコア順)**\n"
-        
-        # ヘッダーなし、リスト形式で見やすく
+        description = "**🏆 本命予測 (v23 Model)**\n"
         
         for i, (_, row) in enumerate(top_picks.iterrows()):
             h_num = str(int(row['horse_number'])).zfill(2)
             h_name = row['horse_name']
             
-            ev = f"{row['expected_value']:.2f}"
-            prob = f"{row['calibrated_prob']*100:.0f}%"
+            # v23は回帰スコアなのでそのまま表示
             score = f"{row['score']:.2f}"
+            prob_val = row.get('prob', 0)
+            prob = f"{prob_val*100:.0f}%"
             
-            # Simple list format without Mark
-            description += f"`{h_num}` **{h_name}** (勝率:{prob}, EV:{ev}, Sc:{score})\n"
+            odds_str = f"{row['odds']:.1f}" if row['odds'] > 0 else "-"
+            
+            description += f"`{h_num}` **{h_name}** (Odds:{odds_str}, Sc:{score}, Win%:{prob})\n"
 
-        # 推奨買い目 (Smart Value Logic)
-        bet_strategy = self._generate_betting_strategy(df)
+        # 2. 推奨買い目
+        bet_msg = self._generate_betting_strategy(df, race_features)
         
         # NetKeiba Link
-        # ID形式補正: YYYY(4) + Venue(2) + Kai(2) + Nichi(2) + R(2) 
-        # race_meta['race_id'] は通常この形式。
         netkeiba_url = f"https://race.netkeiba.com/race/shutuba.html?race_id={race_meta['race_id']}"
         description += f"\n🔗 [NetKeiba]({netkeiba_url})\n"
         
         embed = {
             "title": title_str,
-            "description": description + "\n" + bet_strategy,
-            "color": 0xFF0000 if top_picks.iloc[0]['expected_value'] > 1.5 else (0x00FF00 if chart_rank in ['S', 'A'] else 0xFFA500), # S/Aなら緑、それ以外はオレンジ、高EVは赤
+            "description": description + "\n" + bet_msg,
+            "color": 0x00FF00 if chart_rank in ['S', 'A'] else 0xFFA500,
             "footer": {
-                "text": "Keiiba-AI Prediction System"
+                "text": "Keiiba-AI v23 (Auto-Optimized)"
             }
         }
         
-        payload = {
-            "username": "ナミール",
-            "embeds": [embed]
-        }
+        payload = {"username": "ナミール (v23)", "embeds": [embed]}
         
         try:
             resp = requests.post(self.webhook_url, json=payload)
@@ -148,148 +133,89 @@ class NotificationManager:
             logger.error(f"通知送信失敗: {e}")
             return False
 
-    def _pad_width(self, s: str, width: int) -> str:
-        """全角文字を考慮してパディングする簡易関数"""
-        count = 0
-        for c in s:
-            if ord(c) > 255: count += 2
-            else: count += 1
+    def _generate_betting_strategy(self, df: pd.DataFrame, features: Dict) -> str:
+        """ルールベースで推奨買い目を生成"""
+        # ルール適用
+        valid_bets = []
         
-        padding = width - count
-        if padding > 0:
-            return s + " " * padding
-        else:
-            return s
+        # features は race_level の特徴量 (score_gap, etc)
+        # ルール条件チェック
+        for rule in self.rules:
+            match = True
+            for feat, op, thres in rule['conditions']:
+                val = features.get(feat, 0)
+                if op == '<=':
+                    if not (val <= thres):
+                        match = False; break
+                else:
+                    if not (val > thres):
+                        match = False; break
+            if match:
+                valid_bets.append(rule)
+        
+        if not valid_bets:
+            return "⚠️ **推奨買い目なし (条件不一致)**\n様子見推奨です。\n"
 
-    def _calculate_betting_data(self, df: pd.DataFrame) -> dict:
-        """推奨買い目のデータを計算して返す (シミュレーション用)"""
-        # スコア順にソート (基本データとして使用)
-        sorted_df = df.sort_values('score', ascending=False)
-        top1 = sorted_df.iloc[0]
+        msg = "**📈 推奨買い目 (AI Optimized Rules)**\n"
         
-        # 基本情報
-        top1_ev = top1.get('expected_value', 0)
-        h_num = int(top1['horse_number'])
-        h_str = f"{h_num:02}"
+        # Betting Logic (Generate codes)
+        top_horses = df.sort_values('score', ascending=False)['horse_number'].astype(int).tolist()
         
-        # 相手馬 (Rank 2-6)
-        opps = sorted_df.iloc[1:6] 
-        opp_nums = [f"{int(x):02}" for x in opps['horse_number']]
+        # 重複除外して表示
+        shown_bets = set()
         
-        strategy_data = {
-            "top1": top1,
-            "sorted_df": sorted_df,
-            "ev": top1_ev,
-            "bets": [],
-            "strategy_type": "Low",
-            "is_strong": False
-        }
-        
-        # 戦略判定
-        if top1_ev >= 1.2:
-            # High Value
-            strategy_data["strategy_type"] = "High"
-            # 三連複 1頭軸流し (Rank 2,3,4)
-            strategy_data["bets"].append({
-                "type": "sanrenpuku",
-                "axis": [h_num],
-                "partners": [int(x) for x in opps.iloc[:3]['horse_number']],
-                "points": 3
-            })
+        # ルールごとの表示
+        # 優先度順に並べ替えたいが、JSON順序(ROI高い順)と仮定
+        for rule in valid_bets:
+            bname = rule['bet_name']
+            if bname in shown_bets: continue
             
-        elif top1_ev >= 0.8:
-            # Mid Value
-            strategy_data["strategy_type"] = "Mid"
-            # 三連単 1着固定流し (Rank 2,3,4)
-            strategy_data["bets"].append({
-                "type": "sanrentan_1fix",
-                "axis": [h_num],
-                "partners": [int(x) for x in opps.iloc[:3]['horse_number']],
-                "points": 6
-            })
-            # (参考) 馬連 1頭軸流し (Rank 2,3,4,5)
-            # strategy_data["bets"].append({
-            #     "type": "umaren",
-            #     "axis": [h_num],
-            #     "partners": [int(x) for x in opps.iloc[:4]['horse_number']],
-            #     "points": 4
-            # })
+            # ROIなどの補足情報
+            roi = rule.get('roi', 0) * 100
+            msg += f"✅ **{bname}** (期待ROI {roi:.0f}%)\n"
             
-        else:
-            # Low Value (見送り)
-            strategy_data["strategy_type"] = "Low"
-        
-        # 強気馬券判定 (7番人気以上)
-        axis_pop = int(top1['popularity']) if pd.notna(top1['popularity']) else 99
-        if axis_pop >= 7:
-            strategy_data["is_strong"] = True
-            # 三連単 1着固定流し (Rank 2,3,4,5) -> Opps has 5 horses (Rank 2-6). 
-            # Original code said: {','.join(opp_nums[:4])} which is Rank 2,3,4,5.
-            strategy_data["bets"].append({
-                "type": "sanrentan_1fix_strong",
-                "axis": [h_num],
-                "partners": [int(x) for x in opps.iloc[:4]['horse_number']],
-                "points": 12
-            })
+            # 実際の買い目構築 (簡易)
+            codes_str = self._format_bet_codes(bname, top_horses)
+            if codes_str:
+                msg += f"`{codes_str}`\n"
             
-        return strategy_data
-
-    def _generate_betting_strategy(self, df: pd.DataFrame) -> str:
-        """推奨買い目のテキスト生成 (v12 最適戦略)"""
-        data = self._calculate_betting_data(df)
-        sorted_df = data["sorted_df"]
-        
-        # --- 1. AI本命予想リスト ---
-        msg = "**🤖 AI本命予想 (Ranked v12)**\n"
-        symbols = ['◎', '〇', '▲', '△', '△', '△', '注']
-        
-        # 上位7頭を表示
-        for i, (idx, row) in enumerate(sorted_df.head(7).iterrows()):
-            h_num = str(int(row['horse_number'])).zfill(2)
-            ev = row.get('expected_value', 0)
-            score = row.get('score', 0)
-            pop = int(row['popularity']) if pd.notna(row['popularity']) else 99
-            short_name = str(row['horse_name'])[:5]
-            symbol = symbols[i] if i < len(symbols) else '  '
-            msg += f"`{symbol}{h_num} {short_name:<5}({pop}人) S{score:.2f} E{ev:.2f}`\n"
+            shown_bets.add(bname)
             
-        msg += "\n"
-        
-        # --- 2. 推奨買い目 (v12 Logic) ---
-        msg += "**📈 推奨買い目 (v12戦略)**\n"
-        
-        top1 = data["top1"]
-        h_str = f"{int(top1['horse_number']):02}"
-        # Rank 2-6 IDs for display
-        opps = sorted_df.iloc[1:6]
-        opp_nums = [f"{int(x):02}" for x in opps['horse_number']]
-        
-        if data["strategy_type"] == "High":
-            msg += f"🔥 **High Value (EV {data['ev']:.2f})** - 鉄板/高妙味\n"
-            msg += f"✅ **推奨: 三連複 1頭軸流し (3点)**\n"
-            msg += f"`{h_str} - {','.join(opp_nums[:3])}` (相手: 2,3,4位)\n"
-            msg += "※期待値が高いため、三連複3点で高回収(142%)を狙います。\n"
-            
-        elif data["strategy_type"] == "Mid":
-            msg += f"✨ **Mid Value (EV {data['ev']:.2f})** - 中妙味\n"
-            msg += f"✅ **推奨: 三連単 1着固定流し (6点)**\n"
-            msg += f"`{h_str} -> {','.join(opp_nums[:3])}` (相手: 2,3,4位)\n"
-            msg += f"💡 (安定) 馬連 1頭軸流し (4点): `{h_str} - {','.join(opp_nums[:4])}`\n"
-            
-        else:
-            msg += f"⚠️ **Low Value (EV {data['ev']:.2f})** - 低妙味 (見送り推奨)\n"
-            msg += "過剰人気のため、期待値が低いです。基本はケン(見送り)してください。\n"
-            msg += f"(参考) 三連単 1着固定流し (6点): `{h_str} -> {','.join(opp_nums[:3])}`\n"
-        
-        # --- 3. 強気馬券 ---
-        if data["is_strong"]:
-            axis_pop = int(top1['popularity']) if pd.notna(top1['popularity']) else 99
-            msg += "\n"
-            msg += f"🔥 **強気馬券** (Top1が{axis_pop}番人気)\n"
-            msg += f"✅ **三連単 1着固定流し: {h_str}→{','.join(opp_nums[:4])}** (12点)\n"
-            msg += "※穴狙いで高配当を狙える条件です。\n"
-        
         return msg
+
+    def _format_bet_codes(self, bname, top_horses):
+        """買い目の文字列表現を生成"""
+        try:
+            if 'tansho' in bname:
+                return f"単勝: {top_horses[0]:02}"
+            elif 'umaren_box' in bname:
+                n = int(bname[-1])
+                return f"馬連BOX: {','.join([f'{x:02}' for x in top_horses[:n]])}"
+            elif 'umaren_nagashi' in bname:
+                return f"馬連流し: {top_horses[0]:02} - {','.join([f'{x:02}' for x in top_horses[1:5]])}"
+            elif 'wide_box' in bname:
+                n = int(bname[-1])
+                return f"ワイドBOX: {','.join([f'{x:02}' for x in top_horses[:n]])}"
+            elif 'wide_nagashi' in bname:
+                 return f"ワイド流し: {top_horses[0]:02} - {','.join([f'{x:02}' for x in top_horses[1:5]])}"
+            elif 'umatan_1st' in bname:
+                return f"馬単1着固定: {top_horses[0]:02} -> {','.join([f'{x:02}' for x in top_horses[1:5]])}"
+            elif 'umatan_box' in bname:
+                n = int(bname[-1])
+                return f"馬単BOX: {','.join([f'{x:02}' for x in top_horses[:n]])}"
+            elif 'sanrenpuku_box' in bname:
+                n = int(bname[-1])
+                return f"三連複BOX: {','.join([f'{x:02}' for x in top_horses[:n]])}"
+            elif 'sanrenpuku_nagashi' in bname:
+                return f"三連複流し: {top_horses[0]:02} - {','.join([f'{x:02}' for x in top_horses[1:5]])} (2頭)"
+            elif 'sanrentan_1st' in bname:
+                return f"三連単1着固定: {top_horses[0]:02} -> {','.join([f'{x:02}' for x in top_horses[1:5]])} (M)"
+            elif 'sanrentan_box' in bname:
+                n = int(bname[-1])
+                return f"三連単BOX: {','.join([f'{x:02}' for x in top_horses[:n]])}"
+            return bname
+        except:
+            return f"Error formatting {bname}"
 
 class AutoPredictor:
     def __init__(self, dry_run: bool = False, target_date: str = None):
@@ -298,137 +224,83 @@ class AutoPredictor:
         self.state_file = STATE_FILE_PATH
         self.notified_races = self._load_state()
         
-        # モデル初期化 (初回のみロード)
+        # モデル初期化
         self.loader = InferenceDataLoader()
         self.preprocessor = InferencePreprocessor()
-        self.calibrator = self._load_calibrator()
-        self.model = self._load_model() # Ensemble
-        
-        # v12特徴量リストのロード
-        self.expected_features = self._load_feature_list()
+        self.lgbm, self.catboost, self.meta = self._load_v23_models()
+        self.rules = self._load_rules()
         
         # Load env vars manually to ensure Webhook URL is present
         load_env_manual()
         webhook_url = os.environ.get('DISCORD_WEBHOOK_URL')
         if not webhook_url:
-            logger.error("❌ DISCORD_WEBHOOK_URL is not set. Notifications will fail.")
+            logger.error("❌ DISCORD_WEBHOOK_URL is not set.")
             
-        self.notifier = NotificationManager(webhook_url)
+        self.notifier = NotificationManager(webhook_url, self.rules)
         
     def _load_state(self) -> set:
-        """通知済みレースIDの読み込み"""
         if os.path.exists(self.state_file):
             try:
-                with open(self.state_file, 'r') as f:
-                    return set(json.load(f))
-            except:
-                return set()
+                with open(self.state_file, 'r') as f: return set(json.load(f))
+            except: return set()
         return set()
 
     def _save_state(self):
-        """通知済みレースIDの保存"""
         if self.dry_run: return
-        
         os.makedirs(os.path.dirname(self.state_file), exist_ok=True)
-        with open(self.state_file, 'w') as f:
-            json.dump(list(self.notified_races), f)
+        with open(self.state_file, 'w') as f: json.dump(list(self.notified_races), f)
 
-    def _load_model(self):
-        logger.info("モデル(Ensemble v12: TabNet Revival)をロード中...")
-        model = EnsembleModel()
-        # v12モデルパス (experiments配下)
-        model_path = os.path.join(os.path.dirname(__file__), '../../experiments/v12_tabnet_revival/models/ensemble.pkl')
-        
-        if os.path.exists(model_path):
-            model.load_model(model_path, device_name='cpu') # 推論はCPUで安全に
-            return model
-        else:
-            logger.error(f"モデルファイルが見つかりません: {model_path}")
-            # フォールバック (models/ensemble_v7.pkl)
-            fallback_path = os.path.join(os.path.dirname(__file__), '../../models/ensemble_v7.pkl')
-            if os.path.exists(fallback_path):
-                 logger.warning("フォールバックモデル(v7)を使用します。")
-                 model.load_model(fallback_path)
-                 return model
-            return None
+    def _load_v23_models(self):
+        logger.info(f"Loading v23 models from {MODEL_DIR}...")
+        try:
+            with open(os.path.join(MODEL_DIR, 'lgbm_v23.pkl'), 'rb') as f: lgbm = pickle.load(f)
+            with open(os.path.join(MODEL_DIR, 'catboost_v23.pkl'), 'rb') as f: catboost = pickle.load(f)
+            with open(os.path.join(MODEL_DIR, 'meta_v23.pkl'), 'rb') as f: meta = pickle.load(f)
+            return lgbm, catboost, meta
+        except Exception as e:
+            logger.error(f"Failed to load models: {e}")
+            sys.exit(1)
 
-    def _load_feature_list(self):
-        """v12モデルの特徴量リストをロード (フォールバック: LightGBMモデルから取得)"""
-        import json
-        features_path = os.path.join(os.path.dirname(__file__), 
-            '../../experiments/v12_tabnet_revival/models/tabnet.features.json')
-        if os.path.exists(features_path):
-            try:
-                with open(features_path, 'r', encoding='utf-8') as f:
-                    features = json.load(f)
-                logger.info(f"v12特徴量リストをロード (JSON): {len(features)}個")
-                return features
-            except Exception as e:
-                logger.warning(f"特徴量JSONのロード失敗: {e}. LightGBMからフォールバックします。")
-        
-        # Fallback: LightGBM model's feature_name()
-        if self.model and hasattr(self.model, 'lgbm') and self.model.lgbm:
-            try:
-                lgbm_booster = self.model.lgbm.model  # lightgbm.Booster
-                if hasattr(lgbm_booster, 'feature_name'):
-                    features = lgbm_booster.feature_name()
-                    logger.info(f"v12特徴量リストをロード (LightGBM): {len(features)}個")
-                    return features
-            except Exception as e:
-                logger.warning(f"LightGBMからの特徴量リスト取得失敗: {e}")
-        
-        logger.warning("特徴量リストが見つかりませんでした。特徴量適合なしで推論します。")
-        return None
-
-    def _load_calibrator(self):
-        model_dir = os.path.join(os.path.dirname(__file__), '../../models')
-        path = os.path.join(model_dir, 'calibrator.pkl')
-        if os.path.exists(path):
-            try:
-                calib = ProbabilityCalibrator() # クラス定義済みと仮定
-                calib.load(path)
-                return calib
-            except:
-                with open(path, 'rb') as f:
-                     # Calibratorクラスが見つからない場合のフォールバック(pickle直読みは危険だが、calibration.pyからクラスを持ってくるべき)
-                     pass
-                return None
-        return None
+    def _load_rules(self):
+        if not os.path.exists(RULES_PATH):
+            logger.warning("Rules file not found.")
+            return []
+        with open(RULES_PATH, 'r') as f: return json.load(f)
 
     def run(self):
-        """メイン実行ループ"""
-        logger.info("自動予測プロセスを実行します...")
+        logger.info("AutoPredict v23 Process Start...")
         
-        # 1. 開催日/現在時刻の取得
         now = datetime.now()
-        if self.target_date:
-            today_str = self.target_date.replace('-', '')
-        else:
-            today_str = now.strftime('%Y%m%d')
+        today_str = self.target_date.replace('-', '') if self.target_date else now.strftime('%Y%m%d')
 
-        # 2. レース一覧取得
-        race_list_df = self.loader.load_race_list(today_str)
-        if race_list_df.empty:
-            logger.info("本日の開催レースはありません。")
+        # 1. レース一覧
+        try:
+            race_list_df = self.loader.load_race_list(today_str)
+        except Exception as e:
+            logger.error(f"Race list load failed: {e}")
             return
 
-        # 3. 直前レースのフィルタリング
+        # Prepare venue_name
+        venue_map = {
+            '01': '札幌', '02': '函館', '03': '福島', '04': '新潟', '05': '東京', 
+            '06': '中山', '07': '中京', '08': '京都', '09': '阪神', '10': '小倉'
+        }
+        race_list_df['venue_name'] = race_list_df['venue'].map(venue_map).fillna(race_list_df['venue'])
+
+        if race_list_df.empty:
+            logger.info("No races today.")
+            return
+
+        # 2. フィルタリング (15-35分前)
         targets = []
         for _, row in race_list_df.iterrows():
             race_id = row['race_id']
-            if race_id in self.notified_races:
-                continue
+            if race_id in self.notified_races: continue
                 
-            start_time_str = row['start_time']
-            if not start_time_str: continue
-            
-            # コロンを除去 ("09:45" → "0945")
-            start_time_str = str(start_time_str).replace(':', '')
-
+            start_time_str = str(row['start_time']).replace(':', '')
             try:
                 race_dt = datetime.strptime(f"{today_str}{start_time_str}", "%Y%m%d%H%M")
-            except ValueError:
-                continue
+            except: continue
 
             if self.target_date:
                 targets.append(row)
@@ -439,84 +311,42 @@ class AutoPredictor:
                      targets.append(row)
         
         if not targets:
-            logger.info("現在、直前の通知対象レースはありません。")
+            logger.info("No target races for notification.")
             return
-            
-        logger.info(f"通知対象レース: {len(targets)} 件")
 
-        # 4. 推論 & 通知
+        logger.info(f"Targets: {len(targets)} races")
+
+        # 3. データロード・推論
         target_ids = [r['race_id'] for r in targets]
-        
-        try:
-            raw_df = self.loader.load(target_date=today_str, race_ids=target_ids)
-        except Exception as e:
-            logger.error(f"データロードエラー: {e}")
-            return
-            
-        if raw_df.empty:
-            logger.warning("レースデータが空です。")
-            return
+        raw_df = self.loader.load(target_date=today_str, race_ids=target_ids)
+        if raw_df.empty: return
 
         # 前処理
         X, ids = self.preprocessor.preprocess(raw_df)
         
-        # 特徴量アダプテーション (v12モデル用)
-        if self.expected_features:
-            missing = set(self.expected_features) - set(X.columns)
-            if missing:
-                logger.warning(f"不足特徴量を0で補完: {len(missing)}個")
-                for col in missing:
-                    X[col] = 0.0
-            # 特徴量の順序を揃える
-            X = X[[c for c in self.expected_features if c in X.columns]]
+        # 特徴量補完 (v23モデル用)
+        # pickleなどから特徴量リストを取得するのが正道だが、簡易的にLGBMから取得
+        expected_cols = self.lgbm.feature_name()
         
-        # 予測 (Score)
+        # カラム合わせ
+        for col in expected_cols:
+            if col not in X.columns: X[col] = 0.0
+        X = X[expected_cols]
+
+        # 推論 (Ensemble)
         try:
-            scores = self.model.predict(X)
+            p1 = self.lgbm.predict(X)
+            p2 = self.catboost.predict(X)
+            scores = self.meta.predict(np.column_stack([p1, p2]))
         except Exception as e:
-            logger.error(f"予測エラー: {e}")
+            logger.error(f"Prediction failed: {e}")
             return
 
-        # Calibration
-        if self.calibrator:
-            calibrated_probs = self.calibrator.predict(scores)
-        else:
-            # Softmax Fallback
-            calibrated_probs = softmax(scores) # 簡易
-
-        # Normalize to sum to 1.0 (Race-wise)
-        # Note: This simple normalization assumes raw_df contains exactly one race or we loop.
-        # However, raw_df contains MULTIPLE races.
-        # Use pandas groupby transform to normalize per race_id.
-        
-        # Determine Race IDs for grouping
-        # ids df has 'race_id'.
-        
         # 結果結合
         result_df = ids.copy()
         result_df['score'] = scores
-        
-        # 1. Softmax (Group by Race) with Temperature to avoid extreme probabilities
-        # Temperature > 1.0 makes distribution more uniform
-        from scipy.special import softmax
-        SOFTMAX_TEMPERATURE = 3.0  # スコア差が極端な場合の緩和用
-        result_df['prob'] = result_df.groupby('race_id')['score'].transform(
-            lambda x: softmax(x / SOFTMAX_TEMPERATURE)
-        )
-
-        # 2. Calibration
-        if self.calibrator:
-            result_df['calibrated_prob'] = self.calibrator.predict(result_df['prob'].values)
-        else:
-            result_df['calibrated_prob'] = result_df['prob']
-
-        # 3. Normalize per Race (Safe-guard)
-        race_sums = result_df.groupby('race_id')['calibrated_prob'].transform('sum')
-        result_df['calibrated_prob'] = result_df['calibrated_prob'] / race_sums
-        
-        # EV計算
-        result_df['odds'] = result_df['odds'].replace(0, 1.0)
-        result_df['expected_value'] = result_df['calibrated_prob'] * result_df['odds']
+        # Softmax for Prob
+        result_df['prob'] = result_df.groupby('race_id')['score'].transform(lambda x: softmax(x))
 
         # 通知ループ
         for race_meta in targets:
@@ -524,44 +354,73 @@ class AutoPredictor:
             race_df = result_df[result_df['race_id'] == race_id].copy()
             if race_df.empty: continue
             
-            venue_map = {
-                '01': '札幌', '02': '函館', '03': '福島', '04': '新潟', '05': '東京', 
-                '06': '中山', '07': '中京', '08': '京都', '09': '阪神', '10': '小倉'
-            }
-            venue_code = race_meta['venue']
-            race_meta_dict = {
-                'race_id': race_id,
-                'title': race_meta['title'],
-                'race_number': race_meta['race_number'],
-                'start_time': race_meta['start_time'][:2] + ":" + race_meta['start_time'][2:],
-                'venue_name': venue_map.get(venue_code, 'Unknown'),
-                'date': self.target_date if self.target_date else datetime.now().strftime('%Y/%m/%d')
-            }
-            
-            logger.info(f"通知送信: {race_meta_dict['title']}")
-            
+            # 特徴量抽出 (for Betting Rules)
+            # ここでルール判定用の特徴量(score_gap, etc)を計算
+            race_feats = self._calc_race_features(race_df, race_meta, today_str)
+
+            # 通知
             if not self.dry_run:
-                success = self.notifier.send_prediction(race_meta_dict, race_df)
-                if success:
-                    self.notified_races.add(race_id)
-                time.sleep(1.0) # Rate Limit回避
+                success = self.notifier.send_prediction(race_meta, race_df, race_feats)
+                if success: self.notified_races.add(race_id)
+                time.sleep(1.0)
             else:
-                logger.info("DRY-RUN: 通知をスキップしました。")
-                print(race_df[['horse_name', 'score', 'calibrated_prob']].sort_values('score', ascending=False).head())
+                logger.info(f"[DRY-RUN] {race_meta['title']}")
+                print(race_df.sort_values('score', ascending=False).head())
+                print("Features:", race_feats)
+                print(self.notifier._generate_betting_strategy(race_df, race_feats))
 
         self._save_state()
 
+    def _calc_race_features(self, df, meta, date_str):
+        """ルール適用に必要な特徴量を計算"""
+        sorted_df = df.sort_values('score', ascending=False)
+        top_scores = sorted_df['score'].tolist()
+        top_odds = sorted_df['odds'].head(3).tolist()
+        
+        score_gap = top_scores[0] - top_scores[1] if len(top_scores) > 1 else 0
+        score_conc = sum(top_scores[:3]) / df['score'].sum() if df['score'].sum() > 0 else 0
+        avg_top3 = np.mean(top_odds) if top_odds else 0
+        
+        venue_code = int(str(meta['race_id'])[4:6])
+        
+        # surface判定: proc_df(df)にsurfaceがあれば使う
+        surf = 0
+        if 'surface' in df.columns:
+            try: surf = int(df['surface'].iloc[0]) - 1 
+            except: pass
+            if surf < 0: surf = 0
+
+        # distance
+        dist = 1600
+        if 'distance' in df.columns:
+             dist = float(df['distance'].iloc[0])
+        elif 'distance' in meta:
+             dist = float(meta['distance'])
+             
+        return {
+            'score_gap': score_gap,
+            'top1_odds': top_odds[0] if top_odds else 0,
+            'avg_top3_odds': avg_top3,
+            'score_conc': score_conc,
+            'n_horses': len(df),
+            'distance': dist,
+            'surface': surf,
+            'venue': venue_code - 1,
+            'month': datetime.strptime(date_str, '%Y%m%d').month
+        }
+
 def main():
-    parser = argparse.ArgumentParser(description='Automated Prediction & Notification')
+    parser = argparse.ArgumentParser(description='Automated Prediction & Notification (v23)')
     parser.add_argument('--dry-run', action='store_true', help='通知を送信せずに実行')
     parser.add_argument('--date', type=str, help='対象日付 (YYYYMMDD or YYYY-MM-DD)')
     args = parser.parse_args()
     
-    # 日付正規化
     target_date = args.date
-    if target_date and '-' not in target_date:
-        # YYYYMMDD -> YYYY-MM-DD
-        target_date = f"{target_date[:4]}-{target_date[4:6]}-{target_date[6:]}"
+    if target_date and '-' in target_date:
+        # YYYY-MM-DD -> YYYYMMDD (load_race_list expects YYYYMMDD?)
+        # Actually logic inside run() handles replacement.
+        # But let's standardize to YYYY-MM-DD for consistency
+        pass
 
     predictor = AutoPredictor(dry_run=args.dry_run, target_date=target_date)
     predictor.run()

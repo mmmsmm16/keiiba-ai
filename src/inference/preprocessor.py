@@ -76,17 +76,17 @@ class InferencePreprocessor:
         
         self.history_path = history_path
 
-    def preprocess(self, new_df: pd.DataFrame, history_df: pd.DataFrame = None) -> tuple[pd.DataFrame, pd.DataFrame]:
+    def preprocess(self, new_df: pd.DataFrame, history_df: pd.DataFrame = None, return_full_df: bool = False):
         """
         推論用データを前処理します (高速化版)。
         
-        高速化戦略:
-        1. 馬の過去走集計 (Lag/Rolling):
-           - 予測対象の馬のデータのみを過去データから抽出して結合・再計算する。
-           - 全件再計算を回避し、計算量を O(N_horses) に削減。
-        2. カテゴリ集計 (Jockey/Trainer/Sire):
-           - 過去データの「最終状態」をルックアップテーブルとして作成。
-           - 予測対象行に対してマージし、前走結果をもとに値を更新（インクリメンタル更新）する。
+        Args:
+            new_df: 推論対象の生データ
+            history_df: 過去データ (省略時はファイルからロード)
+            return_full_df: Trueの場合、特徴量選択前のフルデータ(new_df部分)も返す (X, ids, full_df)
+        
+        Returns:
+            (X, ids) or (X, ids, full_df)
         """
         logger.info("推論用前処理を開始します (Incremental Mode)...")
 
@@ -511,4 +511,7 @@ class InferencePreprocessor:
             if feat not in X.columns:
                 X[feat] = 0.0
 
+        if return_full_df:
+             return X, ids, inference_df
+        
         return X, ids
