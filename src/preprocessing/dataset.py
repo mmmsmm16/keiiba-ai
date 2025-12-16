@@ -116,6 +116,11 @@ class DatasetSplitter:
             'odds_race_rank', 'popularity_race_rank',
             'odds_deviation', 'popularity_deviation',
             
+            # --- v11: trend_* (事前予測モード用のためdrop) ---
+            # realtime=OFF時はニュートラル埋めされているため情報量なし
+            'trend_win_inner_rate', 'trend_win_mid_rate', 'trend_win_outer_rate',
+            'trend_win_front_rate', 'trend_win_fav_rate',
+            
             # --- Low Impact Features to Drop (v5 Feature Selection) ---
             # 今回(v8)は再評価のため残す
             # 'race_avg_prize',         # 重要度 0
@@ -137,6 +142,9 @@ class DatasetSplitter:
             # --- v7 Market Features (馬の能力と無関係) ---
             'lag1_odds',              # 前走オッズ（市場評価）
             'lag1_popularity',        # 前走人気（市場評価）
+            
+            # --- v11 Speed Index Intermediates (Leakage) ---
+            'time_index', 'last_3f_index',
         ]
         # Sample Weights for Odds-Weighted Loss (Phase 15)
         # Use log1p(odds) to prioritize high-value winners without excessive noise sensitivity

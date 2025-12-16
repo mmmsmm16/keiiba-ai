@@ -68,5 +68,41 @@ class FeatureEngineer:
             logger.warning("titleカラムがないため、class_levelをデフォルト値(5)で埋めます")
             df['class_level'] = 5
 
+        # ================================================================
+        # 7. [v11 Extended N1] course_id: 競馬場×芝ダ×距離×回り
+        # ================================================================
+        # venue × surface × distance_cat × direction
+        logger.info("v11: course_id（コース識別子）を生成中...")
+        
+        # 距離カテゴリ
+        if 'distance' in df.columns:
+            df['distance_cat'] = pd.cut(
+                df['distance'], 
+                bins=[0, 1399, 1899, 2399, 9999], 
+                labels=['Sprint', 'Mile', 'Intermediate', 'Long']
+            ).astype(str)
+        else:
+            df['distance_cat'] = 'Unknown'
+        
+        # 回り（mawariカラムがある場合）
+        if 'mawari' in df.columns:
+            df['direction'] = df['mawari'].fillna('不明').astype(str)
+        else:
+            df['direction'] = '不明'
+        
+        # course_id生成
+        df['course_id'] = (
+            df['venue'].astype(str) + '_' + 
+            df['surface'].astype(str) + '_' + 
+            df['distance_cat'] + '_' + 
+            df['direction']
+        )
+        
+        # カテゴリ型として保持
+        df['course_id'] = df['course_id'].astype('category')
+        
+        logger.info(f"course_id ユニーク数: {df['course_id'].nunique()}")
+
         logger.info("基本特徴量の生成完了")
         return df
+

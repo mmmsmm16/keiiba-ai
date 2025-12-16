@@ -1,0 +1,29 @@
+{
+  "date": "2025-01-05",
+  "status": "settled",
+  "metrics": {
+    "total_races": 24,
+    "race_hits": 8,
+    "race_hit_rate": 33.33,
+    "total_tickets": 96,
+    "ticket_hits": 8,
+    "ticket_hit_rate": 8.33,
+    "total_stake": 9600,
+    "total_payout": 42561.0,
+    "profit": 32961.0,
+    "roi": 443.34,
+    "max_dd": 2.46,
+    "final_equity": 132961.0
+  },
+  "issues": {
+    "missing_payout_races": 0,
+    "missing_payout_samples": []
+  },
+  "config_snapshot": {
+    "ticket": "sanrenpuku",
+    "topn": 4,
+    "odds_source": "final",
+    "slippage_factor": 0.9,
+    "initial_bankroll": 100000
+  }
+}

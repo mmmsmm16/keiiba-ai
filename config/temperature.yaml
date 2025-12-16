@@ -1,0 +1,5 @@
+temperature:
+  method: minimize_logloss
+  top3: 1.25
+  validated_on: '2024'
+  win: 0.9591392292104948

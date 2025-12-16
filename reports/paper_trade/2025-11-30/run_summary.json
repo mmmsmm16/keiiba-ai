@@ -1,0 +1,58 @@
+{
+  "date": "2025-11-30",
+  "status": "pending_settlement",
+  "config_snapshot": {
+    "data": {
+      "jra_only": true,
+      "odds_source": "final",
+      "allow_final_odds": true,
+      "slippage_factor": 0.9,
+      "exclude_scratched": true
+    },
+    "model": {
+      "prob_col": "prob_residual_softmax",
+      "model_version": "v13_market_residual",
+      "model_dir": "models/v13_market_residual",
+      "fold_models": [
+        "v13_fold_2022.txt",
+        "v13_fold_2023.txt",
+        "v13_fold_2024.txt"
+      ]
+    },
+    "strategy": {
+      "ticket": "sanrenpuku",
+      "topn": 4,
+      "bet_unit": 100,
+      "max_tickets_per_race": null
+    },
+    "risk": {
+      "initial_bankroll": 100000,
+      "max_bet_frac": 0.05,
+      "max_bet_per_race": 5000,
+      "stop_if_drawdown_pct": 50,
+      "min_equity_threshold": 1000
+    },
+    "report": {
+      "out_dir": "reports/paper_trade",
+      "data_dir": "data/paper_trade",
+      "save_ledger": true,
+      "save_predictions": true,
+      "save_tickets": true,
+      "seed": 42
+    },
+    "logging": {
+      "level": "INFO",
+      "save_skip_reasons": true,
+      "max_skip_samples": 50
+    }
+  },
+  "stats": {
+    "total_races": 24,
+    "processed_races": 24,
+    "total_tickets": 96,
+    "total_stake": 9600,
+    "remaining_equity": 90400
+  },
+  "skip_reasons": {},
+  "skip_samples": {}
+}

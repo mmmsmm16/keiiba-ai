@@ -1,7 +1,16 @@
+"""
+category_aggregators.py - カテゴリ集計特徴量生成モジュール
+
+[変更履歴]
+- 2025-12-12: リファクタリング - 同一レース内リーク問題修正
+- 2025-12-15 v11: A3対応 - unknown/0 の集計汚染防止、監視ログ追加
+"""
+
 import pandas as pd
 import logging
 
 logger = logging.getLogger(__name__)
+
 
 class CategoryAggregator:
     """
@@ -11,7 +20,10 @@ class CategoryAggregator:
     [2025-12-12 リファクタリング]
     同一レース内のリーク問題を修正。race_id単位で事前集約することで、
     同じレースに出走する同カテゴリの馬の結果が特徴量に含まれることを防止。
-    詳細: docs/refactoring_log/2025-12-12_data_leakage_fix/CHANGELOG.md
+    
+    [2025-12-15 v11更新]
+    - A3対応: unknown/0 の集計汚染防止
+    - 上位カテゴリの監視ログを追加
     """
     def aggregate(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -100,6 +112,11 @@ class CategoryAggregator:
             logger.info("v7: 母父(BMS) × 距離 の集計...")
             df = self._aggregate_context(df, 'bms_id', 'distance_cat', 'dist')
 
+        # ----------------------------------------------------------------
+        # [v11 A3] 上位カテゴリの監視ログ（unknown/0チェック）
+        # ----------------------------------------------------------------
+        self._log_top_categories(df)
+
         logger.info("カテゴリ集計特徴量の生成完了")
         # 一時カラム削除
         if 'distance_cat' in df.columns:
@@ -108,6 +125,60 @@ class CategoryAggregator:
             df.drop(columns=['_original_idx'], inplace=True)
             
         return df
+    
+    def _log_top_categories(self, df: pd.DataFrame, n: int = 10) -> None:
+        """
+        [v11 A3] カテゴリカラムの上位N件をログ出力し、unknown/0の異常を検出する。
+        
+        Args:
+            df: 入力DataFrame
+            n: 上位N件
+        """
+        logger.info("v11: カテゴリ分布の監視中...")
+        
+        id_cols = ['jockey_id', 'trainer_id', 'sire_id']
+        n_races_cols = [f'{c}_n_races' for c in ['jockey_id', 'trainer_id', 'sire_id']]
+        
+        for col in id_cols:
+            if col not in df.columns:
+                continue
+                
+            # 上位10件の出現頻度
+            top = df[col].astype(str).value_counts().head(n)
+            top_dict = top.to_dict()
+            
+            # unknown/0/nan のチェック
+            total = len(df)
+            suspicious_found = False
+            for suspicious in ['unknown', 'Unknown', 'UNKNOWN', '0', 'nan', 'None', 'NaN']:
+                if suspicious in top_dict:
+                    rate = top_dict[suspicious] / total
+                    if rate > 0.05:  # 5%以上で警告
+                        logger.warning(
+                            f"[A3警告] {col} の '{suspicious}' が {rate:.1%} を占めています。"
+                            f"集計特徴量が汚染されている可能性があります。"
+                        )
+                        suspicious_found = True
+            
+            if not suspicious_found:
+                # 正常時は上位3件のみログ
+                top3 = dict(list(top_dict.items())[:3])
+                logger.debug(f"{col} 上位3件: {top3}")
+        
+        # *_n_races の上位チェック
+        for n_col in n_races_cols:
+            if n_col not in df.columns:
+                continue
+            
+            # n_races が極端に大きい値がないかチェック
+            max_val = df[n_col].max()
+            p99 = df[n_col].quantile(0.99)
+            
+            if max_val > p99 * 5:
+                logger.warning(
+                    f"[A3警告] {n_col} の最大値({max_val:.0f})が99パーセンタイル({p99:.0f})の5倍以上。"
+                    f"unknownカテゴリへの集約が疑われます。"
+                )
 
     def _aggregate_basic(self, df: pd.DataFrame, col: str) -> pd.DataFrame:
         """

@@ -8,6 +8,8 @@ import json
 import argparse
 from datetime import datetime
 from scipy.special import softmax
+from sklearn.metrics import brier_score_loss, log_loss
+from sklearn.calibration import calibration_curve
 
 from sqlalchemy import create_engine, text
 
@@ -177,8 +179,15 @@ def main():
     logger.info("勝率と期待値を計算中...")
     # レースごとにSoftmax
     test_df['prob'] = test_df.groupby('race_id')['score'].transform(lambda x: softmax(x))
+    # [v7] Clip probability to avoid log(0) in metrics
+    test_df['prob'] = np.clip(test_df['prob'], 1e-15, 1.0 - 1e-15)
+    
     # 期待値 = 確率 * オッズ (欠損は0)
     test_df['expected_value'] = test_df['prob'] * test_df['odds'].fillna(0)
+
+    # --- [v7] Probability Metrics ---
+    prob_metrics = calculate_probability_metrics(test_df)
+    # ------------------------------
 
     output_dir = os.path.join(os.path.dirname(__file__), '../../experiments')
     os.makedirs(output_dir, exist_ok=True)
@@ -207,7 +216,8 @@ def main():
         'model': args.model,
         'version': args.version,
         'strategies': {},
-        'roi_curve': []
+        'roi_curve': [],
+        'probability_metrics': prob_metrics
     }
 
     # Strategy 1: レース内で最も期待値が高い馬を1点買い
@@ -715,6 +725,51 @@ def load_race_info(years=[2024]):
     except Exception as e:
         logger.error(f"レース情報ロードエラー: {e}")
         return pd.DataFrame()
+
+def calculate_probability_metrics(df):
+    """
+    [v7] 確率予測の精度評価指標を計算する
+    """
+    logger.info("--- Probability Evaluation ---")
+    
+    # Target: rank==1 (binary)
+    if 'rank' not in df.columns or 'prob' not in df.columns:
+        logger.warning("rank or prob column missing. Skipping probability metrics.")
+        return {}
+        
+    y_true = (df['rank'] == 1).astype(int)
+    y_prob = df['prob']
+    
+    # Check if prob is valid
+    if y_prob.isnull().any():
+        logger.warning("Probability contains NaNs. Filling with 0.")
+        y_prob = y_prob.fillna(0)
+
+    # Metrics
+    try:
+        bs = brier_score_loss(y_true, y_prob)
+        ll = log_loss(y_true, y_prob)
+        
+        logger.info(f"  Brier Score Loss: {bs:.5f}")
+        logger.info(f"  Log Loss: {ll:.5f}")
+        
+        # Calibration Curve
+        prob_true, prob_pred = calibration_curve(y_true, y_prob, n_bins=10)
+        logger.info(f"  Calibration Curve (Bins=10):")
+        for true, pred in zip(prob_true, prob_pred):
+            logger.info(f"    Pred: {pred:.4f} -> Actual: {true:.4f}")
+            
+        return {
+            'brier_score': bs, 
+            'log_loss': ll,
+            'calibration_curve': {
+                'prob_true': prob_true.tolist(),
+                'prob_pred': prob_pred.tolist()
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error calculating probability metrics: {e}")
+        return {}
 
 if __name__ == "__main__":
     main()

@@ -1,3 +1,14 @@
+"""
+run_preprocessing.py - 前処理パイプライン実行スクリプト
+
+[変更履歴]
+- 2025-12-15 v11 Extended: 
+  - Phase 0: --history_start_date, --start_date 追加（データ期間制約）
+  - A4対応: --use_realtime_features フラグ
+  - A6対応: --no_embedding_features フラグ
+  - データ品質バリデーション追加
+"""
+
 import sys
 import os
 import logging
@@ -17,6 +28,7 @@ from preprocessing.disadvantage_detector import DisadvantageDetector
 from preprocessing.relative_features import RelativeFeatureEngineer
 from preprocessing.experience_features import ExperienceFeatureEngineer
 from preprocessing.race_level_features import RaceLevelFeatureEngineer
+from preprocessing.validation_utils import validate_data_quality
 
 # ロガー設定
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -25,11 +37,32 @@ logger = logging.getLogger(__name__)
 import argparse
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description='競馬AI前処理パイプライン (v11 Extended)')
     parser.add_argument('--resume', action='store_true', help='前回のStep 5完了時点から再開します')
-    parser.add_argument('--jra_only', action='store_true', help='JRA会場のみにフィルタリングします (Model v5用)')
-    parser.add_argument('--suffix', type=str, default='', help='出力ファイル名のサフィックス (例: _v8)')
+    parser.add_argument('--jra_only', action='store_true', help='JRA会場のみにフィルタリングします')
+    parser.add_argument('--suffix', type=str, default='', help='出力ファイル名のサフィックス (例: _v11)')
+    
+    # [v11 Extended Phase 0] データ期間制約
+    parser.add_argument('--history_start_date', type=str, default='2014-01-01',
+                       help='生データ読み込み開始日（ウォームアップ用）')
+    parser.add_argument('--start_date', type=str, default='2014-01-01',
+                       help='学習対象の開始日（これより前の行は除外）')
+    
+    # [v11 Extended] 特徴量フラグ（統一名）
+    parser.add_argument('--use_realtime_features', action='store_true', 
+                       help='trend_*特徴量を使用（逐次更新モード）')
+    parser.add_argument('--no_embedding_features', action='store_false',
+                       dest='use_embedding_features', default=True,
+                       help='embedding特徴量を無効化')
     args = parser.parse_args()
+    
+    logger.info("=" * 60)
+    logger.info("競馬AI 前処理パイプライン v11 Extended")
+    logger.info(f"  history_start_date: {args.history_start_date}")
+    logger.info(f"  start_date: {args.start_date}")
+    logger.info(f"  use_realtime_features: {args.use_realtime_features}")
+    logger.info(f"  use_embedding_features: {args.use_embedding_features}")
+    logger.info("=" * 60)
 
     try:
         checkpoint_dir = os.path.join(os.path.dirname(__file__), '../../data/interim')
@@ -55,9 +88,13 @@ def main():
             logger.info("Step 1-5: スキップ (完了済み)")
         else:
             # 1. データのロード
-            logger.info(f"Step 1: データのロード (JRA-VAN) [JRA Only Mode: {args.jra_only}]")
+            logger.info(f"Step 1: データのロード (JRA-VAN)")
+            logger.info(f"  history_start_date={args.history_start_date}, jra_only={args.jra_only}")
             loader = JraVanDataLoader()
-            df = loader.load(jra_only=args.jra_only) # 引数を渡す
+            df = loader.load(
+                jra_only=args.jra_only,
+                history_start_date=args.history_start_date
+            )
  
             # 2. データクレンジング
             logger.info("Step 2: データクレンジング")
@@ -106,18 +143,22 @@ def main():
         df = relative_engineer.add_features(df)
 
         # 6.7. リアルタイム特徴量生成 (v9新規 - 当日の傾向)
+        # [v11 Extended] use_realtime_featuresフラグで運用モード切替
         from preprocessing.realtime_features import RealTimeFeatureEngineer
-        logger.info("Step 6.7: リアルタイム特徴量生成 (当日の傾向)")
-        # JRAのみの場合、リアルタイム特徴量は前レースの結果を使うため
-        # 同じ会場の過去レース数が減るわけではない（同日同会場なので影響なし）
+        mode_str = "逐次更新モード" if args.use_realtime_features else "事前予測モード"
+        logger.info(f"Step 6.7: リアルタイム特徴量生成 [{mode_str}]")
         realtime_engineer = RealTimeFeatureEngineer()
-        df = realtime_engineer.add_features(df)
+        df = realtime_engineer.add_features(df, use_realtime=args.use_realtime_features)
 
         # 6.8. Deep Learning Embedding Features (Phase 12)
-        from preprocessing.embedding_features import EmbeddingFeatureEngineer
-        logger.info("Step 6.8: Embedding特徴量生成 (Entity Embeddings)")
-        emb_engineer = EmbeddingFeatureEngineer()
-        df = emb_engineer.add_features(df)
+        # [v11 Extended] --no_embedding_featuresフラグでスキップ可能
+        if args.use_embedding_features:
+            from preprocessing.embedding_features import EmbeddingFeatureEngineer
+            logger.info("Step 6.8: Embedding特徴量生成 (Entity Embeddings)")
+            emb_engineer = EmbeddingFeatureEngineer()
+            df = emb_engineer.add_features(df)
+        else:
+            logger.info("Step 6.8: Embedding特徴量生成 [スキップ: --no_embedding_features指定]")
 
         # 6.9. 経験特徴量生成 (v7新規 - コース経験・距離経験・騎手乗り替わり)
         logger.info("Step 6.9: 経験特徴量生成 (コース経験・距離経験・初条件フラグ)")
@@ -128,6 +169,29 @@ def main():
         logger.info("Step 6.10: レースレベル特徴量生成 (メンバー強度・パフォーマンス価値)")
         race_level_engineer = RaceLevelFeatureEngineer()
         df = race_level_engineer.add_features(df)
+
+        # 6.11. [v11 Extended N3] 対戦レベル特徴量生成
+        from preprocessing.opposition_features import OppositionFeatureEngineer
+        logger.info("Step 6.11: 対戦レベル特徴量生成 (opponent_strength, relative_strength)")
+        opp_engineer = OppositionFeatureEngineer()
+        df = opp_engineer.add_features(df)
+
+        # ================================================================
+        # [v11 Extended Phase 0] ウォームアップ期間の除外
+        # ================================================================
+        # history_start_date < start_date の場合、ウォームアップ期間のデータを除外
+        if args.start_date:
+            start_date_pd = pd.to_datetime(args.start_date)
+            before_count = len(df)
+            df = df[df['date'] >= start_date_pd].copy()
+            after_count = len(df)
+            warmup_excluded = before_count - after_count
+            
+            if warmup_excluded > 0:
+                logger.info(f"[Phase 0] ウォームアップ期間除外: {warmup_excluded:,}件 (学習対象: {after_count:,}件)")
+            
+            logger.info(f"学習対象期間: {df['date'].min()} ~ {df['date'].max()}")
+            logger.info(f"レース数: {df['race_id'].nunique():,}件, レコード数: {len(df):,}件")
 
         # 7. データの保存 (全データ)
         output_dir = os.path.join(os.path.dirname(__file__), '../../data/processed')
@@ -148,12 +212,30 @@ def main():
         logger.info(f"Step 9: 学習用データセットの保存 ({dataset_path})")
         pd.to_pickle(datasets, dataset_path)
 
+        # [v11] データ品質バリデーション
+        logger.info("Step 10: データ品質バリデーション")
+        validation_result = validate_data_quality(df, stage="Final")
+        if validation_result['warnings']:
+            logger.warning(f"品質チェックで {len(validation_result['warnings'])} 件の警告があります")
+
+        # [v11 Extended V6] リーク検査
+        from preprocessing.validation_utils import check_feature_leak
+        logger.info("Step 10b: リーク検査 (FORBIDDEN_COLUMNS)")
+        feature_cols = list(datasets['train']['X'].columns)
+        check_feature_leak(feature_cols, raise_error=False)  # 警告のみ（エラーにしない）
+
+        logger.info("=" * 60)
         logger.info("前処理パイプラインが正常に完了しました。")
+        logger.info(f"  出力ファイル: {output_path}")
+        logger.info(f"  データセット: {dataset_path}")
+        logger.info(f"  レコード数: {len(df)}")
+        logger.info(f"  特徴量数: {len(datasets['train']['X'].columns)}")
+        logger.info("=" * 60)
 
     except Exception as e:
         logger.error(f"前処理パイプライン中にエラーが発生しました: {e}")
-        # DB接続エラーなどで失敗しても、動作確認用にモックデータでテストするオプションがあれば良いが、
-        # ここでは本番用スクリプトとしてエラーで終了させる。
+        import traceback
+        traceback.print_exc()
 
 if __name__ == "__main__":
     main()

@@ -1,0 +1,46 @@
+generated_at: '2025-12-15T16:32:45.446876'
+metrics:
+  max_drawdown: !!python/object/apply:numpy.core.multiarray.scalar
+  - &id001 !!python/object/apply:numpy.dtype
+    args:
+    - f8
+    - false
+    - true
+    state: !!python/tuple
+    - 3
+    - <
+    - null
+    - null
+    - null
+    - -1
+    - -1
+    - 0
+  - !!binary |
+    MzP/6xGutUA=
+  mean_roi: !!python/object/apply:numpy.core.multiarray.scalar
+  - *id001
+  - !!binary |
+    5slpLpmyUUA=
+  min_fold_roi: !!python/object/apply:numpy.core.multiarray.scalar
+  - *id001
+  - !!binary |
+    ZCpW28btT0A=
+  roi_slippage_90: !!python/object/apply:numpy.core.multiarray.scalar
+  - *id001
+  - !!binary |
+    J9BrWN5LT0A=
+  roi_slippage_95: !!python/object/apply:numpy.core.multiarray.scalar
+  - *id001
+  - !!binary |
+    iZ3Qv/a2UEA=
+  std_roi: !!python/object/apply:numpy.core.multiarray.scalar
+  - *id001
+  - !!binary |
+    EtZ4+5XjE0A=
+parameters:
+  bankroll: 100000
+  ev_threshold: 0.0
+  kelly_fraction: 0.2
+  max_bet_pct: 0.05
+  max_odds: 50
+strategy_name: ev0.00_maxO50_k0.20

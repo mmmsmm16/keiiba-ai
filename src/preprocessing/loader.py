@@ -57,14 +57,20 @@ class JraVanDataLoader:
             logger.warning(f"テーブル存在確認中にエラーが発生しました: {e}. デフォルトの {candidates[0]} を使用します。")
             return candidates[0]
 
-    def load(self, limit: int = None, jra_only: bool = False) -> pd.DataFrame:
+    def load(self, limit: int = None, jra_only: bool = False, 
+             history_start_date: str = "2014-01-01") -> pd.DataFrame:
         """
         JRA-VANデータをロードし、学習用フォーマットに変換します。
+        
+        [v11 Extended] history_start_date でデータ読み込み期間を制限
         
         Args:
             limit (int, optional): ロードする件数の上限
             jra_only (bool, optional): JRA (01-10) のレースのみに限定するかどうか
+            history_start_date (str, optional): この日付以降のデータのみを読み込む (YYYY-MM-DD)
         """
+        logger.info(f"データ読み込み開始: history_start_date={history_start_date}, jra_only={jra_only}")
+        
         # テーブル名の解決 (jvd_プレフィックスの有無、短縮名に対応)
         tbl_race = self._get_table_name(['jvd_race_shosai', 'race_shosai', 'jvd_ra'])
         tbl_seiseki = self._get_table_name(['jvd_seiseki', 'seiseki', 'jvd_se'])
@@ -107,6 +113,14 @@ class JraVanDataLoader:
 
         # フィルタリング条件の構築
         where_clauses = []
+        
+        # [v11 Extended] データ読み込み期間の制限
+        if history_start_date:
+            # 日付フィルタ: kaisai_nen || kaisai_tsukihi >= history_start_date
+            # 例: '2014-01-01' -> '20140101'
+            date_filter = history_start_date.replace('-', '')
+            where_clauses.append(f"CONCAT(r.kaisai_nen, r.kaisai_tsukihi) >= '{date_filter}'")
+        
         if jra_only:
             where_clauses.append("r.keibajo_code BETWEEN '01' AND '10'")
         
@@ -277,6 +291,14 @@ class JraVanDataLoader:
             # 馬場状態マッピング
             state_map = {1: '良', 2: '稍重', 3: '重', 4: '不良'}
             df['state'] = pd.to_numeric(df['state'], errors='coerce').map(state_map).fillna('Unknown')
+
+            # [v11 Extended] 期間ログ出力
+            if 'date' in df.columns and len(df) > 0:
+                date_min = df['date'].min()
+                date_max = df['date'].max()
+                n_races = df['race_id'].nunique()
+                logger.info(f"データ読み込み期間: {date_min} ~ {date_max}")
+                logger.info(f"レース数: {n_races:,}件, レコード数: {len(df):,}件")
 
             logger.info(f"前処理完了: {len(df)} 件")
             return df

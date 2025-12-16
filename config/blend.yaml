@@ -1,0 +1,5 @@
+blend:
+  best_lambda: 0.0
+  calibration_year: 2024
+  method: market_model_blend
+  prob_col: prob

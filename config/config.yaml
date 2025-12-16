@@ -10,3 +10,15 @@ pipeline:
   update_data: true
   retrain_model: true
   valid_year: 2025
+
+# [v11 Extended] 前処理設定
+preprocessing:
+  # データ期間
+  history_start_date: "2014-01-01"  # 生データ読み込み開始日（ウォームアップ用）
+  start_date: "2014-01-01"          # 学習対象の開始日（これより前は除外）
+  
+  # 特徴量フラグ
+  use_realtime_features: false      # trend_*を計算するか（デフォルト: 事前予測モード）
+  use_embedding_features: true      # embeddingを使用するか
+
+
