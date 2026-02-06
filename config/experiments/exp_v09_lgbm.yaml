@@ -1,0 +1,35 @@
+experiment_name: "v09_lgbm_pure"
+description: "純粋能力モデル (LightGBM): オッズなし、調教・斤量追加"
+features:
+  - "base_attributes"
+  - "history_stats"
+  - "jockey_stats"
+  - "pace_stats"
+  - "bloodline_stats"
+  - "training_stats"
+  - "burden_stats"
+
+dataset:
+  train_start_date: "2018-01-01"
+  valid_year: 2024
+  test_end_date: "2025-12-31"
+  jra_only: true
+  drop_market_data: true
+  categorical_features:
+    - "jockey_id"
+    - "trainer_id"
+    - "sire_id"
+
+model_params:
+  model_type: "lightgbm"
+  objective: "lambdarank"
+  metric: "ndcg"
+  eval_at: [5]
+  learning_rate: 0.05
+  num_leaves: 31
+  feature_fraction: 0.8
+  bagging_fraction: 0.8
+  bagging_freq: 5
+  verbosity: -1
+  n_estimators: 1000
+  early_stopping_rounds: 50

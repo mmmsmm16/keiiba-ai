@@ -1,0 +1,141 @@
+
+experiment_name: "exp_t2_refined_v3_2025"
+model_save_path: "models/experiments/exp_t2_refined_v3_2025"
+
+dataset:
+  train_start_date: "2014-01-01"
+  test_end_date: "2025-12-31" 
+  valid_year: 2025             # Train: <2025 (incl 2024). Valid: 2025.
+  # Note: Training will use [2014, 2024) excluding valid_year usually, or user splits manually.
+  # The loader typically splits by year. If valid_year=2024, train is 2014-2023.
+  # WAIT. The user wants train UP TO 2024.
+  # So Validation should be 2024 (Last year) or we train 2014-2024 and valid on 2024?
+  # Standard LightGBM training script splits data: Train = (!= valid_year). 
+  # So if I set valid_year=2024, Train is 2014,15...23.
+  # That means 2024 is NOT in training set for the model used in 2025?
+  # That contradicts "Train with data up to 2024".
+  # Usually Walk-Forward means: Train [2014-2024], Predict [2025].
+  # To do that, we need a validation set inside [2014-2024] to stop early.
+  # Let's set valid_year: 2024 for Early Stopping, BUT then retrain on full 2014-2024?
+  # Or just accept that 2024 is validation.
+  # LightGBM usually uses valid set for early stopping.
+  # If we want 2024 in training, we need valid=2023?
+  # No, then 2024 is in train.
+  # Let's set valid_year=2024 for now. That ensures the model is TUNED for 2024 patterns (best iter).
+  # Actually, if 2024 is Valid, it is NOT used for gradient updates.
+  # Ideally we want 2024 in Train.
+  # But we don't have 2025 data for validation.
+  # So we have to use 2024 as validation (Proxy for future).
+  # Just like for 2024 sim, we used 2023 for validation (and 2014-2022 for train).
+  # So this Methodology is consistent.
+  
+  jra_only: true
+  drop_market_data: true
+  binary_target: "win"
+  description: "T2 Refined v3 (2025 Prediction Version - Trained on history)"
+
+  exclude_features:
+    - horse_id
+    - mare_id
+    - sire_id
+    - jockey_id
+    - trainer_id
+    - jockey_n_races_180d
+    - jockey_win_rate_180d
+    - jockey_top3_rate_180d
+    - trainer_n_races_180d
+    - trainer_win_rate_180d
+    - trainer_top3_rate_180d
+
+  categorical_features:
+    - sex
+    - grade_code
+    - kyoso_joken_code
+    - surface
+    - venue
+    - prev_grade
+    - dist_change_category
+    - interval_category
+    - attr_rot
+    - attr_str
+    - attr_slp
+    - interval_type_code
+    - lag1_grade
+    - lag2_grade
+    - lag3_grade
+    - lag4_grade
+    - lag5_grade
+    - weather_code
+    - going_code
+    - lag1_going_code
+    - lag1_surface
+    - is_handicap_race_guess
+
+features:
+  - base_attributes
+  - history_stats
+  - jockey_stats
+  - pace_stats
+  - bloodline_stats
+  - burden_stats
+  - changes_stats
+  - aptitude_stats
+  - speed_index_stats
+  - relative_stats
+  - jockey_trainer_stats
+  - temporal_jockey_stats
+  - temporal_trainer_stats
+  - class_stats
+  - segment_stats
+  - risk_stats
+  - course_aptitude
+  - extended_aptitude
+  - runstyle_fit
+  - jockey_trainer_compatibility
+  - interval_aptitude
+  - physique_training
+  - jockey_strategy
+  - race_dynamics
+  - sire_aptitude
+  - pace_pressure_stats
+  - race_attributes
+  - race_conditions
+  - race_structure
+  - impost_features
+  - track_bias
+  - rating_elo
+  - form_trend
+  - deep_lag_extended
+  - lap_fit
+  - stable_form
+  - horse_events
+  - aptitude_smoothing
+  - relative_expansion
+  - frame_bias
+  - weight_pattern
+  - rest_pattern
+  - corner_dynamics
+  - head_to_head
+  - training_detail
+  - bloodline_detail
+  - strategy_pattern
+  - horse_gear
+
+model_params:
+  model_type: "lightgbm"
+  objective: "binary"
+  metric: "auc"
+  learning_rate: 0.05
+  num_leaves: 63
+  feature_fraction: 0.8
+  bagging_fraction: 0.8
+  bagging_freq: 5
+  early_stopping_rounds: 100
+  n_estimators: 3000
+  verbose: -1
+  seed: 42
+
+calibration:
+  enabled: true
+  method: "isotonic"
+  n_folds: 5

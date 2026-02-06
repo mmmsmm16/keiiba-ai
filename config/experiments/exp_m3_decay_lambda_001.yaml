@@ -1,0 +1,58 @@
+experiment_name: "m3_top3_decay_001"
+model_save_path: "models/experiments/m3_top3_decay_001"
+
+dataset:
+  train_start_date: "2015-01-01"
+  test_end_date: "2024-12-31"
+  valid_year: 2024
+  jra_only: true
+  drop_market_data: true
+  binary_target: "top3"
+  description: "M3: Exponential Decay (lambda=0.001)"
+  categorical_features:
+    - jockey_id
+    - trainer_id
+    - sire_id
+    - horse_id
+    - sex
+    - grade_code
+    - kyoso_joken_code
+    - surface
+    - venue
+    - prev_grade
+    - dist_change_category
+    - interval_category
+
+features:
+  - base_attributes
+  - history_stats
+  - jockey_stats
+  - pace_stats
+  - bloodline_stats
+  - training_stats
+  - burden_stats
+  - changes_stats
+  - aptitude_stats
+  - speed_index_stats
+  - pace_pressure_stats
+  - relative_stats
+  - jockey_trainer_stats
+
+model_params:
+  model_type: "lightgbm"
+  objective: "binary"
+  metric: "auc"
+  learning_rate: 0.05
+  num_leaves: 31
+  feature_fraction: 0.8
+  bagging_fraction: 0.8
+  bagging_freq: 5
+  early_stopping_rounds: 100
+  n_estimators: 2000
+  verbose: -1
+
+sample_weight:
+  enabled: true
+  strategy: "exponential"
+  lambda: 0.001
+  normalize: true

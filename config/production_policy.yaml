@@ -1,0 +1,29 @@
+# Production Policy Configuration
+# Frozen Date: 2025-12-17
+# Phase: 13 (Production Integration)
+
+model:
+  path: "models/production/model.pkl"
+  type: "lightgbm_joblib"
+  bet_types:
+    - win
+
+betting:
+  strategy: "fractional_kelly"
+  parameters:
+    min_ev_threshold: 1.0
+    base_stake: 100000
+    min_bet_amount: 100
+
+safety:  # Budgeting
+  initial_bankroll: 100000    # 初期資金 (100,000円)
+  max_budget_per_race: 3000   # 1レースあたりの最大投資額 (3,000円)
+  kelly_fraction: 0.05         # ケリー基準の適用割合
+  max_daily_budget: 100000 # Safety Cap
+  max_bets_per_race: 50 # Avoid spamming
+  min_time_to_race: 2 # Minutes
+  allowed_tracks: ["JRA"] # Filter NAR if needed
+
+system:
+  pipeline_version: "v1.0.0"
+  logging_level: "INFO"

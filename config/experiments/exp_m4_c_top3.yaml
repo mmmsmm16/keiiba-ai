@@ -1,0 +1,51 @@
+
+experiment_name: "m4_c_top3_weak_segments"
+model_type: "lightgbm"
+objective: "binary"
+
+# Features
+features:
+  - base_attributes
+  - history_stats
+  - jockey_stats
+  - temporal_jockey_stats # M4-A
+  - temporal_trainer_stats # M4-A
+  - class_stats          # M4-B
+  - segment_stats        # M4-C (New)
+  - pace_stats
+  - bloodline_stats
+  - odds_features
+  - training_stats
+  - burden_stats
+  - changes_stats
+  - aptitude_stats
+  - speed_index_stats
+  - pace_pressure_stats
+  - relative_stats
+
+dataset:
+  train_start_date: "2015-01-01"
+  train_end_date: "2023-12-31" # Valid=2024
+  valid_year: 2024
+  drop_market_data: true
+  binary_target: "top3"
+
+sample_weight:
+  enabled: true
+  strategy: "piecewise"
+  normalize: true
+  year_weights:
+    0: 1.0   # 2023
+    1: 0.7   # 2022
+    2: 0.5   # 2021
+    "default": 0.3
+
+model_params:
+  # Standard LightGBM params
+  learning_rate: 0.05
+  num_boost_round: 1000
+  early_stopping_rounds: 50
+  max_depth: 7
+  num_leaves: 31
+  colsample_bytree: 0.7
+  subsample: 0.8

@@ -1,0 +1,51 @@
+experiment_name: v11_lgbm_enhanced
+model_save_path: models/experiments/v11_lgbm_enhanced
+
+dataset:
+  train_start_date: '2015-01-01'
+  test_end_date: '2025-12-31'
+  jra_only: true
+  drop_market_data: true # Pure ability model
+  valid_year: 2024
+  
+  # Categorical features for LGBM
+  categorical_features:
+    - jockey_id
+    - trainer_id
+    - sire_id
+    - horse_id
+    - sex
+    - grade_code
+    - kyoso_joken_code
+    - surface
+    - venue
+    - prev_grade
+    - dist_change_category
+    - interval_category
+
+features:
+  - base_attributes
+  - history_stats
+  - jockey_stats
+  - pace_stats
+  - bloodline_stats
+  - training_stats
+  - burden_stats
+  - changes_stats
+  - aptitude_stats
+  - speed_index_stats
+
+model_params:
+  model_type: lightgbm
+  objective: lambdarank
+  metric: ndcg
+  ndcg_eval_at: [5, 10]
+  boosting_type: gbdt
+  n_estimators: 10000
+  learning_rate: 0.05
+  num_leaves: 31
+  max_depth: -1
+  subsample: 0.8
+  colsample_bytree: 0.8
+  early_stopping_rounds: 100
+  verbose: -1

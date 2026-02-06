@@ -1,0 +1,14 @@
+
+experiment_name: "exp_bad_fail_top3_mismatch"
+experiment:
+  description: "Bad config"
+model_params:
+  objective: "binary"
+dataset:
+  train_start_date: "2015-01-01"
+  train_end_date: "2023-12-31"
+  valid_year: 2024
+  target_col: "target_top2" # MISMATCH: Name has Top3, Target is Top2
+  binary_target: "top2"       # Mismatch
+sample_weight:
+    enabled: false

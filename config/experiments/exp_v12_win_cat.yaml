@@ -1,0 +1,48 @@
+experiment_name: "v12_win_cat"
+model_save_path: "models/experiments/v12_win_cat"
+
+dataset:
+  train_start_date: "2015-01-01"
+  test_end_date: "2025-12-31"
+  valid_year: 2024
+  jra_only: true
+  drop_market_data: true
+  binary_target: "win" # Rank=1 only
+  description: "v12 Win Specialist (CatBoost, Balanced weights)"
+  categorical_features:
+    - jockey_id
+    - trainer_id
+    - sire_id
+    - sex
+    - age
+    - grade_code
+    - kyoso_joken_code
+    - surface
+    - venue
+    - prev_grade
+    - horse_id
+    - dist_change_category
+    - interval_category
+
+features:
+  - base_attributes
+  - history_stats
+  - jockey_stats
+  - pace_stats
+  - bloodline_stats
+  - training_stats
+  - burden_stats
+  - changes_stats
+  - aptitude_stats
+  - speed_index_stats
+
+model_params:
+  model_type: "catboost"
+  objective: "binary" # Will be mapped to Logloss in run_experiment.py
+  eval_metric: "AUC"
+  auto_class_weights: "Balanced"
+  depth: 8
+  learning_rate: 0.05
+  l2_leaf_reg: 3.0
+  early_stopping_rounds: 100
+  n_estimators: 10000

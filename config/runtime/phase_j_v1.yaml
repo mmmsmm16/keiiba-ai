@@ -1,0 +1,64 @@
+# Phase J Runtime Configuration (v1.0)
+system:
+  cron_interval_sec: 60
+  lead_time_minutes: 10
+  timezone: "Asia/Tokyo"
+  db_connection: "postgresql://postgres:postgres@db:5432/pckeiba"
+  discord_webhook_url_env: "DISCORD_WEBHOOK_URL"
+  state_db_path: "data/runtime_state.sqlite"
+
+strategies:
+  # 1. Core (Stable)
+  win_core:
+    enabled: true
+    thresholds:
+      p1: 0.60
+      margin: 0.10
+      ev: 2.6
+    bet_type: "tansho"
+    amount_fixed: 200 # Fixed amount
+    priority: 3
+
+  # 2. Sub-Core Balanced (Frequency/Profit)
+  umaren_balanced:
+    enabled: true
+    thresholds:
+      ev: 4.0
+      p_pair: 0.015 # 1.5%
+    max_pairs: 3
+    bet_type: "umaren"
+    amount_fixed: 100 # Per pair (e.g., 3 * 100 = 300)
+    budget_cap_race: 600
+    priority: 2
+
+  # 3. Sub-Core High Return (Jackpot)
+  umaren_high:
+    enabled: true
+    thresholds:
+      ev: 10.0
+    max_pairs: 1
+    bet_type: "umaren"
+    amount_fixed: 100
+    priority: 1 # Highest Priority
+
+  # 4. Frequency (Experience)
+  wide_freq:
+    enabled: true
+    thresholds:
+      p1: 0.40
+      margin: 0.10
+    bet_type: "wide"
+    rule_type: "W1" # Top1-Top2
+    amount_fixed: 100
+    priority: 4 # Lowest
+
+budgets:
+  race_cap_total: 2000 # Max yen per race (relaxed)
+  day_cap_total: 10000 # Max yen per day
+  stop_loss_files: "data/stop_loss_state.json"
+
+prediction:
+  model_version: "v13_e1"
+  top_k: 5
+  umaren_k: 5 # Use Top5 horses
+  seed: 42

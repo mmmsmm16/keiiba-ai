@@ -1,0 +1,80 @@
+name: m4_a_top3_temporal
+base_config: config/base_config.yaml
+
+experiment:
+  description: "Phase M4-A: Top3 Model with Temporal & Relative Stats (Jockey/Trainer)"
+  output_dir: "models/experiments/m4_a_top3_temporal"
+
+model_params:
+  learning_rate: 0.05
+  num_leaves: 31
+  max_depth: 7
+  min_data_in_leaf: 50
+  bagging_fraction: 0.8
+  feature_fraction: 0.8
+  lambda_l1: 0.2
+  lambda_l2: 0.2
+  objective: "binary"
+  metric: ["auc", "binary_logloss"]
+
+dataset:
+  target_col: "target_top3" # Top3 target (rank <= 3)
+  train_start_date: "2024-01-01"
+  train_end_date: "2023-12-31" 
+  valid_year: 2024
+  drop_market_data: true
+  features:
+    - "base_attributes"
+    - "history_stats"
+    - "jockey_stats"
+    - "pace_stats"
+    - "bloodline_stats"
+    - "training_stats"
+    - "burden_stats"
+    - "changes_stats"
+    - "aptitude_stats"
+    - "speed_index_stats"
+    - "pace_pressure_stats"
+    - "relative_stats"
+    - "jockey_trainer_stats"
+
+# Features
+features:
+  - base_attributes
+  - history_stats
+  - jockey_stats         # Legacy (Keep for avg_rank)
+  - temporal_jockey_stats # New (M4-A)
+  - temporal_trainer_stats # New (M4-A)
+  - pace_stats
+  - bloodline_stats
+  - odds_features
+  - training_stats
+  - burden_stats
+  - changes_stats
+  - aptitude_stats
+  - speed_index_stats
+  - pace_pressure_stats
+  - relative_stats
+
+sample_weight:
+  enabled: true
+  strategy: "piecewise"
+  normalize: true
+  # Relative Year Weights (0=Last Year=2023, 1=2022...)
+  # Since train_end=2023, 2023 is delta=0.
+  # We want 2024(Test) -> NA (Not in train).
+  # We want 2023(Train Last) -> 1.0
+  # 2022 -> 0.7
+  # 2021 -> 0.5
+  # Older -> 0.3
+  year_weights:
+    0: 1.0
+    1: 0.7
+    2: 0.5
+    "default": 0.3
+
+post_processing:
+  calibration:
+    enabled: true
+    method: "isotonic"
+    n_bins: 10

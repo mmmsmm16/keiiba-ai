@@ -49,9 +49,17 @@ class PayoutLoader:
             SELECT 
                 CONCAT(kaisai_nen, keibajo_code, kaisai_kai, kaisai_nichime, race_bango) AS race_id,
                 haraimodoshi_tansho_1a, haraimodoshi_tansho_1b,
+                haraimodoshi_fukusho_1a, haraimodoshi_fukusho_1b,
+                haraimodoshi_fukusho_2a, haraimodoshi_fukusho_2b,
+                haraimodoshi_fukusho_3a, haraimodoshi_fukusho_3b,
                 haraimodoshi_umaren_1a, haraimodoshi_umaren_1b,
                 haraimodoshi_umaren_2a, haraimodoshi_umaren_2b,
                 haraimodoshi_umaren_3a, haraimodoshi_umaren_3b,
+                haraimodoshi_wide_1a, haraimodoshi_wide_1b,
+                haraimodoshi_wide_2a, haraimodoshi_wide_2b,
+                haraimodoshi_wide_3a, haraimodoshi_wide_3b,
+                haraimodoshi_wide_4a, haraimodoshi_wide_4b,
+                haraimodoshi_wide_5a, haraimodoshi_wide_5b,
                 haraimodoshi_sanrenpuku_1a, haraimodoshi_sanrenpuku_1b,
                 haraimodoshi_sanrenpuku_2a, haraimodoshi_sanrenpuku_2b,
                 haraimodoshi_sanrenpuku_3a, haraimodoshi_sanrenpuku_3b,
@@ -96,7 +104,10 @@ class PayoutLoader:
             if rid not in payout_map:
                 payout_map[rid] = {
                     'tansho': {},
+                    'fukusho': {},
+                    'fukusho': {},
                     'umaren': {},
+                    'wide': {},
                     'sanrenpuku': {},
                     'sanrentan': {}
                 }
@@ -116,7 +127,9 @@ class PayoutLoader:
             
             # Parse each ticket type
             payout_map[rid]['tansho'].update(parse_pay('haraimodoshi_tansho', 1))
+            payout_map[rid]['fukusho'].update(parse_pay('haraimodoshi_fukusho', 3))
             payout_map[rid]['umaren'].update(parse_pay('haraimodoshi_umaren', 3))
+            payout_map[rid]['wide'].update(parse_pay('haraimodoshi_wide', 5))
             payout_map[rid]['sanrenpuku'].update(parse_pay('haraimodoshi_sanrenpuku', 3))
             payout_map[rid]['sanrentan'].update(parse_pay('haraimodoshi_sanrentan', 6))
         

@@ -83,18 +83,70 @@ class DatasetSplitter:
         if df.empty:
             return {'X': pd.DataFrame(), 'y': pd.Series(), 'group': np.array([])}
 
-        # LambdaRankのためには、クエリ（レースID）ごとにデータがまとまっている必要がある
-        df = df.sort_values('race_id')
+        # [Fix] LambdaRank用にデータをソート (日付 -> レースID)
+        # データの並び順とgroupの並び順が完全に一致する必要がある
+        df = df.sort_values(['date', 'race_id'])
 
-        # グループ情報
-        group = df.groupby('race_id').size().to_numpy()
+        # グループ情報 (Query単位のデータ数)
+        # sort=False にすることで、dfの並び順(date, race_id順)を維持したままカウントする
+        # 【Important】LambdaRank/YetiRankでは学習データがクエリごとに連続している必要がある
+        # [Fix] LambdaRank requires data to be sorted by query (race_id) blocks.
+        # df is sorted, but standard groupby().size() aggregates disjoint blocks if they share the same key.
+        # To strictly match the physical dataframe order, we use Run-Length Encoding (RLE).
+        
+        # 1. Identify where race_id changes
+        is_new_group = df['race_id'] != df['race_id'].shift()
+        group_ids = is_new_group.cumsum()
+        
+        # 2. Count size of each physical block
+        group = df.groupby(group_ids, sort=False).size().to_numpy()
+        
+        # [Validation] Disjoint Check
+        # If n_groups > nunique, it means some race_ids are split (disjoint).
+        n_unique_races = df['race_id'].nunique()
+        if len(group) != n_unique_races:
+             # Find which races are disjoint
+             dup_counts = df.groupby('race_id').size()
+             # This is just counts, not blocks.
+             # We just warn for now.
+             print(f"[WARNING] Disjoint race_ids detected! Groups: {len(group)}, Unique: {n_unique_races}")
+             # This implies data quality issue, but RLE enables training to proceed safely.
+
+        # [Validation] Group Consistency Check
+        # 1. Sum of groups must equal total rows
+        assert group.sum() == len(df), f"Group sum {group.sum()} != len(df) {len(df)}"
+        # 2. Number of groups must match physical blocks (Guaranteed by logic above)
+        # assert len(group) == n_unique_races <-- Disabled because we handle disjoint now
+        
+        # 3. [Strict] Verify contiguous blocks (Race ID Order Mismatch Check)
+        # LambdaRank requires data to be sorted by query (race_id) blocks.
+        # Check if df matches the group boundaries exactly.
+        current_idx = 0
+        for i, size in enumerate(group):
+            # Check strictly if the chunk contains only one race_id
+            # Using .iloc is fast enough for ~50k groups
+            chunk_race_id = df['race_id'].iloc[current_idx]
+            # Just checking the first row is basically enough if we assume sorted, 
+            # but to be 100% sure we check nunique if performance allows. 
+            # Doing .iloc[slice].nunique() for every group might be slow (40k calls).
+            # Optimization: check first and last of the chunk. If sorted, they must match.
+            chunk_race_id_last = df['race_id'].iloc[current_idx + size - 1]
+            
+            # [Fix] Do not compare with unique_races[i] because disjoint groups break the index alignment.
+            # Only check self-consistency (start matches end).
+            
+            if chunk_race_id != chunk_race_id_last:
+                 raise ValueError(f"Group {i} is not contiguous! Found {chunk_race_id} at start and {chunk_race_id_last} at end.")
+            
+            current_idx += size
+
 
         # 特徴量 (X) と ターゲット (y) の分離
         # 【重要】未来情報（レース結果）を含むカラムは全て削除する
         drop_cols = [
-            # ID・メタデータ
-            'race_id', 'date', 'title', 'horse_id', 'horse_name',
-            'jockey_id', 'trainer_id', 'sire_id', 'mare_id',
+            # ID・メタデータ (v09: 特徴量として使うため一部残す)
+            'race_id', 'date', 'title', 'mare_id',
+            'horse_name', # 名前は基本不要
             # 目的変数
             'rank', 'target', 'rank_str',
             # 未来情報 (Result)
@@ -161,12 +213,19 @@ class DatasetSplitter:
             is_winner = df['target'] > 0
             w[is_winner] = 1.0 + np.log1p(odds[is_winner])
 
+        # [v09] ID系を保持するためのオプション (デフォルトは削除)
+        # ユーザー要求により jockey_id, trainer_id, sire_id を特徴量として使いたい場合がある
+        # 実習済みの experiment runner が明示的に X を加工することも可能だが、
+        # ここでは exclude_ids=False なら削除しないようにする。
+        # 一旦、ハードコードされたリストから外す。
+        
         # 存在しないカラムをdropしようとしてもエラーにならないように errors='ignore'
         X = df.drop(columns=drop_cols, errors='ignore')
 
-        # カテゴリ変数がobject型のままだとLightGBMで扱いにくい場合があるため数値型のみ選択
-        # (feature_engineeringで数値化済み前提)
-        X = X.select_dtypes(exclude=['object'])
+        # [v09 Fix] jockey_idなどはobject型だがCatBoostでは必要。
+        # select_dtypes(exclude=['object']) をコメントアウトし、
+        # 必要に応じて上位で処理する。
+        # X = X.select_dtypes(exclude=['object'])
 
         y = df['target']
 

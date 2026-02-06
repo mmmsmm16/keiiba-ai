@@ -1,0 +1,52 @@
+tickets:
+  win:
+    snapshot_sources: [T-60, T-30, T-10, T-5]
+    history_available_years: [2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]
+    ev_mode: price_aware
+    source_table: apd_sokuho_o1
+    col_name: odds_tansho
+
+  place:
+    snapshot_sources: [T-60, T-30, T-10, T-5]
+    history_available_years: [2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]
+    ev_mode: price_aware
+    source_table: apd_sokuho_o1
+    col_name: odds_fukusho
+
+  umaren:
+    snapshot_sources: [T-60, T-30, T-10, T-5]
+    history_available_years: [2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]
+    ev_mode: price_aware
+    source_table: apd_sokuho_o2
+    col_name: odds_umaren
+
+  wakuren:
+    snapshot_sources: [T-60, T-30, T-10, T-5]
+    history_available_years: [2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]
+    ev_mode: price_aware
+    source_table: apd_sokuho_o1
+    col_name: odds_wakuren
+
+  wide:
+    history_available_years: []
+    ev_mode: price_agnostic
+    source_table: null
+    note: "No sokuho data available (o3 empty)"
+
+  umatan:
+    history_available_years: []
+    ev_mode: price_agnostic
+    source_table: null
+    note: "No sokuho data available (o4 empty)"
+
+  sanrenpuku:
+    history_available_years: []
+    ev_mode: price_agnostic
+    source_table: null
+    note: "No sokuho data available (o5 empty)"
+
+  sanrentan:
+    history_available_years: []
+    ev_mode: price_agnostic
+    source_table: null
+    note: "No sokuho data available (o6 empty)"

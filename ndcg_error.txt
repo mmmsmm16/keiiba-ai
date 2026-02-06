@@ -1,0 +1,9 @@
+Error: Computing NDCG is only meaningful when there is more than 1 document. Got 1 instead.
+Traceback (most recent call last):
+  File "/workspace/src/run_experiment.py", line 405, in run_experiment
+    score = ndcg_score([y_t], [y_s], k=5)
+  File "/usr/local/lib/python3.10/dist-packages/sklearn/utils/_param_validation.py", line 213, in wrapper
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/sklearn/metrics/_ranking.py", line 1871, in ndcg_score
+    raise ValueError(
+ValueError: Computing NDCG is only meaningful when there is more than 1 document. Got 1 instead.

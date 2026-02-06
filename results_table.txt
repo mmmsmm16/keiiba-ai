@@ -1,0 +1,8 @@
+| Metric              | Baseline   |   Q1 (ClassStats) |   Diff |
+|:--------------------|:-----------|------------------:|-------:|
+| global_auc          |            |            0.6929 |      0 |
+| global_logloss      |            |            0.2639 |      0 |
+| ndcg_5              |            |            0.4922 |      0 |
+| recall_5            |            |            0.5969 |      0 |
+| class_change_ndcg_5 |            |            0.7078 |      0 |
+| small_field_ndcg_5  |            |            0.5203 |      0 |

@@ -1,0 +1,21 @@
+experiment_name: v07_win_binary
+model_params:
+  objective: binary
+  metric: auc
+  learning_rate: 0.05
+  num_leaves: 31
+  n_estimators: 1000
+  is_unbalance: true
+features:
+  - base_attributes
+  - history_stats
+  - jockey_stats
+  - pace_stats
+  - bloodline_stats
+dataset:
+  train_start_date: '2015-01-01'
+  test_end_date: '2025-12-31'
+  valid_year: 2024
+  jra_only: true
+  binary_target: win
+  description: "Target: Rank=1 (Win Only). Imbalance handled."

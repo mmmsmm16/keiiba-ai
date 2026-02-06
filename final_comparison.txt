@@ -1,0 +1,28 @@
+WARN: Baseline path not found standard locations. Searching...
+Q1 Path: models/experiments/exp_q1_class_stats/eval_2024.json
+Base Path: models/experiments/phase_m_win/eval_2024.json
+=== Q1 RESULTS ===
+{
+  "experiment": "exp_q1_class_stats",
+  "year": 2024,
+  "global": {
+    "auc": 0.6929127648520901,
+    "logloss": 0.2639440423008928
+  },
+  "ranking": {
+    "ndcg@5": 0.4921776190639032,
+    "recall@5": 0.5969107486691585
+  },
+  "segments": {
+    "class_change": {
+      "ndcg@5": 0.7077526403965237,
+      "recall@5": 0.909856571047365
+    },
+    "small_field": {
+      "ndcg@5": 0.5203465252702619,
+      "recall@5": 0.6558430130235832
+    }
+  }
+}
+=== BASELINE RESULTS ===
+null

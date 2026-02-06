@@ -1,0 +1,29 @@
+# NAR Production Policy Configuration
+# Created: 2025-12-18
+# For: 南関東地方競馬 (South Kanto NAR)
+
+model:
+  path: "models/production/nar/v1_south_kanto.txt"
+  type: "lightgbm"
+  bet_types:
+    - win
+    - place
+    - umaren
+
+betting:
+  strategy: "fractional_kelly"
+  parameters:
+    min_ev_threshold: 1.0    # EV ≧ 1.0 のみ購入
+    base_stake: 100000
+    min_bet_amount: 100
+
+safety:
+  initial_bankroll: 100000   # 初期資金 (100,000円)
+  max_budget_per_race: 3000  # 1レースあたりの最大投資額 (3,000円)
+  kelly_fraction: 0.05       # ケリー基準の適用割合
+  max_daily_budget: 30000    # 1日あたりの最大投資額
+  max_bets_per_race: 30      # 1レースあたりの最大購入点数
+
+system:
+  pipeline_version: "v1.0.0"
+  logging_level: "INFO"

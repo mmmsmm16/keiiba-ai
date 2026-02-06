@@ -1,0 +1,51 @@
+# Production Strategy Configuration (Phase J Go-Live)
+# Based on Phase P Findings (2025-12-23)
+# Rule: Win Only, Odds < 20.0
+
+meta:
+  model_version: "v24_m5_final"
+  eval_mode: "adhoc"
+  rule_version: "P_win_ev2_odds20_v1"
+
+prediction:
+  umaren_k: 5 
+
+strategies:
+  # --- Win Strategy (Core) ---
+  win_core:
+    enabled: true
+    bet_type: "win"
+    amount_fixed: 1000 # Unit bet
+    priority: 1
+    thresholds:
+      p1: 0.10
+      ev: 2.0
+      margin: 0.0
+    max_odds: 20.0 # Guardrail (P4)
+
+  # --- Umaren Strategies (Retired) ---
+  umaren_high:
+    enabled: false
+    amount_fixed: 500
+    max_pairs: 1
+    priority: 2
+    thresholds:
+      ev: 10.0
+
+  umaren_balanced:
+    enabled: false
+    amount_fixed: 100
+    max_pairs: 3
+    priority: 3
+    thresholds:
+      p_pair: 0.015
+      ev: 1.5
+
+  # --- Wide Strategy (Retired) ---
+  wide_freq:
+    enabled: false
+    amount_fixed: 100
+    priority: 4
+    thresholds:
+      p1: 0.40
+      margin: 0.10

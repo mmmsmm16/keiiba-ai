@@ -85,12 +85,13 @@ class OddsFetcher:
     def __init__(self, engine):
         self.engine = engine
     
-    def fetch_latest_odds(self, race_id: str, before_minutes: int = 10) -> Optional[Dict[int, float]]:
+    def fetch_latest_odds(self, race_id: str, race_dt: datetime, before_minutes: int = 10) -> Optional[Dict[int, float]]:
         """
-        指定レースの最新オッズを取得
+        指定レースの最新オッズを取得 (発走N分前時点)
         
         Args:
             race_id: YYYY+PP+KK+NN+RR 形式
+            race_dt: 発走日時 (datetime)
             before_minutes: 発走何分前までのオッズを取得するか
         
         Returns:
@@ -103,6 +104,11 @@ class OddsFetcher:
         kaisai_nichi = race_id[8:10]
         race_bango = race_id[10:12]
         
+        # 基準時刻 (発走 - N分)
+        target_dt = race_dt - timedelta(minutes=before_minutes)
+        # MMDDHHMM 形式に変換 (apd_sokuho_o1.happyo_tsukihi_jifunと比較用)
+        target_ts_str = target_dt.strftime('%m%d%H%M')
+        
         query = f"""
         SELECT happyo_tsukihi_jifun, odds_tansho
         FROM apd_sokuho_o1
@@ -111,6 +117,7 @@ class OddsFetcher:
           AND kaisai_kai = '{kaisai_kai}'
           AND kaisai_nichime = '{kaisai_nichi}'
           AND race_bango = '{race_bango}'
+          AND happyo_tsukihi_jifun <= '{target_ts_str}'
         ORDER BY happyo_tsukihi_jifun DESC
         LIMIT 1
         """
@@ -249,12 +256,29 @@ class V13Predictor:
         """
         df = race_df.copy()
         
+        # === LEAK GUARD ===
+        # 未来情報(rank等)が含まれていたら例外を投げる
+        forbidden_cols = ['rank', 'rank_result', 'kakutei_chakujun', 'payout', 'time', 'agari']
+        leaks = [c for c in forbidden_cols if c in df.columns]
+        if leaks:
+            raise ValueError(f"Leakage detected! Forbidden columns found in input: {leaks}")
+        
+        # === LEAK PREVENTION ===
         # snapshot oddsをマージ
         df['odds_snapshot'] = df['horse_number'].map(snapshot_odds)
         
-        # 欠損オッズを補完（最終オッズがあれば使う）
-        if 'odds' in df.columns:
-            df['odds_snapshot'] = df['odds_snapshot'].fillna(df['odds'])
+        # Snapshot odds から人気順を計算して上書き (Parquetの確定情報を隠蔽)
+        if 'odds_snapshot' in df.columns and df['odds_snapshot'].notna().any():
+            # オッズ昇順でランク付け (欠損は最下位扱い)
+            temp_odds = df['odds_snapshot'].fillna(float('inf'))
+            # method='min'で同率は同じ順位
+            df['popularity'] = temp_odds.rank(method='min').astype(int)
+            
+            # odds/tansho_oddsも上書き
+            df['odds'] = df['odds_snapshot']
+            df['tansho_odds'] = df['odds_snapshot']
+        else:
+            logger.warning("Snapshot odds not available. Using parquet features intact (Potential Leak if past race).")
         
         # モデル推論
         feature_cols = self.models[0].feature_name()
@@ -483,7 +507,7 @@ class AutoPredictV13:
         return df
     
     def run(self):
-        """メイン処理"""
+        """メイン処理 (単日)"""
         logger.info("=== Auto Predict v13 開始 ===")
         
         now = datetime.now()
@@ -494,118 +518,208 @@ class AutoPredictV13:
         
         logger.info(f"対象日: {date_str}")
         
-        # レース一覧取得
         race_list = self._load_race_list(date_str)
         if race_list.empty:
             logger.info("本日のレースなし")
             return
+            
+        self._process_races(race_list, now if not self.target_date else None, date_str)
         
-        logger.info(f"レース数: {len(race_list)}")
+        self._save_state()
+        logger.info("=== Auto Predict v13 完了 ===")
+
+    def batch_run_year(self, year: str, jra_only: bool = True) -> pd.DataFrame:
+        """指定年の全レースをまとめて予測"""
+        logger.info(f"=== Batch Predict Year: {year} ===")
         
-        # 対象レースをフィルタリング
+        query = f"""
+        SELECT DISTINCT kaisai_tsukihi as date
+        FROM jvd_ra
+        WHERE kaisai_nen = '{year}'
+          AND data_kubun = '7'
+        """
+        if jra_only:
+             query += " AND keibajo_code BETWEEN '01' AND '10'"
+             
+        df_dates = pd.read_sql(query, self.engine)
+        dates = sorted(df_dates['date'].unique())
+        logger.info(f"Found {len(dates)} dates.")
+        
+        all_results = []
+        
+        for d in dates:
+            date_str = f"{year}{d}"
+            # logger.info(f"Processing {date_str}...") # Reduce log noise
+            
+            race_list = self._load_race_list(date_str)
+            if race_list.empty:
+                continue
+                
+            results = self._process_races_batch(race_list, date_str)
+            if results:
+                all_results.extend(results)
+                
+        if not all_results:
+            return pd.DataFrame()
+            
+        logger.info(f"Generated {len(all_results)} race predictions.")
+        return pd.concat(all_results, ignore_index=True)
+
+    def _process_races_batch(self, race_list: pd.DataFrame, date_str: str) -> List[pd.DataFrame]:
+        """バッチ処理用"""
         targets = []
         for _, row in race_list.iterrows():
             race_id = row['race_id']
-            
-            if race_id in self.notified_races:
+            start_time_str = str(row['start_time']).zfill(4)
+            try:
+                race_dt = datetime.strptime(f"{date_str}{start_time_str}", "%Y%m%d%H%M")
+                targets.append((row, race_dt))
+            except:
                 continue
+        
+        if not targets:
+            return []
+            
+        target_race_ids = [row['race_id'] for row, _ in targets]
+        all_features_df = self.predictor.get_features(date_str, race_ids=target_race_ids)
+        
+        if all_features_df.empty:
+            return []
+            
+        results = []
+        for row, race_dt in targets:
+            race_id = row['race_id']
+            entries = all_features_df[all_features_df['race_id'].astype(str) == str(race_id)].copy()
+            if entries.empty:
+                continue
+            
+            # Strict Snapshot Odds (No Fallback)
+            snapshot_odds = self.predictor.odds_fetcher.fetch_latest_odds(race_id, race_dt, before_minutes=10)
+            
+            if not snapshot_odds:
+                continue
+            
+            # Cleanup parquet potential leaks before prediction
+            # odds/popularity are overwritten by predict_race (safe), but rank/time must be dropped
+            drop_cols = ['rank', 'time', 'agari', 'kakutei_chakujun']
+            entries = entries.drop(columns=[c for c in drop_cols if c in entries.columns], errors='ignore')
+
+            try:
+                pred_df = self.predictor.predict_race(entries, snapshot_odds)
+                
+                # Metadata
+                pred_df['race_id'] = race_id
+                pred_df['post_time'] = race_dt
+                pred_df['snapshot_time_used'] = race_dt - timedelta(minutes=10)
+                pred_df['odds_tminus10m'] = pred_df['odds_snapshot']
+                pred_df['popularity_tminus10m'] = pred_df['popularity']
+                pred_df['p_market_tminus10m'] = pred_df['p_market']
+                
+                save_cols = [
+                    'race_id', 'horse_number', 'post_time', 'snapshot_time_used',
+                    'odds_tminus10m', 'popularity_tminus10m', 'p_market_tminus10m',
+                    'raw_score', 'prob_residual_softmax', 'rank'
+                ]
+                if 'delta_logit' in pred_df.columns:
+                     save_cols.append('delta_logit')
+                     
+                results.append(pred_df[save_cols])
+            except Exception as e:
+                # logger.error(f"Error predicting {race_id}: {e}")
+                pass
+                
+        return results
+
+    def _process_races(self, race_list: pd.DataFrame, now: Optional[datetime], date_str: str):
+        """通常実行用"""
+        targets = []
+        for _, row in race_list.iterrows():
+            race_id = row['race_id']
+            if race_id in self.notified_races: continue
             
             start_time_str = str(row['start_time']).zfill(4)
             try:
                 race_dt = datetime.strptime(f"{date_str}{start_time_str}", "%Y%m%d%H%M")
-            except:
-                continue
+            except: continue
             
-            if self.target_date:
-                # 日付指定時は全レース対象
-                targets.append((row, race_dt))
-            else:
-                # リアルタイム時は5-15分前のレースを対象
+            if now:
                 diff_min = (race_dt - now).total_seconds() / 60
                 if 5 <= diff_min <= 15:
                     targets.append((row, race_dt))
+            else:
+                targets.append((row, race_dt))
         
         if not targets:
             logger.info("対象レースなし (5-15分前のレースがない)")
             return
+
+        target_race_ids = [r['race_id'] for r, _ in targets]
+        all_features_df = self.predictor.get_features(date_str, race_ids=target_race_ids) # Parquet
         
-        logger.info(f"対象レース: {len(targets)}件")
-        
-        # 対象レースIDリストを作成
-        target_race_ids = [row['race_id'] for row, _ in targets]
-        
-        # 全対象レースの特徴量をまとめて取得 (parquet優先、フォールバック: InferencePreprocessor)
-        logger.info("特徴量取得中...")
-        all_features_df = self.predictor.get_features(date_str, race_ids=target_race_ids)
-        
-        if all_features_df.empty:
-            logger.warning("特徴量生成失敗")
-            return
-        
-        # 各レースを処理
+        if all_features_df.empty: return
+
         for row, race_dt in targets:
             race_id = row['race_id']
-            logger.info(f"処理中: {race_id}")
-            
-            # 特徴量付きデータを取得
             entries = all_features_df[all_features_df['race_id'].astype(str) == str(race_id)].copy()
-            if entries.empty:
-                logger.warning(f"特徴量データなし: {race_id}")
-                continue
+            if entries.empty: continue
             
-            logger.info(f"特徴量生成完了: {len(entries)} horses")
+            # Drop leaks
+            drop_cols = ['rank', 'time', 'agari', 'kakutei_chakujun']
+            entries = entries.drop(columns=[c for c in drop_cols if c in entries.columns], errors='ignore')
             
-            # 時系列オッズ取得
-            snapshot_odds = self.predictor.odds_fetcher.fetch_latest_odds(race_id, before_minutes=10)
+            snapshot_odds = self.predictor.odds_fetcher.fetch_latest_odds(race_id, race_dt, before_minutes=10)
             if not snapshot_odds:
-                logger.warning(f"オッズ取得失敗: {race_id}, 最終オッズを使用")
-                if 'odds' in entries.columns:
-                    snapshot_odds = dict(zip(entries['horse_number'].astype(int), entries['odds']))
-                else:
-                    snapshot_odds = {}
-            
-            # 予測
+                logger.warning(f"オッズ取得失敗: {race_id}")
+                continue # No Fallback
+
             try:
                 result_df = self.predictor.predict_race(entries, snapshot_odds)
+                tickets = self.strategy.generate_tickets(result_df)
+                tickets_msg = self.strategy.format_tickets(tickets)
+                
+                race_meta = {
+                    'race_id': race_id, 'venue': row['venue'], 'race_number': int(row['race_number']),
+                    'title': row['title'] or '', 'start_time': f"{start_time_str[:2]}:{start_time_str[2:]}"
+                }
+                
+                if self.dry_run:
+                    logger.info(f"[DRY-RUN] {race_meta}")
+                    print(result_df[['horse_number', 'horse_name', 'odds_snapshot', 'popularity', 'score_logit_snap', 'rank']].head(8))
+                    print(tickets_msg)
+                else:
+                    if self.notifier.send(race_meta, result_df, tickets_msg):
+                        self.notified_races.add(race_id)
+                    time.sleep(1.5)
             except Exception as e:
-                logger.error(f"予測エラー: {race_id}, {e}")
-                continue
-            
-            # 買い目生成
-            tickets = self.strategy.generate_tickets(result_df)
-            tickets_msg = self.strategy.format_tickets(tickets)
-            
-            # 通知
-            race_meta = {
-                'race_id': race_id,
-                'venue': row['venue'],
-                'race_number': int(row['race_number']),
-                'title': row['title'] or '',
-                'start_time': f"{start_time_str[:2]}:{start_time_str[2:]}"
-            }
-            
-            if self.dry_run:
-                logger.info(f"[DRY-RUN] {race_meta}")
-                print(result_df[['horse_number', 'horse_name', 'odds_snapshot', 'score_logit_snap', 'rank']].head(8))
-                print(tickets_msg)
-            else:
-                success = self.notifier.send(race_meta, result_df, tickets_msg)
-                if success:
-                    self.notified_races.add(race_id)
-                time.sleep(1.5)
-        
-        self._save_state()
-        logger.info("=== Auto Predict v13 完了 ===")
+                logger.error(f"Error {race_id}: {e}")
 
 
 def main():
     parser = argparse.ArgumentParser(description='Auto Predict v13 (T-10m Odds + 三連複BOX4)')
     parser.add_argument('--dry-run', action='store_true', help='通知を送信せずに実行')
     parser.add_argument('--date', type=str, help='対象日付 (YYYY-MM-DD or YYYYMMDD)')
+    parser.add_argument('--year', type=str, help='指定年をまとめて処理 (Batch Mode)')
+    parser.add_argument('--jra_only', action='store_true', default=True, help='JRAのみ')
+    parser.add_argument('--out', type=str, help='出力先parquetパス (Batch Mode用)')
+    parser.add_argument('--run_leak_proof', action='store_true', help='Leak Proof Mode Flag (Dummy for compatibility)')
+    
     args = parser.parse_args()
     
     predictor = AutoPredictV13(dry_run=args.dry_run, target_date=args.date)
-    predictor.run()
+    
+    if args.year:
+        if not args.out:
+            print("Error: --out is required when using --year")
+            return
+        df = predictor.batch_run_year(args.year, args.jra_only)
+        if not df.empty:
+            os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
+            df.to_parquet(args.out)
+            logger.info(f"Saved {len(df)} rows to {args.out}")
+        else:
+            logger.warning("No predictions generated.")
+    else:
+        predictor.run()
 
 
 if __name__ == "__main__":

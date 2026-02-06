@@ -1,0 +1,21 @@
+experiment_name: v08_return_reg_odds
+model_params:
+  objective: regression
+  metric: rmse
+  learning_rate: 0.05
+  num_leaves: 31
+  n_estimators: 1000
+  feature_fraction: 0.8
+features:
+  - base_attributes
+  - history_stats
+  - jockey_stats
+  - pace_stats
+  - bloodline_stats
+  - odds_features
+dataset:
+  train_start_date: '2020-01-01'
+  test_end_date: '2025-12-31'
+  valid_year: 2024
+  jra_only: true
+  description: "Target: FinalOdds (if Win) else 0. Input: Odds 10min."

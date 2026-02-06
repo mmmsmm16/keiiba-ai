@@ -1,0 +1,106 @@
+
+experiment_name: "exp_t2_refined"
+model_save_path: "models/experiments/exp_t2_refined"
+
+dataset:
+  train_start_date: "2014-01-01"
+  test_end_date: "2024-12-31"
+  valid_year: 2023
+  jra_only: true
+  drop_market_data: true
+  binary_target: "win"
+  description: "T2 + Priority 6 (Features Refinement & Interactions)"
+
+  # ID系特徴量を除外
+  exclude_features:
+    - horse_id
+    - mare_id
+    - sire_id
+    - jockey_id
+    - trainer_id
+    # Priority 6: Drop 180d features (High correlation with 365d)
+    - jockey_n_races_180d
+    - jockey_win_rate_180d
+    - jockey_top3_rate_180d
+    - trainer_n_races_180d
+    - trainer_win_rate_180d
+    - trainer_top3_rate_180d
+
+  categorical_features:
+    - sex
+    - grade_code
+    - kyoso_joken_code
+    - surface
+    - venue
+    - prev_grade
+    - dist_change_category
+    - interval_category
+    - attr_rot
+    - attr_str
+    - attr_slp
+    - interval_type_code
+    # New Lag Categoricals
+    - lag1_grade
+    - lag2_grade
+    - lag3_grade
+    - lag4_grade
+    - lag5_grade
+
+features:
+  - base_attributes
+  - history_stats
+  - jockey_stats
+  - pace_stats
+  - bloodline_stats
+  - burden_stats
+  - changes_stats
+  - aptitude_stats
+  - speed_index_stats
+  - pace_pressure_stats
+  - relative_stats
+  - jockey_trainer_stats
+  - temporal_jockey_stats
+  - temporal_trainer_stats
+  - class_stats
+  - segment_stats
+  - risk_stats
+  - course_aptitude
+  - extended_aptitude
+  - runstyle_fit
+  - jockey_trainer_compatibility
+  - interval_aptitude
+  - physique_training
+  - jockey_strategy
+  - race_dynamics
+  - sire_aptitude
+  - track_bias
+  - frame_bias
+  - weight_pattern
+  - rest_pattern
+  - corner_dynamics
+  - head_to_head
+  - training_detail
+  - bloodline_detail
+  - strategy_pattern
+  - horse_gear
+
+
+
+model_params:
+  model_type: "lightgbm"
+  objective: "binary"
+  metric: "auc"
+  learning_rate: 0.05
+  num_leaves: 63
+  feature_fraction: 0.8
+  bagging_fraction: 0.8
+  bagging_freq: 5
+  early_stopping_rounds: 100
+  n_estimators: 2000
+  verbose: -1
+  seed: 42
+
+calibration:
+  enabled: true
+  method: "isotonic"
+  n_folds: 5

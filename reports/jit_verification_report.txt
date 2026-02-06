@@ -1,0 +1,1695 @@
+# JIT vs Training Feature Verification Report
+# Date: 20241115
+# Generated: 2026-01-04T10:33:00.576765
+
+{
+  "total_records": 64,
+  "features_compared": 87,
+  "feature_details": {
+    "age": {
+      "type": "categorical",
+      "match_rate": 1.0,
+      "exact_matches": 64
+    },
+    "avg_first_corner_norm": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "avg_pci": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "avg_speed_index": {
+      "type": "numeric",
+      "match_rate": 0.0,
+      "exact_matches": 0,
+      "mean_abs_diff": 0.17797497731730622,
+      "max_abs_diff": 0.6954112747114781,
+      "std_diff": 0.11318203642057026
+    },
+    "class_trend_3": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "collapse_rate_10": {
+      "type": "numeric",
+      "match_rate": 0.984375,
+      "exact_matches": 63,
+      "mean_abs_diff": 0.0006944444444444437,
+      "max_abs_diff": 0.0444444444444444,
+      "std_diff": 0.00555555555555555
+    },
+    "course_win_rate": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "dist_change_category": {
+      "type": "categorical",
+      "match_rate": 1.0,
+      "exact_matches": 64
+    },
+    "dist_win_rate": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "distance": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "fit_inner_nige": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "fit_nige_short": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "fit_nige_slow": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "fit_sashi_high": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "fit_sashi_long": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "grade_code": {
+      "type": "categorical",
+      "match_rate": 1.0,
+      "exact_matches": 64
+    },
+    "hc_n_races_365d": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "hc_top3_rate_365d": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "horse_id": {
+      "type": "categorical",
+      "match_rate": 1.0,
+      "exact_matches": 64
+    },
+    "impost": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "interval": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "interval_category": {
+      "type": "categorical",
+      "match_rate": 1.0,
+      "exact_matches": 64
+    },
+    "is_nige_interaction": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "is_same_class_prev": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "jockey_avg_rank": {
+      "type": "numeric",
+      "match_rate": 0.0,
+      "exact_matches": 0,
+      "mean_abs_diff": 0.0450928312093586,
+      "max_abs_diff": 1.3046875,
+      "std_diff": 0.1599485293702402
+    },
+    "jockey_change": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "jockey_class_diff": {
+      "type": "numeric",
+      "match_rate": 0.0,
+      "exact_matches": 0,
+      "mean_abs_diff": 0.012406092458786235,
+      "max_abs_diff": 0.14612301200908795,
+      "std_diff": 0.02272434976183733
+    },
+    "jockey_id": {
+      "type": "categorical",
+      "match_rate": 1.0,
+      "exact_matches": 64
+    },
+    "jockey_n_races": {
+      "type": "numeric",
+      "match_rate": 0.0,
+      "exact_matches": 0,
+      "mean_abs_diff": 24008.046875,
+      "max_abs_diff": 24377.0,
+      "std_diff": 2951.625
+    },
+    "jockey_top3_rate": {
+      "type": "numeric",
+      "match_rate": 0.0,
+      "exact_matches": 0,
+      "mean_abs_diff": 0.05200487505048183,
+      "max_abs_diff": 0.2669270833333333,
+      "std_diff": 0.027291708988298594
+    },
+    "jockey_win_rate": {
+      "type": "numeric",
+      "match_rate": 0.0,
+      "exact_matches": 0,
+      "mean_abs_diff": 0.04949662250151865,
+      "max_abs_diff": 0.08203125,
+      "std_diff": 0.004131381269648427
+    },
+    "jt_avg_rank": {
+      "type": "numeric",
+      "match_rate": 0.0,
+      "exact_matches": 0,
+      "mean_abs_diff": 0.1159080921842306,
+      "max_abs_diff": 4.6923076923076925,
+      "std_diff": 0.5911542278978725
+    },
+    "jt_run_count": {
+      "type": "numeric",
+      "match_rate": 0.0,
+      "exact_matches": 0,
+      "mean_abs_diff": 256391.703125,
+      "max_abs_diff": 264665.0,
+      "std_diff": 46383.02786124611
+    },
+    "jt_top3_rate_smoothed": {
+      "type": "numeric",
+      "match_rate": 0.0,
+      "exact_matches": 0,
+      "mean_abs_diff": 0.027768079340855654,
+      "max_abs_diff": 0.03364140210772337,
+      "std_diff": 0.004515528119426626
+    },
+    "jt_win_rate_smoothed": {
+      "type": "numeric",
+      "match_rate": 0.0,
+      "exact_matches": 0,
+      "mean_abs_diff": 0.023845791372374192,
+      "max_abs_diff": 0.027272076160498593,
+      "std_diff": 0.00451935470938142
+    },
+    "kyoso_joken_code": {
+      "type": "categorical",
+      "match_rate": 1.0,
+      "exact_matches": 64
+    },
+    "lag1_rank": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "lag1_time_diff": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "last_nige_rate": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "mare_id": {
+      "type": "categorical",
+      "match_rate": 1.0,
+      "exact_matches": 64
+    },
+    "max_speed_index": {
+      "type": "numeric",
+      "match_rate": 0.0,
+      "exact_matches": 0,
+      "mean_abs_diff": 0.17857980548478816,
+      "max_abs_diff": 1.7407247458993966,
+      "std_diff": 0.29707873484459735
+    },
+    "mean_rank_5": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "mean_time_diff_5": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 3.469446951953614e-18,
+      "max_abs_diff": 2.220446049250313e-16,
+      "std_diff": 2.7755575615628914e-17
+    },
+    "n_nige_in_race": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "n_other_nige": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "nige_pressure_interaction": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "pred_runstyle": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "prev_grade": {
+      "type": "categorical",
+      "match_rate": 1.0,
+      "exact_matches": 64
+    },
+    "prev_race_level": {
+      "type": "numeric",
+      "match_rate": 0.0,
+      "exact_matches": 0,
+      "mean_abs_diff": 24163.474912023747,
+      "max_abs_diff": 265493.66666666674,
+      "std_diff": 50832.53868048051
+    },
+    "prev_winner_level": {
+      "type": "numeric",
+      "match_rate": 0.0625,
+      "exact_matches": 4,
+      "mean_abs_diff": 108053.28125,
+      "max_abs_diff": 1957460.0,
+      "std_diff": 340661.14736025967
+    },
+    "race_nige_count_bin": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "race_nige_pressure_sum": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "rank_std_5": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "relative_impost_diff": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "relative_impost_pct": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "relative_impost_z": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 5.56629395354058e-16,
+      "max_abs_diff": 3.3306690738754696e-15,
+      "std_diff": 7.628481256859164e-16
+    },
+    "relative_interval_diff": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "relative_interval_pct": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "relative_interval_z": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "relative_last_3f_diff": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 8.43769498715119e-15,
+      "max_abs_diff": 5.684341886080802e-14,
+      "std_diff": 1.4033522404175977e-14
+    },
+    "relative_last_3f_pct": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "relative_last_3f_z": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 9.226560487851643e-17,
+      "max_abs_diff": 6.661338147750939e-16,
+      "std_diff": 1.4397122473848172e-16
+    },
+    "relative_nige_rate_diff": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "relative_nige_rate_pct": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "relative_nige_rate_z": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 7.37257477290143e-17,
+      "max_abs_diff": 8.881784197001252e-16,
+      "std_diff": 1.251293406564566e-16
+    },
+    "relative_speed_index_diff": {
+      "type": "numeric",
+      "match_rate": 0.0,
+      "exact_matches": 0,
+      "mean_abs_diff": 1.1401932017801302,
+      "max_abs_diff": 8.214736252166588,
+      "std_diff": 1.7103676061925346
+    },
+    "relative_speed_index_pct": {
+      "type": "numeric",
+      "match_rate": 0.234375,
+      "exact_matches": 15,
+      "mean_abs_diff": 0.18036858974358974,
+      "max_abs_diff": 0.75,
+      "std_diff": 0.18331632478162407
+    },
+    "relative_speed_index_z": {
+      "type": "numeric",
+      "match_rate": 0.03125,
+      "exact_matches": 2,
+      "mean_abs_diff": 0.4844489383047954,
+      "max_abs_diff": 2.9512108347672545,
+      "std_diff": 0.584892146513921
+    },
+    "resurrection_flag": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "run_count": {
+      "type": "numeric",
+      "match_rate": 0.984375,
+      "exact_matches": 63,
+      "mean_abs_diff": 0.015625,
+      "max_abs_diff": 1.0,
+      "std_diff": 0.125
+    },
+    "sex": {
+      "type": "categorical",
+      "match_rate": 1.0,
+      "exact_matches": 64
+    },
+    "sire_dirt_win_rate": {
+      "type": "numeric",
+      "match_rate": 0.109375,
+      "exact_matches": 7,
+      "mean_abs_diff": 0.07136929206607545,
+      "max_abs_diff": 0.425,
+      "std_diff": 0.060761834492953526
+    },
+    "sire_id": {
+      "type": "categorical",
+      "match_rate": 1.0,
+      "exact_matches": 64
+    },
+    "sire_n_races": {
+      "type": "numeric",
+      "match_rate": 0.0,
+      "exact_matches": 0,
+      "mean_abs_diff": 4143.75,
+      "max_abs_diff": 18478.0,
+      "std_diff": 4819.4224873018875
+    },
+    "sire_turf_win_rate": {
+      "type": "numeric",
+      "match_rate": 0.21875,
+      "exact_matches": 14,
+      "mean_abs_diff": 0.048825958913654724,
+      "max_abs_diff": 0.11424903722721438,
+      "std_diff": 0.033605512616581526
+    },
+    "sire_win_rate": {
+      "type": "numeric",
+      "match_rate": 0.109375,
+      "exact_matches": 7,
+      "mean_abs_diff": 0.06141690232959348,
+      "max_abs_diff": 0.4289153863792708,
+      "std_diff": 0.058792361813479896
+    },
+    "surface": {
+      "type": "categorical",
+      "match_rate": 1.0,
+      "exact_matches": 64
+    },
+    "surface_win_rate": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "time_diff_std_5": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 3.469446951953614e-18,
+      "max_abs_diff": 2.220446049250313e-16,
+      "std_diff": 2.7755575615628914e-17
+    },
+    "trainer_id": {
+      "type": "categorical",
+      "match_rate": 1.0,
+      "exact_matches": 64
+    },
+    "training_time_3f": {
+      "type": "numeric",
+      "match_rate": 0.03125,
+      "exact_matches": 2,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "training_time_4f": {
+      "type": "numeric",
+      "match_rate": 0.03125,
+      "exact_matches": 2,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "training_time_last1f": {
+      "type": "numeric",
+      "match_rate": 0.03125,
+      "exact_matches": 2,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "venue": {
+      "type": "categorical",
+      "match_rate": 1.0,
+      "exact_matches": 64
+    },
+    "weight": {
+      "type": "numeric",
+      "match_rate": 0.96875,
+      "exact_matches": 62,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "weight_diff": {
+      "type": "numeric",
+      "match_rate": 1.0,
+      "exact_matches": 64,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    },
+    "weight_ratio": {
+      "type": "numeric",
+      "match_rate": 0.96875,
+      "exact_matches": 62,
+      "mean_abs_diff": 0.0,
+      "max_abs_diff": 0.0,
+      "std_diff": 0.0
+    }
+  },
+  "nan_counts": {
+    "avg_first_corner_norm": {
+      "jit": 0,
+      "train": 0
+    },
+    "avg_pci": {
+      "jit": 0,
+      "train": 0
+    },
+    "avg_speed_index": {
+      "jit": 0,
+      "train": 0
+    },
+    "class_trend_3": {
+      "jit": 0,
+      "train": 0
+    },
+    "collapse_rate_10": {
+      "jit": 0,
+      "train": 0
+    },
+    "course_win_rate": {
+      "jit": 0,
+      "train": 0
+    },
+    "dist_win_rate": {
+      "jit": 0,
+      "train": 0
+    },
+    "distance": {
+      "jit": 0,
+      "train": 0
+    },
+    "fit_inner_nige": {
+      "jit": 0,
+      "train": 0
+    },
+    "fit_nige_short": {
+      "jit": 0,
+      "train": 0
+    },
+    "fit_nige_slow": {
+      "jit": 0,
+      "train": 0
+    },
+    "fit_sashi_high": {
+      "jit": 0,
+      "train": 0
+    },
+    "fit_sashi_long": {
+      "jit": 0,
+      "train": 0
+    },
+    "hc_n_races_365d": {
+      "jit": 0,
+      "train": 0
+    },
+    "hc_top3_rate_365d": {
+      "jit": 0,
+      "train": 0
+    },
+    "impost": {
+      "jit": 0,
+      "train": 0
+    },
+    "interval": {
+      "jit": 0,
+      "train": 0
+    },
+    "is_nige_interaction": {
+      "jit": 0,
+      "train": 0
+    },
+    "is_same_class_prev": {
+      "jit": 0,
+      "train": 0
+    },
+    "jockey_avg_rank": {
+      "jit": 0,
+      "train": 0
+    },
+    "jockey_change": {
+      "jit": 0,
+      "train": 0
+    },
+    "jockey_class_diff": {
+      "jit": 0,
+      "train": 0
+    },
+    "jockey_n_races": {
+      "jit": 0,
+      "train": 0
+    },
+    "jockey_top3_rate": {
+      "jit": 0,
+      "train": 0
+    },
+    "jockey_win_rate": {
+      "jit": 0,
+      "train": 0
+    },
+    "jt_avg_rank": {
+      "jit": 0,
+      "train": 0
+    },
+    "jt_run_count": {
+      "jit": 0,
+      "train": 0
+    },
+    "jt_top3_rate_smoothed": {
+      "jit": 0,
+      "train": 0
+    },
+    "jt_win_rate_smoothed": {
+      "jit": 0,
+      "train": 0
+    },
+    "lag1_rank": {
+      "jit": 0,
+      "train": 0
+    },
+    "lag1_time_diff": {
+      "jit": 0,
+      "train": 0
+    },
+    "last_nige_rate": {
+      "jit": 0,
+      "train": 0
+    },
+    "max_speed_index": {
+      "jit": 0,
+      "train": 0
+    },
+    "mean_rank_5": {
+      "jit": 0,
+      "train": 0
+    },
+    "mean_time_diff_5": {
+      "jit": 0,
+      "train": 0
+    },
+    "n_nige_in_race": {
+      "jit": 0,
+      "train": 0
+    },
+    "n_other_nige": {
+      "jit": 0,
+      "train": 0
+    },
+    "nige_pressure_interaction": {
+      "jit": 0,
+      "train": 0
+    },
+    "pred_runstyle": {
+      "jit": 0,
+      "train": 0
+    },
+    "prev_race_level": {
+      "jit": 0,
+      "train": 0
+    },
+    "prev_winner_level": {
+      "jit": 0,
+      "train": 0
+    },
+    "race_nige_count_bin": {
+      "jit": 0,
+      "train": 0
+    },
+    "race_nige_pressure_sum": {
+      "jit": 0,
+      "train": 0
+    },
+    "rank_std_5": {
+      "jit": 0,
+      "train": 0
+    },
+    "relative_impost_diff": {
+      "jit": 0,
+      "train": 0
+    },
+    "relative_impost_pct": {
+      "jit": 0,
+      "train": 0
+    },
+    "relative_impost_z": {
+      "jit": 0,
+      "train": 0
+    },
+    "relative_interval_diff": {
+      "jit": 0,
+      "train": 0
+    },
+    "relative_interval_pct": {
+      "jit": 0,
+      "train": 0
+    },
+    "relative_interval_z": {
+      "jit": 0,
+      "train": 0
+    },
+    "relative_last_3f_diff": {
+      "jit": 0,
+      "train": 0
+    },
+    "relative_last_3f_pct": {
+      "jit": 0,
+      "train": 0
+    },
+    "relative_last_3f_z": {
+      "jit": 0,
+      "train": 0
+    },
+    "relative_nige_rate_diff": {
+      "jit": 0,
+      "train": 0
+    },
+    "relative_nige_rate_pct": {
+      "jit": 0,
+      "train": 0
+    },
+    "relative_nige_rate_z": {
+      "jit": 0,
+      "train": 0
+    },
+    "relative_speed_index_diff": {
+      "jit": 0,
+      "train": 0
+    },
+    "relative_speed_index_pct": {
+      "jit": 0,
+      "train": 0
+    },
+    "relative_speed_index_z": {
+      "jit": 0,
+      "train": 0
+    },
+    "resurrection_flag": {
+      "jit": 0,
+      "train": 0
+    },
+    "run_count": {
+      "jit": 0,
+      "train": 0
+    },
+    "sire_dirt_win_rate": {
+      "jit": 0,
+      "train": 0
+    },
+    "sire_n_races": {
+      "jit": 0,
+      "train": 0
+    },
+    "sire_turf_win_rate": {
+      "jit": 0,
+      "train": 0
+    },
+    "sire_win_rate": {
+      "jit": 0,
+      "train": 0
+    },
+    "surface_win_rate": {
+      "jit": 0,
+      "train": 0
+    },
+    "time_diff_std_5": {
+      "jit": 0,
+      "train": 0
+    },
+    "training_time_3f": {
+      "jit": 62,
+      "train": 62
+    },
+    "training_time_4f": {
+      "jit": 62,
+      "train": 62
+    },
+    "training_time_last1f": {
+      "jit": 62,
+      "train": 62
+    },
+    "weight": {
+      "jit": 2,
+      "train": 2
+    },
+    "weight_diff": {
+      "jit": 0,
+      "train": 0
+    },
+    "weight_ratio": {
+      "jit": 2,
+      "train": 2
+    }
+  },
+  "inf_counts": {
+    "avg_first_corner_norm": {
+      "jit": 0,
+      "train": 0
+    },
+    "avg_pci": {
+      "jit": 0,
+      "train": 0
+    },
+    "avg_speed_index": {
+      "jit": 0,
+      "train": 0
+    },
+    "class_trend_3": {
+      "jit": 0,
+      "train": 0
+    },
+    "collapse_rate_10": {
+      "jit": 0,
+      "train": 0
+    },
+    "course_win_rate": {
+      "jit": 0,
+      "train": 0
+    },
+    "dist_win_rate": {
+      "jit": 0,
+      "train": 0
+    },
+    "distance": {
+      "jit": 0,
+      "train": 0
+    },
+    "fit_inner_nige": {
+      "jit": 0,
+      "train": 0
+    },
+    "fit_nige_short": {
+      "jit": 0,
+      "train": 0
+    },
+    "fit_nige_slow": {
+      "jit": 0,
+      "train": 0
+    },
+    "fit_sashi_high": {
+      "jit": 0,
+      "train": 0
+    },
+    "fit_sashi_long": {
+      "jit": 0,
+      "train": 0
+    },
+    "hc_n_races_365d": {
+      "jit": 0,
+      "train": 0
+    },
+    "hc_top3_rate_365d": {
+      "jit": 0,
+      "train": 0
+    },
+    "impost": {
+      "jit": 0,
+      "train": 0
+    },
+    "interval": {
+      "jit": 0,
+      "train": 0
+    },
+    "is_nige_interaction": {
+      "jit": 0,
+      "train": 0
+    },
+    "is_same_class_prev": {
+      "jit": 0,
+      "train": 0
+    },
+    "jockey_avg_rank": {
+      "jit": 0,
+      "train": 0
+    },
+    "jockey_change": {
+      "jit": 0,
+      "train": 0
+    },
+    "jockey_class_diff": {
+      "jit": 0,
+      "train": 0
+    },
+    "jockey_n_races": {
+      "jit": 0,
+      "train": 0
+    },
+    "jockey_top3_rate": {
+      "jit": 0,
+      "train": 0
+    },
+    "jockey_win_rate": {
+      "jit": 0,
+      "train": 0
+    },
+    "jt_avg_rank": {
+      "jit": 0,
+      "train": 0
+    },
+    "jt_run_count": {
+      "jit": 0,
+      "train": 0
+    },
+    "jt_top3_rate_smoothed": {
+      "jit": 0,
+      "train": 0
+    },
+    "jt_win_rate_smoothed": {
+      "jit": 0,
+      "train": 0
+    },
+    "lag1_rank": {
+      "jit": 0,
+      "train": 0
+    },
+    "lag1_time_diff": {
+      "jit": 0,
+      "train": 0
+    },
+    "last_nige_rate": {
+      "jit": 0,
+      "train": 0
+    },
+    "max_speed_index": {
+      "jit": 0,
+      "train": 0
+    },
+    "mean_rank_5": {
+      "jit": 0,
+      "train": 0
+    },
+    "mean_time_diff_5": {
+      "jit": 0,
+      "train": 0
+    },
+    "n_nige_in_race": {
+      "jit": 0,
+      "train": 0
+    },
+    "n_other_nige": {
+      "jit": 0,
+      "train": 0
+    },
+    "nige_pressure_interaction": {
+      "jit": 0,
+      "train": 0
+    },
+    "pred_runstyle": {
+      "jit": 0,
+      "train": 0
+    },
+    "prev_race_level": {
+      "jit": 0,
+      "train": 0
+    },
+    "prev_winner_level": {
+      "jit": 0,
+      "train": 0
+    },
+    "race_nige_count_bin": {
+      "jit": 0,
+      "train": 0
+    },
+    "race_nige_pressure_sum": {
+      "jit": 0,
+      "train": 0
+    },
+    "rank_std_5": {
+      "jit": 0,
+      "train": 0
+    },
+    "relative_impost_diff": {
+      "jit": 0,
+      "train": 0
+    },
+    "relative_impost_pct": {
+      "jit": 0,
+      "train": 0
+    },
+    "relative_impost_z": {
+      "jit": 0,
+      "train": 0
+    },
+    "relative_interval_diff": {
+      "jit": 0,
+      "train": 0
+    },
+    "relative_interval_pct": {
+      "jit": 0,
+      "train": 0
+    },
+    "relative_interval_z": {
+      "jit": 0,
+      "train": 0
+    },
+    "relative_last_3f_diff": {
+      "jit": 0,
+      "train": 0
+    },
+    "relative_last_3f_pct": {
+      "jit": 0,
+      "train": 0
+    },
+    "relative_last_3f_z": {
+      "jit": 0,
+      "train": 0
+    },
+    "relative_nige_rate_diff": {
+      "jit": 0,
+      "train": 0
+    },
+    "relative_nige_rate_pct": {
+      "jit": 0,
+      "train": 0
+    },
+    "relative_nige_rate_z": {
+      "jit": 0,
+      "train": 0
+    },
+    "relative_speed_index_diff": {
+      "jit": 0,
+      "train": 0
+    },
+    "relative_speed_index_pct": {
+      "jit": 0,
+      "train": 0
+    },
+    "relative_speed_index_z": {
+      "jit": 0,
+      "train": 0
+    },
+    "resurrection_flag": {
+      "jit": 0,
+      "train": 0
+    },
+    "run_count": {
+      "jit": 0,
+      "train": 0
+    },
+    "sire_dirt_win_rate": {
+      "jit": 0,
+      "train": 0
+    },
+    "sire_n_races": {
+      "jit": 0,
+      "train": 0
+    },
+    "sire_turf_win_rate": {
+      "jit": 0,
+      "train": 0
+    },
+    "sire_win_rate": {
+      "jit": 0,
+      "train": 0
+    },
+    "surface_win_rate": {
+      "jit": 0,
+      "train": 0
+    },
+    "time_diff_std_5": {
+      "jit": 0,
+      "train": 0
+    },
+    "training_time_3f": {
+      "jit": 0,
+      "train": 0
+    },
+    "training_time_4f": {
+      "jit": 0,
+      "train": 0
+    },
+    "training_time_last1f": {
+      "jit": 0,
+      "train": 0
+    },
+    "weight": {
+      "jit": 0,
+      "train": 0
+    },
+    "weight_diff": {
+      "jit": 0,
+      "train": 0
+    },
+    "weight_ratio": {
+      "jit": 0,
+      "train": 0
+    }
+  },
+  "mismatches": [
+    {
+      "feature": "avg_speed_index",
+      "race_id": "202447130110",
+      "horse_number": "5",
+      "jit_value": -0.37381968209922584,
+      "train_value": -0.51137855539708
+    },
+    {
+      "feature": "avg_speed_index",
+      "race_id": "202445090509",
+      "horse_number": "7",
+      "jit_value": 0.0,
+      "train_value": -0.13875231382229783
+    },
+    {
+      "feature": "avg_speed_index",
+      "race_id": "202445090509",
+      "horse_number": "2",
+      "jit_value": 0.0,
+      "train_value": -0.3098434727433701
+    },
+    {
+      "feature": "collapse_rate_10",
+      "race_id": "202447130106",
+      "horse_number": "7",
+      "jit_value": 0.6,
+      "train_value": 0.5555555555555556
+    },
+    {
+      "feature": "jockey_avg_rank",
+      "race_id": "202447130110",
+      "horse_number": "5",
+      "jit_value": 5.821989528795812,
+      "train_value": 5.796890263757733
+    },
+    {
+      "feature": "jockey_avg_rank",
+      "race_id": "202445090509",
+      "horse_number": "7",
+      "jit_value": 5.821989528795812,
+      "train_value": 5.796890263757733
+    },
+    {
+      "feature": "jockey_avg_rank",
+      "race_id": "202445090509",
+      "horse_number": "2",
+      "jit_value": 5.821989528795812,
+      "train_value": 5.796890263757733
+    },
+    {
+      "feature": "jockey_class_diff",
+      "race_id": "202447130110",
+      "horse_number": "5",
+      "jit_value": 7.767593599503075e-05,
+      "train_value": -5.4557259703075234e-05
+    },
+    {
+      "feature": "jockey_class_diff",
+      "race_id": "202445090509",
+      "horse_number": "7",
+      "jit_value": -0.001452212090509955,
+      "train_value": -8.576023931010368e-05
+    },
+    {
+      "feature": "jockey_class_diff",
+      "race_id": "202445090509",
+      "horse_number": "2",
+      "jit_value": -0.0014201368698841532,
+      "train_value": -8.16741630533524e-05
+    },
+    {
+      "feature": "jockey_n_races",
+      "race_id": "202447130110",
+      "horse_number": "5",
+      "jit_value": 191.0,
+      "train_value": 24568.0
+    },
+    {
+      "feature": "jockey_n_races",
+      "race_id": "202445090509",
+      "horse_number": "7",
+      "jit_value": 191.0,
+      "train_value": 24568.0
+    },
+    {
+      "feature": "jockey_n_races",
+      "race_id": "202445090509",
+      "horse_number": "2",
+      "jit_value": 191.0,
+      "train_value": 24568.0
+    },
+    {
+      "feature": "jockey_top3_rate",
+      "race_id": "202447130110",
+      "horse_number": "5",
+      "jit_value": 0.2513089005235602,
+      "train_value": 0.2999023119505047
+    },
+    {
+      "feature": "jockey_top3_rate",
+      "race_id": "202445090509",
+      "horse_number": "7",
+      "jit_value": 0.2513089005235602,
+      "train_value": 0.2999023119505047
+    },
+    {
+      "feature": "jockey_top3_rate",
+      "race_id": "202445090509",
+      "horse_number": "2",
+      "jit_value": 0.2513089005235602,
+      "train_value": 0.2999023119505047
+    },
+    {
+      "feature": "jockey_win_rate",
+      "race_id": "202447130110",
+      "horse_number": "5",
+      "jit_value": 0.04712041884816754,
+      "train_value": 0.09610061869098013
+    },
+    {
+      "feature": "jockey_win_rate",
+      "race_id": "202445090509",
+      "horse_number": "7",
+      "jit_value": 0.04712041884816754,
+      "train_value": 0.09610061869098013
+    },
+    {
+      "feature": "jockey_win_rate",
+      "race_id": "202445090509",
+      "horse_number": "2",
+      "jit_value": 0.04712041884816754,
+      "train_value": 0.09610061869098013
+    },
+    {
+      "feature": "jt_avg_rank",
+      "race_id": "202447130110",
+      "horse_number": "5",
+      "jit_value": 5.641095890410959,
+      "train_value": 5.693472740513231
+    },
+    {
+      "feature": "jt_avg_rank",
+      "race_id": "202445090509",
+      "horse_number": "7",
+      "jit_value": 5.635782747603834,
+      "train_value": 5.693580952309068
+    },
+    {
+      "feature": "jt_avg_rank",
+      "race_id": "202445090509",
+      "horse_number": "2",
+      "jit_value": 5.63375796178344,
+      "train_value": 5.693548752321
+    },
+    {
+      "feature": "jt_run_count",
+      "race_id": "202447130110",
+      "horse_number": "5",
+      "jit_value": 365.0,
+      "train_value": 265027.0
+    },
+    {
+      "feature": "jt_run_count",
+      "race_id": "202445090509",
+      "horse_number": "7",
+      "jit_value": 313.0,
+      "train_value": 264977.0
+    },
+    {
+      "feature": "jt_run_count",
+      "race_id": "202445090509",
+      "horse_number": "2",
+      "jit_value": 314.0,
+      "train_value": 264972.0
+    },
+    {
+      "feature": "jt_top3_rate_smoothed",
+      "race_id": "202447130110",
+      "horse_number": "5",
+      "jit_value": 0.28108108108108104,
+      "train_value": 0.30496505186455536
+    },
+    {
+      "feature": "jt_top3_rate_smoothed",
+      "race_id": "202445090509",
+      "horse_number": "7",
+      "jit_value": 0.2769255742228715,
+      "train_value": 0.30495844142214745
+    },
+    {
+      "feature": "jt_top3_rate_smoothed",
+      "race_id": "202445090509",
+      "horse_number": "2",
+      "jit_value": 0.2760964557371743,
+      "train_value": 0.3049604218298847
+    },
+    {
+      "feature": "jt_win_rate_smoothed",
+      "race_id": "202447130110",
+      "horse_number": "5",
+      "jit_value": 0.0753948753948754,
+      "train_value": 0.09777743535529164
+    },
+    {
+      "feature": "jt_win_rate_smoothed",
+      "race_id": "202445090509",
+      "horse_number": "7",
+      "jit_value": 0.07215323431539648,
+      "train_value": 0.09777324237109847
+    },
+    {
+      "feature": "jt_win_rate_smoothed",
+      "race_id": "202445090509",
+      "horse_number": "2",
+      "jit_value": 0.0719372066677456,
+      "train_value": 0.09777508720494951
+    },
+    {
+      "feature": "max_speed_index",
+      "race_id": "202447130110",
+      "horse_number": "5",
+      "jit_value": 0.0,
+      "train_value": -0.36114754695183593
+    },
+    {
+      "feature": "max_speed_index",
+      "race_id": "202445090509",
+      "horse_number": "7",
+      "jit_value": 0.0,
+      "train_value": 0.15627812567560304
+    },
+    {
+      "feature": "max_speed_index",
+      "race_id": "202445090509",
+      "horse_number": "2",
+      "jit_value": 0.0,
+      "train_value": -0.20797772237332984
+    },
+    {
+      "feature": "prev_race_level",
+      "race_id": "202447130110",
+      "horse_number": "5",
+      "jit_value": 4948.0,
+      "train_value": 5847.5
+    },
+    {
+      "feature": "prev_race_level",
+      "race_id": "202445090509",
+      "horse_number": "7",
+      "jit_value": 56550.0,
+      "train_value": 42918.57142857143
+    },
+    {
+      "feature": "prev_race_level",
+      "race_id": "202445090509",
+      "horse_number": "2",
+      "jit_value": 56550.0,
+      "train_value": 42918.57142857143
+    },
+    {
+      "feature": "prev_winner_level",
+      "race_id": "202447130110",
+      "horse_number": "5",
+      "jit_value": 0.0,
+      "train_value": 9000.0
+    },
+    {
+      "feature": "prev_winner_level",
+      "race_id": "202445090509",
+      "horse_number": "7",
+      "jit_value": 0.0,
+      "train_value": 64720.0
+    },
+    {
+      "feature": "prev_winner_level",
+      "race_id": "202445090509",
+      "horse_number": "2",
+      "jit_value": 0.0,
+      "train_value": 64720.0
+    },
+    {
+      "feature": "relative_speed_index_diff",
+      "race_id": "202447130110",
+      "horse_number": "5",
+      "jit_value": -7.328128913623388,
+      "train_value": -3.0656292311080477
+    },
+    {
+      "feature": "relative_speed_index_diff",
+      "race_id": "202445090509",
+      "horse_number": "7",
+      "jit_value": 0.24830414465930062,
+      "train_value": 0.45196220256676156
+    },
+    {
+      "feature": "relative_speed_index_diff",
+      "race_id": "202445090509",
+      "horse_number": "2",
+      "jit_value": -1.7009796899271663,
+      "train_value": -1.7682588072836012
+    },
+    {
+      "feature": "relative_speed_index_pct",
+      "race_id": "202445090509",
+      "horse_number": "2",
+      "jit_value": 0.15384615384615385,
+      "train_value": 0.07692307692307693
+    },
+    {
+      "feature": "relative_speed_index_pct",
+      "race_id": "202445090509",
+      "horse_number": "11",
+      "jit_value": 0.07692307692307693,
+      "train_value": 0.15384615384615385
+    },
+    {
+      "feature": "relative_speed_index_pct",
+      "race_id": "202445090511",
+      "horse_number": "2",
+      "jit_value": 1.0,
+      "train_value": 0.75
+    },
+    {
+      "feature": "relative_speed_index_z",
+      "race_id": "202447130110",
+      "horse_number": "5",
+      "jit_value": -2.632602500653147,
+      "train_value": -2.317967907021478
+    },
+    {
+      "feature": "relative_speed_index_z",
+      "race_id": "202445090509",
+      "horse_number": "7",
+      "jit_value": 0.1942867036466423,
+      "train_value": 0.3886646135506679
+    },
+    {
+      "feature": "relative_speed_index_z",
+      "race_id": "202445090509",
+      "horse_number": "2",
+      "jit_value": -1.3309392695771836,
+      "train_value": -1.5206130558869628
+    },
+    {
+      "feature": "run_count",
+      "race_id": "202447130106",
+      "horse_number": "7",
+      "jit_value": 10.0,
+      "train_value": 9.0
+    },
+    {
+      "feature": "sire_dirt_win_rate",
+      "race_id": "202447130110",
+      "horse_number": "5",
+      "jit_value": 0.03333333333333333,
+      "train_value": 0.08827303053630998
+    },
+    {
+      "feature": "sire_dirt_win_rate",
+      "race_id": "202445090509",
+      "horse_number": "7",
+      "jit_value": 0.1,
+      "train_value": 0.075069142631371
+    },
+    {
+      "feature": "sire_dirt_win_rate",
+      "race_id": "202445090509",
+      "horse_number": "2",
+      "jit_value": 0.0,
+      "train_value": 0.08949658172778123
+    },
+    {
+      "feature": "sire_n_races",
+      "race_id": "202447130110",
+      "horse_number": "5",
+      "jit_value": 32.0,
+      "train_value": 10170.0
+    },
+    {
+      "feature": "sire_n_races",
+      "race_id": "202445090509",
+      "horse_number": "7",
+      "jit_value": 23.0,
+      "train_value": 4968.0
+    },
+    {
+      "feature": "sire_n_races",
+      "race_id": "202445090509",
+      "horse_number": "2",
+      "jit_value": 36.0,
+      "train_value": 5904.0
+    },
+    {
+      "feature": "sire_turf_win_rate",
+      "race_id": "202447130110",
+      "horse_number": "5",
+      "jit_value": 0.0,
+      "train_value": 0.05915065722952477
+    },
+    {
+      "feature": "sire_turf_win_rate",
+      "race_id": "202445090509",
+      "horse_number": "7",
+      "jit_value": 0.0,
+      "train_value": 0.06069485140226036
+    },
+    {
+      "feature": "sire_turf_win_rate",
+      "race_id": "202445090509",
+      "horse_number": "2",
+      "jit_value": 0.0,
+      "train_value": 0.07892690513219285
+    },
+    {
+      "feature": "sire_win_rate",
+      "race_id": "202447130110",
+      "horse_number": "5",
+      "jit_value": 0.03125,
+      "train_value": 0.08249754178957719
+    },
+    {
+      "feature": "sire_win_rate",
+      "race_id": "202445090509",
+      "horse_number": "7",
+      "jit_value": 0.08695652173913043,
+      "train_value": 0.06843800322061191
+    },
+    {
+      "feature": "sire_win_rate",
+      "race_id": "202445090509",
+      "horse_number": "2",
+      "jit_value": 0.0,
+      "train_value": 0.08434959349593496
+    }
+  ],
+  "summary": {
+    "overall_match_rate": 0.7444324712643678,
+    "total_exact_matches": "4145",
+    "total_comparisons": 5568,
+    "features_with_100_match": 60,
+    "features_with_issues": 27
+  }
+}

@@ -5,7 +5,7 @@ Phase 9: Real-world operation simulation
 Usage:
     docker compose exec app python scripts/paper_trade_run.py \
         --date 2025-12-16 \
-        --config configs/runtime/paper_trade.yaml
+        --config config/runtime/paper_trade.yaml
 """
 
 import sys
@@ -462,7 +462,7 @@ def main():
     parser.add_argument('--date', type=str, required=True,
                         help='Target date (YYYY-MM-DD)')
     parser.add_argument('--config', type=str, 
-                        default='configs/runtime/paper_trade.yaml',
+                        default='config/runtime/paper_trade.yaml',
                         help='Config file path')
     
     args = parser.parse_args()

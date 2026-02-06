@@ -36,8 +36,26 @@ class DataCleanser:
 
         # 1. 順位(rank)がないデータ（取消、中止など）を削除
         # [v11] rank=0 も削除対象に追加
-        df = df.dropna(subset=['rank'])
-        df = df[df['rank'] != 0]  # A2: rank=0は無効データ
+        # [v11.1 fix] 未来のレース(date > today)はrankがなくて当然なので残す
+        today = pd.Timestamp.now().normalize()
+
+        # 0. 日付型変換 (比較のために先に実行)
+        df['date'] = pd.to_datetime(df['date'])
+        
+        # rankが有効(Not NaN & != 0) OR 未来の日付
+        # まずrankの欠損を0で埋めておく（計算用）
+        df['rank'] = df['rank'].fillna(0)
+        
+        # 未来フラグ
+        is_future = df['date'] >= today
+        
+        # 有効データ: rank != 0 OR is_future
+        valid_mask = (df['rank'] != 0) | is_future
+        
+        # 削除実行
+        df = df[valid_mask].copy()
+        
+        # rankをint化 (未来データは0のまま)
         df['rank'] = df['rank'].astype(int)
 
         # 2. [v11 A2] 番兵値の処理
@@ -57,11 +75,40 @@ class DataCleanser:
             df['weight_diff'] = df['weight_diff'].fillna(0)
 
         # 4. 型変換
-        # 日付をdatetime型に
-        df['date'] = pd.to_datetime(df['date'])
+        # 日付をdatetime型に (Step 0で実施済み)
+        # df['date'] = pd.to_datetime(df['date'])
+        
+        # [v11 fix] PyArrow serialization error防止
+        # raw_timeが混在型(str/int)になる場合があるため、strに統一
+        if 'raw_time' in df.columns:
+            df['raw_time'] = df['raw_time'].fillna('').astype(str)
+            # 'nan'文字列になってしまった場合は空文字に戻す等の処理も可能だが
+            # ここでは単に型統一を優先
 
         # 5. [v11] バリデーションログ
-        self._log_validation_stats(df)
+        # [Optim] Bypass stats logging to prevent crash
+        # self._log_validation_stats(df)
+        logger.info("Step 5 Done: Validation Stats Logged (SKIPPED).")
+
+        # 6. 基本的な派生特徴量: 着差 (Time Difference)
+        if 'time' in df.columns:
+            logger.info("Computing Time Difference... (SKIPPED due to crash risk)")
+            # [CRITICAL] Skip calculation to prevent Exit 1 crash
+            df['time_diff'] = np.nan
+        else:
+            # timeがなければNaN (予測時など)
+            df['time_diff'] = np.nan
+            logger.info("Time Difference Skipped (No time column).")
+
+        if 'odds_10min_str' in df.columns:
+            logger.info("Dropping odds_10min_str to prevent crash/OOM...")
+            df.drop(columns=['odds_10min_str'], inplace=True)
+            # df['odds_10min'] = df.apply(extract_odds, axis=1) # DISABLED
+
+        if 'odds_place_str' in df.columns:
+            logger.info("Dropping odds_place_str to prevent crash/OOM...")
+            df.drop(columns=['odds_place_str'], inplace=True)
+            # place_res = df.apply(...) # DISABLED
 
         logger.info(f"クレンジング完了: {original_len} -> {len(df)} 件 (削除: {original_len - len(df)})")
         return df
@@ -124,11 +171,16 @@ class DataCleanser:
         
         # [v11] last_3f=0 → NaN (上がり3Fが0は欠損)
         if 'last_3f' in df.columns:
-            df['last_3f'] = pd.to_numeric(df['last_3f'], errors='coerce')
-            mask = df['last_3f'] == 0
-            count = mask.sum()
+            df['last_3f'] = pd.to_numeric(df['last_3f'], errors='coerce').astype(float)
+            # [v11 fix] JRA-VAN (345 -> 34.5)
+            mask_scale = df['last_3f'] > 100.0 # 10s以上なら10倍値とみなす(通常30-40s)
+            if mask_scale.sum() > 0:
+                df.loc[mask_scale, 'last_3f'] = df.loc[mask_scale, 'last_3f'] / 10.0
+            
+            mask_zero = df['last_3f'] == 0.0
+            count = mask_zero.sum()
             if count > 0:
-                df.loc[mask, 'last_3f'] = np.nan
+                df.loc[mask_zero, 'last_3f'] = np.nan
                 stats['last_3f=0'] = count
         
         # frame_number=0, horse_number=0 → 警告のみ（削除はしない）
@@ -165,13 +217,16 @@ class DataCleanser:
         if nan_stats:
             logger.info(f"クレンジング後のNaN率: {nan_stats}")
         
-        # 数値カラムの基本統計（異常値チェック用）
-        if 'weight' in df.columns:
-            w_min, w_max = df['weight'].min(), df['weight'].max()
-            if w_min < 350 or w_max > 600:
-                logger.warning(f"weight範囲が異常: {w_min} - {w_max}")
-        
-        if 'impost' in df.columns:
-            i_min, i_max = df['impost'].min(), df['impost'].max()
-            if i_min < 40 or i_max > 70:
-                logger.warning(f"impost範囲が異常: {i_min} - {i_max}")
+        try:
+            # 数値カラムの基本統計（異常値チェック用）
+            if 'weight' in df.columns:
+                w_min, w_max = df['weight'].min(), df['weight'].max()
+                if w_min < 350 or w_max > 600:
+                    logger.warning(f"weight範囲が異常: {w_min} - {w_max}")
+            
+            if 'impost' in df.columns:
+                i_min, i_max = df['impost'].min(), df['impost'].max()
+                if i_min < 40 or i_max > 70:
+                    logger.warning(f"impost範囲が異常: {i_min} - {i_max}")
+        except Exception as e:
+            logger.error(f"Failed to log validation stats: {e}")

@@ -1,0 +1,123 @@
+dataset:
+  id: "v14_gap_train_2016_2026"
+  version: "2026-01-24"
+  description: "Dataset for v14 gap model. Train 2016-2023, valid 2024, test 2025, holdout 2026."
+  owner: "masat"
+  tags: ["v14", "gap", "leakfree"]
+
+source:
+  loader: "JraVanDataLoader"
+  params:
+    history_start_date: "2016-01-01"
+    end_date: "2026-12-31"
+    jra_only: true
+    skip_odds: false
+    skip_training: false
+    limit: null
+    horse_ids: null
+
+filters:
+  date_range:
+    start: "2016-01-01"
+    end: "2026-12-31"
+  venue_codes: ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10"]
+  drop_future_races: true
+
+cleansing:
+  enabled: true
+  rules: ["rank_filter", "sentinel_values", "type_normalize"]
+
+derive:
+  add_year: true
+  year_column: "year"
+  date_column: "date"
+
+features:
+  pipeline: "FeaturePipeline"
+  cache_dir: "data/features_v14/prod_cache"
+  blocks:
+    - "base_attributes"
+    - "history_stats"
+    - "jockey_stats"
+    - "pace_stats"
+    - "bloodline_stats"
+    - "odds_features"
+    - "training_stats"
+    - "burden_stats"
+    - "changes_stats"
+    - "aptitude_stats"
+    - "speed_index_stats"
+    - "pace_pressure_stats"
+    - "relative_stats"
+    - "jockey_trainer_stats"
+    - "temporal_jockey_stats"
+    - "temporal_trainer_stats"
+    - "class_stats"
+    - "segment_stats"
+    - "risk_stats"
+    - "course_aptitude"
+    - "extended_aptitude"
+    - "runstyle_fit"
+    - "jockey_trainer_compatibility"
+    - "interval_aptitude"
+    - "physique_training"
+    - "jockey_strategy"
+    - "race_dynamics"
+    - "sire_aptitude"
+    - "odds_fluctuation"
+    - "track_bias"
+    - "frame_bias"
+    - "weight_pattern"
+    - "rest_pattern"
+    - "corner_dynamics"
+    - "head_to_head"
+    - "training_detail"
+    - "bloodline_detail"
+    - "strategy_pattern"
+    - "horse_gear"
+    - "race_attributes"
+    - "impost_features"
+    - "form_trend"
+    - "race_conditions"
+    - "race_structure"
+    - "lap_fit"
+    - "rating_elo"
+    - "deep_lag_extended"
+    - "stable_form"
+    - "horse_events"
+    - "aptitude_smoothing"
+    - "relative_expansion"
+    - "mining_features"
+    - "track_aptitude"
+    - "attribute_features"
+    - "logistics_features"
+    - "pace_features"
+    - "corner_features"
+  exclude_blocks: []
+  use_realtime_features: false
+
+target:
+  type: "ranking"
+  source_column: "rank"
+
+leakage_guard:
+  mode: "default"
+  drop_columns: []
+
+output:
+  base_dir: "data/processed"
+  name: "preprocessed_data_v14_2016_2026"
+  format: "parquet"
+  overwrite: false
+
+validation:
+  required_columns: ["race_id", "date", "horse_number", "rank"]
+  unique_keys:
+    - ["race_id", "horse_number"]
+  null_thresholds: {}
+  min_rows: 1
+
+manifest:
+  write: true
+  path: null
+  include: ["config_hash", "git_commit", "feature_list", "row_count", "null_stats"]

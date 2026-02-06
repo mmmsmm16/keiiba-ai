@@ -1,0 +1,58 @@
+
+experiment_name: "exp_r2_tabnet"
+model_type: "tabnet"
+base_exp: "exp_q8_freshness"
+
+dataset:
+    train_start_date: "2015-01-01"
+    valid_year: 2023
+    test_end_date: "2024-12-31"
+    binary_target: "win"
+    categorical_features:
+        - "place_code"
+        - "race_type_code"
+        - "track_code"
+        - "weather_code"
+        - "distance_category"
+        - "grade_code"
+        - "running_style_code"
+        - "jockey_id"
+        - "trainer_id"
+        - "sire_id"
+        - "sex"
+        - "venue"
+        - "surface"
+        - "kyoso_joken_code"
+
+features:
+    block_list:
+        - "base_attributes"
+        - "history_stats"
+        - "jockey_stats"
+        - "pace_stats"
+        - "bloodline_stats"
+        - "class_stats"
+        - "risk_stats"
+        - "runstyle_fit"
+        - "jockey_trainer_compatibility"
+        - "interval_aptitude"
+
+model_params:
+    n_d: 16       # Dimension of prediction layer (usually 8-64)
+    n_a: 16       # Dimension of attention layer (usually = n_d)
+    n_steps: 3    # Reduced for speed (was 5)
+    gamma: 1.3    # Coefficient for feature reusage (usually 1.0-2.0)
+    lambda_sparse: 0 # Disable sparse loss for debug
+    optimizer_params:
+        lr: 0.02
+    mask_type: "sparsemax" # Standard
+    scheduler_params:
+        step_size: 10
+        gamma: 0.9
+    batch_size: 4096 # Increase for GPU speed
+    max_epochs: 200
+    patience: 20
+    
+resources:
+    device: "cuda"
+    num_workers: 0

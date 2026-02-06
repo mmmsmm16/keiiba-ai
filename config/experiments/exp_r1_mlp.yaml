@@ -1,0 +1,55 @@
+
+experiment_name: "exp_r1_mlp"
+model_type: "mlp"
+base_exp: "exp_q8_freshness"
+
+dataset:
+    train_start_date: "2015-01-01"
+    valid_year: 2023
+    test_end_date: "2024-12-31"
+    binary_target: "win"
+    categorical_features:
+        - "place_code"
+        - "race_type_code"
+        - "track_code"
+        - "weather_code"
+        - "distance_category"
+        - "grade_code"
+        - "running_style_code"
+        - "jockey_id"
+        - "trainer_id"
+        - "sire_id"
+        - "sex"
+        - "venue"
+        - "surface"
+        - "kyoso_joken_code"
+        # Add high-cardinality IDs for embedding
+
+features:
+    # Use same features as Q8 (Freshness)
+    # The loader will pick them up from the Q8 parquet
+    # We will filter columns in the script if needed
+    block_list:
+        - "base_attributes"
+        - "history_stats"
+        - "jockey_stats"
+        - "pace_stats"
+        - "bloodline_stats"
+        - "class_stats"
+        - "risk_stats"
+        - "runstyle_fit"
+        - "jockey_trainer_compatibility"
+        - "interval_aptitude"
+
+model_params:
+    hidden_dims: [512, 256, 128]
+    dropout_rate: 0.3
+    learning_rate: 1.0e-3
+    batch_size: 1024
+    epochs: 200
+    early_stopping_patience: 20
+    embedding_dim_rule: "sqrt" # or fixed value
+    
+resources:
+    device: "cuda"
+    num_workers: 4

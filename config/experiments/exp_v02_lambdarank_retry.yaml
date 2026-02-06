@@ -1,0 +1,24 @@
+experiment_name: v02_lambdarank_retry
+features:
+  - base_attributes
+  - history_stats
+
+dataset:
+  train_start_date: '2020-01-01'
+  test_end_date: '2024-12-31'
+  valid_year: 2024
+  jra_only: true
+  description: "Retry LambdaRank with fixed pipeline. Compare NDCG with Binary AUC."
+
+model_params:
+  objective: lambdarank
+  metric: ndcg
+  ndcg_eval_at: [1, 3, 5]
+  label_gain: [0, 1, 3, 7]
+  boosting_type: gbdt
+  learning_rate: 0.05
+  num_leaves: 31
+  feature_fraction: 0.8
+  bagging_fraction: 0.8
+  bagging_freq: 5
+  verbose: -1

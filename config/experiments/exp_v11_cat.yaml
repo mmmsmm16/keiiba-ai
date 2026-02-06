@@ -1,0 +1,49 @@
+experiment_name: v11_cat_enhanced
+model_save_path: models/experiments/v11_cat_enhanced
+
+dataset:
+  train_start_date: '2015-01-01'
+  test_end_date: '2025-12-31'
+  jra_only: true
+  drop_market_data: true 
+  valid_year: 2024
+  
+  categorical_features:
+    - jockey_id
+    - trainer_id
+    - sire_id
+    - sex
+    - age
+    - grade_code 
+    - kyoso_joken_code
+    - surface
+    - venue
+    - prev_grade
+    - horse_id
+    - dist_change_category
+    - interval_category
+
+features:
+  - base_attributes
+  - history_stats
+  - jockey_stats
+  - pace_stats
+  - bloodline_stats
+  - training_stats
+  - burden_stats
+  - changes_stats
+  - aptitude_stats
+  - speed_index_stats
+
+model_params:
+  model_type: catboost
+  objective: lambdarank
+  n_estimators: 10000 
+  learning_rate: 0.067 # Tuned v10
+  depth: 8 # Tuned v10
+  l2_leaf_reg: 1.97 # Tuned v10
+  random_strength: 3.57 # Tuned v10
+  bagging_temperature: 0.1 # Tuned v10
+  subsample: 0.8
+  early_stopping_rounds: 100
+  eval_metric: NDCG:top=10

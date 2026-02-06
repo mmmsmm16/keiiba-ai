@@ -1,0 +1,30 @@
+
+experiment_name: "exp_r3_ensemble"
+models:
+  lgbm:
+    config_path: "config/experiments/exp_q8_freshness.yaml"
+    model_path: "models/experiments/exp_q8_freshness/model.pkl"
+    type: "lgbm"
+    weight: 1.0
+  
+  mlp:
+    config_path: "config/experiments/exp_r1_mlp.yaml"
+    model_path: "models/experiments/exp_r1_mlp/model.pth"
+    model_dir: "models/experiments/exp_r1_mlp" # for scaler/encoders
+    type: "mlp"
+    weight: 1.0
+
+  tabnet:
+    config_path: "config/experiments/exp_r2_tabnet.yaml"
+    model_path: "models/experiments/exp_r2_tabnet/tabnet_model.zip.zip"
+    model_dir: "models/experiments/exp_r2_tabnet" # for encoders
+    type: "tabnet"
+    weight: 1.0
+
+# Base Data (Q8)
+data_path:
+  features: "data/temp_q8/Q8_features.parquet"
+  targets: "data/temp_q8/Q8_targets.parquet"
+
+dataset:
+    valid_year: 2024 # Target year for ensemble evaluation

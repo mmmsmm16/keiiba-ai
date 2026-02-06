@@ -1,0 +1,58 @@
+experiment_name: "v13_e1_calib_2022"
+model_save_path: "models/experiments/v13_e1_calib_2022"
+
+dataset:
+  train_start_date: "2015-01-01"
+  test_end_date: "2025-12-31"
+  valid_year: 2022
+  jra_only: true
+  drop_market_data: true
+  binary_target: "top3"
+  description: "v13 Phase E: Platt Scaling Calibration (2022)"
+  categorical_features:
+    - jockey_id
+    - trainer_id
+    - sire_id
+    - horse_id
+    - sex
+    - grade_code
+    - kyoso_joken_code
+    - surface
+    - venue
+    - prev_grade
+    - dist_change_category
+    - interval_category
+
+features:
+  - base_attributes
+  - history_stats
+  - jockey_stats
+  - pace_stats
+  - bloodline_stats
+  - training_stats
+  - burden_stats
+  - changes_stats
+  - aptitude_stats
+  - speed_index_stats
+  - pace_pressure_stats
+  - relative_stats
+  - jockey_trainer_stats
+
+calibration:
+  enabled: true
+  method: "platt"
+  n_folds: 5
+
+model_params:
+  model_type: "lightgbm"
+  objective: "binary"
+  metric: "auc"
+  is_unbalance: true
+  learning_rate: 0.05
+  num_leaves: 31
+  feature_fraction: 0.8
+  bagging_fraction: 0.8
+  bagging_freq: 5
+  early_stopping_rounds: 100
+  n_estimators: 10000
+  verbose: -1

@@ -1,0 +1,82 @@
+experiment_name: "exp_t2_bloodline"
+model_save_path: "models/experiments/exp_t2_bloodline"
+
+dataset:
+    train_start_date: '2014-01-01'
+    valid_start_date: '2024-01-01'
+    valid_end_date: '2024-12-31'
+    test_start_date: '2025-01-01'
+    test_end_date: '2026-12-31'
+    valid_year: 2023
+    jra_only: true
+    drop_market_data: true
+    binary_target: "win"
+    
+    exclude_features:
+      - horse_id
+      - jockey_id
+      - trainer_id
+      - sire_id
+      - bms_id
+      - mare_id
+      - owner_id
+      - breeder_id
+      - race_id # handled by script but good to be explicit
+    
+    categorical_features:
+      - venue
+      - surface
+      - weather
+      - state
+      - course_type # if exists, or training_course_cat
+      - grade_code
+
+model_params:
+  objective: binary
+  metric: auc
+  boosting_type: gbdt
+  learning_rate: 0.05
+  num_leaves: 63
+  feature_fraction: 0.8
+  bagging_fraction: 0.8
+  bagging_freq: 5
+  verbose: -1
+  n_estimators: 10000
+  early_stopping_rounds: 100
+
+features:
+  - base_attributes
+  - history_stats
+  - jockey_stats
+  - pace_stats
+  # - bloodline_stats # MISSING? Removing to fix hang
+  - odds_features
+  - burden_stats
+  - changes_stats
+  - aptitude_stats
+  - speed_index_stats
+  - pace_pressure_stats
+  - relative_stats
+  - jockey_trainer_stats
+  - temporal_jockey_stats
+  - temporal_trainer_stats
+  - class_stats
+  - segment_stats
+  - risk_stats
+  - course_aptitude
+  - extended_aptitude
+  - runstyle_fit
+  - jockey_trainer_compatibility
+  - interval_aptitude
+  - physique_training
+  - jockey_strategy
+  - race_dynamics
+  - sire_aptitude
+  - track_bias
+  - frame_bias
+  # - odds_fluctuation
+  - weight_pattern
+  - rest_pattern
+  - corner_dynamics
+  - training_detail
+  - bloodline_detail

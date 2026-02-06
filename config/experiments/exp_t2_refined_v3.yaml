@@ -1,0 +1,136 @@
+
+experiment_name: "exp_t2_refined_v3"
+model_save_path: "models/experiments/exp_t2_refined_v3"
+
+dataset:
+  train_start_date: "2014-01-01"
+  test_end_date: "2024-12-31"
+  valid_year: 2023
+  jra_only: true
+  drop_market_data: true
+  binary_target: "win"
+  description: "T2 Refined v3 (Expanded Features: Conditions, Structure, Elo, Trends)"
+
+  # ID系特徴量を除外
+  exclude_features:
+    - horse_id
+    - mare_id
+    - sire_id
+    - jockey_id
+    - trainer_id
+    # Redundant / High Correlation
+    - jockey_n_races_180d
+    - jockey_win_rate_180d
+    - jockey_top3_rate_180d
+    - trainer_n_races_180d
+    - trainer_win_rate_180d
+    - trainer_top3_rate_180d
+    # - is_jockey_change (Use 'jockey_change' in burden_stats or standardized one)
+    # We should exclude dupes. if available in multiple, keep one.
+
+  categorical_features:
+    - sex
+    - grade_code
+    - kyoso_joken_code
+    - surface
+    - venue
+    - prev_grade
+    - dist_change_category
+    - interval_category
+    - attr_rot
+    - attr_str
+    - attr_slp
+    - interval_type_code
+    - lag1_grade
+    - lag2_grade
+    - lag3_grade
+    - lag4_grade
+    - lag5_grade
+    # New Categoricals
+    - weather_code
+    - going_code
+    - lag1_going_code
+    - lag1_surface
+    - is_handicap_race_guess
+
+# Feature Groups (P0..P3) definition for readability (Logic handles all 'features' list)
+features:
+  # --- P0: Core (Existing + Essential) ---
+  - base_attributes
+  - history_stats
+  - jockey_stats
+  - pace_stats
+  - bloodline_stats
+  - burden_stats
+  - changes_stats
+  - aptitude_stats
+  - speed_index_stats
+  - relative_stats
+  - jockey_trainer_stats
+  
+  # --- M4 Temporal/Segment Blocks ---
+  - temporal_jockey_stats
+  - temporal_trainer_stats
+  - class_stats
+  - segment_stats
+  - risk_stats
+  - course_aptitude
+  - extended_aptitude
+  - runstyle_fit
+  - jockey_trainer_compatibility
+  - interval_aptitude
+  - physique_training
+  - jockey_strategy
+  - race_dynamics
+  - sire_aptitude
+  - pace_pressure_stats
+  # - training_stats  # Optional: May have limited data
+  
+  # --- P1: Conditions & Structure ---
+  - race_attributes    # field_size, handicap
+  - race_conditions    # weather, going, variant
+  - race_structure     # early_speed, entropy, pace_exp
+  - impost_features    # impost_change
+  - track_bias         # Track bias features
+  
+  # --- P2: Advanced Ratings & Trends ---
+  - rating_elo         # horse_elo, field_elo
+  - form_trend         # ewm, slope (rank, time_diff)
+  - deep_lag_extended  # lag1_impost, lag1_field_size etc.
+  - lap_fit            # lap_fit_interaction
+  
+  # --- P3: Operations & Details ---
+  - stable_form        # trainer/jockey recent form
+  - horse_events       # trainer_change, gelding
+  - aptitude_smoothing # smoothed versions
+  - relative_expansion # relative elo, form stats
+  
+  # --- T2 Legacy Blocks ---
+  - frame_bias
+  - weight_pattern
+  - rest_pattern
+  - corner_dynamics
+  - head_to_head       
+  - training_detail    # May have some missing data
+  - bloodline_detail
+  - strategy_pattern
+  - horse_gear
+
+model_params:
+  model_type: "lightgbm"
+  objective: "binary"
+  metric: "auc"
+  learning_rate: 0.05
+  num_leaves: 63
+  feature_fraction: 0.8
+  bagging_fraction: 0.8
+  bagging_freq: 5
+  early_stopping_rounds: 100
+  n_estimators: 3000 # Increased for more features
+  verbose: -1
+  seed: 42
+
+calibration:
+  enabled: true
+  method: "isotonic"
+  n_folds: 5

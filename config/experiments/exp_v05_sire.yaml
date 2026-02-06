@@ -1,0 +1,26 @@
+experiment_name: v05_sire
+features:
+  - base_attributes
+  - history_stats
+  - jockey_stats
+  - pace_stats
+  - bloodline_stats
+
+dataset:
+  train_start_date: '2020-01-01'
+  test_end_date: '2024-12-31'
+  valid_year: 2024
+  jra_only: true
+  description: "Add sire performance features (overall, turf, dirt) to capture aptitude."
+
+model_params:
+  objective: binary
+  metric: auc
+  is_unbalance: true
+  boosting_type: gbdt
+  learning_rate: 0.05
+  num_leaves: 31
+  feature_fraction: 0.8
+  bagging_fraction: 0.8
+  bagging_freq: 5
+  verbose: -1

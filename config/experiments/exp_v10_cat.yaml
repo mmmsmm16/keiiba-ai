@@ -1,0 +1,47 @@
+experiment_name: v10_cat_competitor
+model_save_path: models/experiments/v10_cat_competitor
+
+dataset:
+  train_start_date: '2015-01-01'
+  test_end_date: '2025-12-31'
+  jra_only: true
+  drop_market_data: true # Pure ability model
+  valid_ratio: 0.15 # Not used if DatasetSplitter uses valid_year
+  
+  # New features in v10
+  categorical_features:
+    - jockey_id
+    - trainer_id
+    - sire_id
+    - sex
+    - age # CatBoost treats int as numerical unless specified, but age is ordinal/cat
+    - distance # Treat as numeric usually, but can be cat? -> Keep numeric
+    - grade_code 
+    - kyoso_joken_code
+    - surface
+    - venue
+    - prev_grade
+    - horse_id
+
+features:
+  - base_attributes      # extended with race context
+  - history_stats        # extended with competitor level
+  - jockey_stats
+  - pace_stats
+  - bloodline_stats
+  - training_stats
+  - burden_stats
+
+model_params:
+  model_type: catboost
+  objective: lambdarank
+  n_estimators: 10000 
+  learning_rate: 0.067 # Tuned (Trial 7)
+  depth: 8 # Tuned (Trial 7, safer than 10)
+  l2_leaf_reg: 1.97 # Tuned
+  random_strength: 3.57 # Tuned
+  bagging_temperature: 0.1 # Tuned
+  subsample: 0.8
+  # colsample_bytree: 0.8 # CatBoostRanker incompatibility
+  early_stopping_rounds: 100
+  eval_metric: NDCG:top=10

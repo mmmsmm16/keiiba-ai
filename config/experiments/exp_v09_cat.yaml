@@ -1,0 +1,32 @@
+experiment_name: "v09_cat_pure"
+description: "純粋能力モデル (CatBoost): オッズなし、調教・斤量追加"
+features:
+  - "base_attributes"
+  - "history_stats"
+  - "jockey_stats"
+  - "pace_stats"
+  - "bloodline_stats"
+  - "training_stats"
+  - "burden_stats"
+
+dataset:
+  train_start_date: "2018-01-01"
+  valid_year: 2024
+  test_end_date: "2025-12-31"
+  jra_only: true
+  drop_market_data: true
+  categorical_features:
+    - "jockey_id"
+    - "trainer_id"
+    - "sire_id"
+
+model_params:
+  model_type: "catboost"
+  objective: "lambdarank" # Will be mapped to YetiRank in run_experiment.py
+  iterations: 1000
+  learning_rate: 0.05
+  depth: 6
+  l2_leaf_reg: 3
+  random_seed: 42
+  early_stopping_rounds: 50
+  task_type: "CPU" # GPU availability check failed for this container earlier
