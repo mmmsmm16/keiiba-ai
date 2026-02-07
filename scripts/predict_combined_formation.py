@@ -84,6 +84,14 @@ def pad_japanese(s, width, align='left'):
     else:
         return ' ' * pad_len + s
 
+def normalize_race_id(raw_race_id):
+    if raw_race_id is None:
+        return None
+    race_id = "".join(ch for ch in str(raw_race_id).strip() if ch.isdigit())
+    if len(race_id) != 12:
+        return None
+    return race_id
+
 
 def build_v13_features(df, feats_v13, logger, fill_value=0.0):
     missing = [c for c in feats_v13 if c not in df.columns]
@@ -229,6 +237,15 @@ def main():
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     logger = logging.getLogger(__name__)
 
+    if args.race_id:
+        normalized_race_id = normalize_race_id(args.race_id)
+        if normalized_race_id is None:
+            logger.error(f"Invalid --race_id: {args.race_id}. Expected 12 digits (YYYYVVKKDDRR).")
+            return
+        if normalized_race_id != args.race_id:
+            logger.info(f"Normalized race_id: {args.race_id} -> {normalized_race_id}")
+        args.race_id = normalized_race_id
+
     # 2. Load Models
     logger.info("Loading V13 & V14 Models...")
     try:
@@ -257,6 +274,7 @@ def main():
     use_optimized_loading = True
     if args.force:
          use_optimized_loading = False
+    optimized_load_failed = False
          
     if use_optimized_loading:
         logger.info(f"Optimized Data Loading Enabled (Target: {target_date}, RaceID: {args.race_id})")
@@ -265,23 +283,17 @@ def main():
         try:
              # Build query to get horses
              if args.race_id:
-                  # Parse race_id components
-                  # format: YYYY(4)Venue(2)Kai(2)Day(2)No(2)
-                  if len(args.race_id) == 12:
-                      r_nen = args.race_id[:4]
-                      r_venue = args.race_id[4:6]
-                      r_kai = args.race_id[6:8]
-                      r_nichi = args.race_id[8:10]
-                      r_no = args.race_id[10:12]
-                      
-                      q_horses = f"""
-                      SELECT DISTINCT ketto_toroku_bango FROM jvd_se 
-                      WHERE kaisai_nen='{r_nen}' AND keibajo_code='{r_venue}' 
-                        AND kaisai_kai='{r_kai}' AND kaisai_nichime='{r_nichi}' 
-                        AND race_bango='{r_no}'
-                      """
-                  else:
-                       use_optimized_loading = False # Invalid ID
+                  q_horses = f"""
+                  SELECT DISTINCT ketto_toroku_bango
+                  FROM jvd_se
+                  WHERE CONCAT(
+                      LPAD(COALESCE(kaisai_nen::text, ''), 4, '0'),
+                      LPAD(COALESCE(keibajo_code::text, ''), 2, '0'),
+                      LPAD(COALESCE(kaisai_kai::text, ''), 2, '0'),
+                      LPAD(COALESCE(kaisai_nichime::text, ''), 2, '0'),
+                      LPAD(COALESCE(race_bango::text, ''), 2, '0')
+                  ) = '{args.race_id}'
+                  """
              else:
                   # By Date
                   y = target_date.split('-')[0]
@@ -319,7 +331,12 @@ def main():
                  
         except Exception as e:
             logger.error(f"Optimized loading failed: {e}. Falling back to full load.")
+            optimized_load_failed = True
             use_optimized_loading = False
+
+    if args.race_id and optimized_load_failed and not args.force:
+        logger.error("Aborting in --race_id mode to avoid expensive full-history fallback. Use --force only for emergency runs.")
+        return
     
     if not use_optimized_loading:
         df_raw = loader.load(history_start_date=start_history, end_date=target_date, skip_odds=False)
@@ -388,13 +405,27 @@ def main():
 
     # [Fix] Ensure odds_10min is numeric
     df_today['odds_10min'] = pd.to_numeric(df_today.get('odds_10min', np.nan), errors='coerce')
+    df_today.loc[df_today['odds_10min'] <= 0, 'odds_10min'] = np.nan
     invalid_odds_mask = df_today['odds_10min'].isna() | (df_today['odds_10min'] <= 0)
 
     # Check if odds_10min exists (or is empty) and try to fill from JVD_O1
     if invalid_odds_mask.any():
         try:
             year_str = f"'{date_str[:4]}'"
-            q_o1 = f"SELECT kaisai_nen, keibajo_code, kaisai_kai, kaisai_nichime, race_bango, odds_tansho FROM jvd_o1 WHERE kaisai_nen = {year_str} AND kaisai_tsukihi = '{date_str[4:]}'"
+            q_o1 = (
+                "SELECT kaisai_nen, keibajo_code, kaisai_kai, kaisai_nichime, race_bango, odds_tansho "
+                f"FROM jvd_o1 WHERE kaisai_nen = {year_str} AND kaisai_tsukihi = '{date_str[4:]}'"
+            )
+            if args.race_id:
+                q_o1 += (
+                    " AND CONCAT("
+                    "LPAD(COALESCE(kaisai_nen::text, ''), 4, '0'),"
+                    "LPAD(COALESCE(keibajo_code::text, ''), 2, '0'),"
+                    "LPAD(COALESCE(kaisai_kai::text, ''), 2, '0'),"
+                    "LPAD(COALESCE(kaisai_nichime::text, ''), 2, '0'),"
+                    "LPAD(COALESCE(race_bango::text, ''), 2, '0')"
+                    f") = '{args.race_id}'"
+                )
             df_o1_raw = pd.read_sql(q_o1, loader.engine)
             if not df_o1_raw.empty:
                 def build_rid(row):
@@ -437,12 +468,16 @@ def main():
     if invalid_odds_mask.any():
         if 'odds' in df_today.columns:
             df_today.loc[invalid_odds_mask, 'odds_10min'] = df_today.loc[invalid_odds_mask, 'odds']
-        else:
-            logger.warning("Critical: No odds information available. Filling odds_10min with 10.0.")
-            df_today.loc[invalid_odds_mask, 'odds_10min'] = 10.0
+
+    invalid_odds_mask = df_today['odds_10min'].isna() | (df_today['odds_10min'] <= 0)
+    if invalid_odds_mask.any():
+        logger.warning(f"Odds fallback unresolved for {int(invalid_odds_mask.sum())} rows. Filling odds_10min=10.0.")
+        df_today.loc[invalid_odds_mask, 'odds_10min'] = 10.0
 
     if 'odds' not in df_today.columns:
         df_today['odds'] = df_today['odds_10min']
+    else:
+        df_today['odds'] = pd.to_numeric(df_today['odds'], errors='coerce').fillna(df_today['odds_10min'])
 
     if 'odds_final' not in df_today.columns:
         df_today['odds_final'] = df_today['odds']
