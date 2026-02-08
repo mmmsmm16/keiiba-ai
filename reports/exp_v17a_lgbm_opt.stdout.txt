@@ -1,0 +1,11 @@
+[2026-02-07 16:14:46] Loading data: data/processed/preprocessed_data_v12.parquet
+[2026-02-07 16:14:46] Using 315 columns
+[2026-02-07 16:14:53] rows train=237437 valid=46994 test=47607 holdout=2439
+[2026-02-07 16:14:53] candidates=6 policy_edges=[0.0, 1.05] axis_modes=['value', 'hybrid'] partner_modes=['value', 'prob'] pair_options=[0, 2, 3] trio_options=[0, 3] policy_max_cases=96
+[2026-02-07 16:14:53] Loaded payout map races=3454 for years=[2024]
+[2026-02-07 16:14:54] Loaded payout map races=3455 for years=[2025]
+[2026-02-07 16:14:54] [Candidate 1/6] lgbm_binary_no_market_none feats=307
+Training until validation scores don't improve for 80 rounds
+Early stopping, best iteration is:
+[2]	valid_0's binary_logloss: 0.256076
+[2026-02-07 16:15:06] [lgbm_binary_no_market_none 1/6] policy search start: 96

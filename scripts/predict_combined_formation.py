@@ -199,12 +199,39 @@ def merge_odds_fluctuation_features(df, logger):
         return df
 
 # Config
-# Config
-V13_MODEL_PATH = 'models/experiments/exp_lambdarank_hard_weighted/model.pkl'
-V13_FEATS_PATH = 'models/experiments/exp_lambdarank_hard_weighted/features.csv'
-V14_MODEL_PATH = 'models/experiments/exp_gap_v14_production/model_v14.pkl'
-V14_FEATS_PATH = 'models/experiments/exp_gap_v14_production/features.csv'
-CACHE_DIR = 'data/features_v14/prod_cache'
+MODEL_PROFILES = {
+    # Current production models
+    "BASE": {
+        "v13_model_path": "models/experiments/exp_lambdarank_hard_weighted/model.pkl",
+        "v13_feats_path": "models/experiments/exp_lambdarank_hard_weighted/features.csv",
+        "v14_model_path": "models/experiments/exp_gap_v14_production/model_v14.pkl",
+        "v14_feats_path": "models/experiments/exp_gap_v14_production/features.csv",
+        "cache_dir": "data/features_v14/prod_cache",
+        "blend": {
+            "enabled": False,
+            "v13_base_weight": 1.0,
+            "v14_base_weight": 1.0,
+        },
+    },
+    # Enhanced models (this workstream)
+    "ENHANCED": {
+        "v13_model_path": "models/experiments/exp_lambdarank_hard_weighted_enhanced/model.pkl",
+        "v13_feats_path": "models/experiments/exp_lambdarank_hard_weighted_enhanced/features.csv",
+        "v14_model_path": "models/experiments/exp_gap_v14_production_enhanced/model_v14.pkl",
+        "v14_feats_path": "models/experiments/exp_gap_v14_production_enhanced/features.csv",
+        "cache_dir": "data/features_v14/prod_cache_enhanced",
+        "blend": {
+            "enabled": True,
+            # Tuned on holdout-style scan: restore hit while keeping ROI edge.
+            "v13_base_weight": 0.50,
+            "v14_base_weight": 0.30,
+            "v13_base_model_path": "models/experiments/exp_lambdarank_hard_weighted/model.pkl",
+            "v13_base_feats_path": "models/experiments/exp_lambdarank_hard_weighted/features.csv",
+            "v14_base_model_path": "models/experiments/exp_gap_v14_production/model_v14.pkl",
+            "v14_base_feats_path": "models/experiments/exp_gap_v14_production/features.csv",
+        },
+    },
+}
 
 def main():
     parser = argparse.ArgumentParser()
@@ -212,6 +239,13 @@ def main():
     parser.add_argument('--race_id', type=str, help='Specific Race ID')
     parser.add_argument('--discord', action='store_true', help='Webhook output format')
     parser.add_argument('--force', action='store_true', help='Force recompute features')
+    parser.add_argument(
+        '--model_profile',
+        type=str,
+        default='BASE',
+        choices=['BASE', 'ENHANCED', 'base', 'enhanced'],
+        help='Model profile to use: BASE (current v13/v14) or ENHANCED (new v13/v14).'
+    )
     parser.add_argument("--webhook_url", type=str, default=os.environ.get("DISCORD_WEBHOOK_URL", ""), help="Discord Webhook URL")
     args = parser.parse_args()
     
@@ -246,7 +280,26 @@ def main():
             logger.info(f"Normalized race_id: {args.race_id} -> {normalized_race_id}")
         args.race_id = normalized_race_id
 
-    # 2. Load Models
+    # 2. Resolve model profile
+    profile_key = args.model_profile.upper()
+    profile = MODEL_PROFILES.get(profile_key, MODEL_PROFILES["BASE"])
+    V13_MODEL_PATH = profile["v13_model_path"]
+    V13_FEATS_PATH = profile["v13_feats_path"]
+    V14_MODEL_PATH = profile["v14_model_path"]
+    V14_FEATS_PATH = profile["v14_feats_path"]
+    CACHE_DIR = profile["cache_dir"]
+    blend_cfg = profile.get("blend", {}) or {}
+    blend_enabled = bool(blend_cfg.get("enabled", False))
+    v13_base_weight = float(blend_cfg.get("v13_base_weight", 1.0))
+    v14_base_weight = float(blend_cfg.get("v14_base_weight", 1.0))
+
+    logger.info(f"Model profile: {profile_key}")
+    logger.info(f"  V13 model: {V13_MODEL_PATH}")
+    logger.info(f"  V14 model: {V14_MODEL_PATH}")
+    if blend_enabled:
+        logger.info(f"  Blend enabled: v13 base_weight={v13_base_weight:.2f}, v14 base_weight={v14_base_weight:.2f}")
+
+    # 3. Load Models
     logger.info("Loading V13 & V14 Models...")
     try:
         model_v13 = joblib.load(V13_MODEL_PATH)
@@ -261,11 +314,31 @@ def main():
         
         model_v14 = joblib.load(V14_MODEL_PATH)
         feats_v14 = pd.read_csv(V14_FEATS_PATH)['feature'].tolist()
+
+        model_v13_base = None
+        feats_v13_base = None
+        model_v14_base = None
+        feats_v14_base = None
+        if blend_enabled:
+            v13_base_model_path = blend_cfg.get("v13_base_model_path")
+            v13_base_feats_path = blend_cfg.get("v13_base_feats_path")
+            v14_base_model_path = blend_cfg.get("v14_base_model_path")
+            v14_base_feats_path = blend_cfg.get("v14_base_feats_path")
+            if v13_base_model_path and v13_base_feats_path:
+                model_v13_base = joblib.load(v13_base_model_path)
+                feats_v13_base = load_v13_feature_list(v13_base_feats_path, logger)
+                if not feats_v13_base:
+                    logger.warning("V13 base feature list is empty. Disable v13 blending.")
+                    model_v13_base = None
+                    feats_v13_base = None
+            if v14_base_model_path and v14_base_feats_path:
+                model_v14_base = joblib.load(v14_base_model_path)
+                feats_v14_base = pd.read_csv(v14_base_feats_path)["feature"].tolist()
     except Exception as e:
         logger.error(f"Failed to load models: {e}")
         return
 
-    # 3. Load Data
+    # 4. Load Data
     loader = JraVanDataLoader()
     start_history = "2016-01-01"
     
@@ -567,6 +640,17 @@ def main():
             v13_scores = v13_scores[:, -1]
     else:
         v13_scores = model_v13.predict(X_v13)
+
+    if blend_enabled and model_v13_base is not None and feats_v13_base is not None:
+        X_v13_base = build_v13_features(df_v13_today, feats_v13_base, logger, fill_value=np.nan)
+        if hasattr(model_v13_base, 'predict_proba'):
+            v13_base_scores = model_v13_base.predict_proba(X_v13_base)
+            if isinstance(v13_base_scores, np.ndarray) and v13_base_scores.ndim == 2:
+                v13_base_scores = v13_base_scores[:, -1]
+        else:
+            v13_base_scores = model_v13_base.predict(X_v13_base)
+        v13_scores = (v13_base_weight * v13_base_scores) + ((1.0 - v13_base_weight) * v13_scores)
+        logger.info("Applied V13 score blending (BASE+ENHANCED).")
         
     logger.info(f"V13 Raw Scores Stats: min={v13_scores.min():.4f}, max={v13_scores.max():.4f}, mean={v13_scores.mean():.4f}, std={v13_scores.std():.4f}")
 
@@ -611,6 +695,14 @@ def main():
         logger.info(f"X_v14 Sample Stats (Top 5 feats):\n{X_v14.iloc[:, :5].describe()}")
     
     v14_scores = model_v14.predict(X_v14)
+    if blend_enabled and model_v14_base is not None and feats_v14_base is not None:
+        for c in feats_v14_base:
+            if c not in df_today.columns:
+                df_today[c] = 0.0
+        X_v14_base = df_today[feats_v14_base].fillna(0)
+        v14_base_scores = model_v14_base.predict(X_v14_base)
+        v14_scores = (v14_base_weight * v14_base_scores) + ((1.0 - v14_base_weight) * v14_scores)
+        logger.info("Applied V14 score blending (BASE+ENHANCED).")
     df_today['gap_v14'] = v14_scores
 
     # Ranks

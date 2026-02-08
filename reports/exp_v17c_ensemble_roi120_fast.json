@@ -1,0 +1,336 @@
+{
+  "experiment": "exp_v17c_ensemble_nextgen",
+  "split": {
+    "train_end_year": 2023,
+    "valid_year": 2024,
+    "test_year": 2025
+  },
+  "constraints": {
+    "min_hit": 0.18,
+    "min_coverage": 0.12,
+    "min_tickets": 5000
+  },
+  "model_packs": [
+    {
+      "name": "xgb_no_market",
+      "model_path": "models/experiments/exp_v16_xgb_binary_nomarket_roi120/model.pkl",
+      "feat_path": "models/experiments/exp_v16_xgb_binary_nomarket_roi120/features.csv",
+      "n_features": 307
+    },
+    {
+      "name": "xgb_light",
+      "model_path": "models/experiments/exp_v16_xgb_binary_light_roi120/model.pkl",
+      "feat_path": "models/experiments/exp_v16_xgb_binary_light_roi120/features.csv",
+      "n_features": 310
+    },
+    {
+      "name": "xgb_ranker",
+      "model_path": "models/experiments/exp_v16_xgb_ranker_value_b24/model.pkl",
+      "feat_path": "models/experiments/exp_v16_xgb_ranker_value_b24/features.csv",
+      "n_features": 310
+    }
+  ],
+  "weight_step": 0.1,
+  "n_weight_vectors": 8,
+  "policy_profile": "roi_balanced",
+  "policy_axis_min_edges": [
+    0.0,
+    1.05
+  ],
+  "policy_axis_modes": [
+    "value",
+    "hybrid"
+  ],
+  "policy_partner_modes": [
+    "value",
+    "prob"
+  ],
+  "policy_pair_options": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "policy_trio_options": [
+    0,
+    2,
+    3
+  ],
+  "policy_max_cases": 40,
+  "best_candidate_by_valid": {
+    "blend_id": 4,
+    "weights": {
+      "xgb_no_market": 0.3,
+      "xgb_light": 0.4,
+      "xgb_ranker": 0.3
+    },
+    "valid_utility": 82.65515001322257,
+    "valid_blended_roi": 83.81178000743218,
+    "valid_blended_hit": 0.3242617255356109,
+    "valid_tickets": 10764,
+    "valid_coverage": 1.0,
+    "test_utility": 79.81436941725916,
+    "test_blended_roi": 80.87835320417288,
+    "test_blended_hit": 0.321656050955414,
+    "test_tickets": 10736,
+    "test_coverage": 1.0,
+    "policy": {
+      "gamma": 0.0,
+      "bonus": 0.0,
+      "axis_p": 0.05,
+      "axis_min_odds": 1.0,
+      "axis_min_edge": 0.0,
+      "axis_mode": "hybrid",
+      "partner_mode": "value",
+      "win_ev": 0.9,
+      "pair_n": 1.0,
+      "trio_n": 0.0
+    }
+  },
+  "top_candidates_valid": [
+    {
+      "blend_id": 4,
+      "weights": {
+        "xgb_no_market": 0.3,
+        "xgb_light": 0.4,
+        "xgb_ranker": 0.3
+      },
+      "valid_utility": 82.65515001322257,
+      "valid_blended_roi": 83.81178000743218,
+      "valid_blended_hit": 0.3242617255356109,
+      "valid_tickets": 10764,
+      "valid_coverage": 1.0,
+      "test_utility": 79.81436941725916,
+      "test_blended_roi": 80.87835320417288,
+      "test_blended_hit": 0.321656050955414,
+      "test_tickets": 10736,
+      "test_coverage": 1.0,
+      "policy": {
+        "gamma": 0.0,
+        "bonus": 0.0,
+        "axis_p": 0.05,
+        "axis_min_odds": 1.0,
+        "axis_min_edge": 0.0,
+        "axis_mode": "hybrid",
+        "partner_mode": "value",
+        "win_ev": 0.9,
+        "pair_n": 1.0,
+        "trio_n": 0.0
+      }
+    },
+    {
+      "blend_id": 8,
+      "weights": {
+        "xgb_no_market": 0.5,
+        "xgb_light": 0.4,
+        "xgb_ranker": 0.1
+      },
+      "valid_utility": 82.29312155050793,
+      "valid_blended_roi": 82.03979207743323,
+      "valid_blended_hit": 0.3048639258830342,
+      "valid_tickets": 11158,
+      "valid_coverage": 1.0,
+      "test_utility": 80.37050470388895,
+      "test_blended_roi": 80.22140221402213,
+      "test_blended_hit": 0.30862767805442964,
+      "test_tickets": 11111,
+      "test_coverage": 1.0,
+      "policy": {
+        "gamma": 0.0,
+        "bonus": 0.0,
+        "axis_p": 0.05,
+        "axis_min_odds": 1.0,
+        "axis_min_edge": 0.0,
+        "axis_mode": "hybrid",
+        "partner_mode": "value",
+        "win_ev": 0.9,
+        "pair_n": 1.0,
+        "trio_n": 0.0
+      }
+    },
+    {
+      "blend_id": 7,
+      "weights": {
+        "xgb_no_market": 0.5,
+        "xgb_light": 0.5,
+        "xgb_ranker": 0.0
+      },
+      "valid_utility": 82.10275834162789,
+      "valid_blended_roi": 82.13026268441885,
+      "valid_blended_hit": 0.30804863925883036,
+      "valid_tickets": 11116,
+      "valid_coverage": 1.0,
+      "test_utility": 80.99977552704087,
+      "test_blended_roi": 81.11703088314972,
+      "test_blended_hit": 0.3126809496236248,
+      "test_tickets": 11074,
+      "test_coverage": 1.0,
+      "policy": {
+        "gamma": 0.0,
+        "bonus": 0.0,
+        "axis_p": 0.05,
+        "axis_min_odds": 1.0,
+        "axis_min_edge": 0.0,
+        "axis_mode": "hybrid",
+        "partner_mode": "value",
+        "win_ev": 0.9,
+        "pair_n": 1.0,
+        "trio_n": 0.0
+      }
+    },
+    {
+      "blend_id": 6,
+      "weights": {
+        "xgb_no_market": 0.2,
+        "xgb_light": 0.4,
+        "xgb_ranker": 0.4
+      },
+      "valid_utility": 82.04891081087482,
+      "valid_blended_roi": 83.60507757404795,
+      "valid_blended_hit": 0.32078749276201507,
+      "valid_tickets": 10635,
+      "valid_coverage": 1.0,
+      "test_utility": 86.03253302590835,
+      "test_blended_roi": 87.51602564102564,
+      "test_blended_hit": 0.32493483927019984,
+      "test_tickets": 10608,
+      "test_coverage": 0.9997104806022004,
+      "policy": {
+        "gamma": 0.0,
+        "bonus": 0.0,
+        "axis_p": 0.05,
+        "axis_min_odds": 1.0,
+        "axis_min_edge": 0.0,
+        "axis_mode": "hybrid",
+        "partner_mode": "value",
+        "win_ev": 0.9,
+        "pair_n": 1.0,
+        "trio_n": 0.0
+      }
+    },
+    {
+      "blend_id": 1,
+      "weights": {
+        "xgb_no_market": 0.4,
+        "xgb_light": 0.4,
+        "xgb_ranker": 0.2
+      },
+      "valid_utility": 81.67449650146857,
+      "valid_blended_roi": 82.24629731212288,
+      "valid_blended_hit": 0.3155761436016213,
+      "valid_tickets": 10938,
+      "valid_coverage": 1.0,
+      "test_utility": 80.52432132607679,
+      "test_blended_roi": 81.04111345114916,
+      "test_blended_hit": 0.31644470179502027,
+      "test_tickets": 10921,
+      "test_coverage": 1.0,
+      "policy": {
+        "gamma": 0.0,
+        "bonus": 0.0,
+        "axis_p": 0.05,
+        "axis_min_odds": 1.0,
+        "axis_min_edge": 0.0,
+        "axis_mode": "hybrid",
+        "partner_mode": "value",
+        "win_ev": 0.9,
+        "pair_n": 1.0,
+        "trio_n": 0.0
+      }
+    },
+    {
+      "blend_id": 2,
+      "weights": {
+        "xgb_no_market": 0.4,
+        "xgb_light": 0.3,
+        "xgb_ranker": 0.3
+      },
+      "valid_utility": 81.02860982361162,
+      "valid_blended_roi": 81.32247201237827,
+      "valid_blended_hit": 0.3126809496236248,
+      "valid_tickets": 10987,
+      "valid_coverage": 1.0,
+      "test_utility": 82.44912851461714,
+      "test_blended_roi": 82.77194264316375,
+      "test_blended_hit": 0.315865662999421,
+      "test_tickets": 10949,
+      "test_coverage": 1.0,
+      "policy": {
+        "gamma": 0.0,
+        "bonus": 0.0,
+        "axis_p": 0.05,
+        "axis_min_odds": 1.0,
+        "axis_min_edge": 0.0,
+        "axis_mode": "hybrid",
+        "partner_mode": "value",
+        "win_ev": 0.9,
+        "pair_n": 1.0,
+        "trio_n": 0.0
+      }
+    },
+    {
+      "blend_id": 3,
+      "weights": {
+        "xgb_no_market": 0.4,
+        "xgb_light": 0.2,
+        "xgb_ranker": 0.4
+      },
+      "valid_utility": 80.8791566339717,
+      "valid_blended_roi": 80.7908532176428,
+      "valid_blended_hit": 0.3123914302258251,
+      "valid_tickets": 11064,
+      "valid_coverage": 1.0,
+      "test_utility": 82.51788501356059,
+      "test_blended_roi": 82.48459028281363,
+      "test_blended_hit": 0.3089171974522293,
+      "test_tickets": 11032,
+      "test_coverage": 1.0,
+      "policy": {
+        "gamma": 0.0,
+        "bonus": 0.0,
+        "axis_p": 0.05,
+        "axis_min_odds": 1.0,
+        "axis_min_edge": 0.0,
+        "axis_mode": "hybrid",
+        "partner_mode": "value",
+        "win_ev": 0.9,
+        "pair_n": 1.0,
+        "trio_n": 0.0
+      }
+    },
+    {
+      "blend_id": 5,
+      "weights": {
+        "xgb_no_market": 0.3,
+        "xgb_light": 0.3,
+        "xgb_ranker": 0.4
+      },
+      "valid_utility": 79.32971361263269,
+      "valid_blended_roi": 81.71969624146881,
+      "valid_blended_hit": 0.3254198031268095,
+      "valid_tickets": 10403,
+      "valid_coverage": 1.0,
+      "test_utility": 78.99437939950755,
+      "test_blended_roi": 81.35541008856373,
+      "test_blended_hit": 0.31962941517081644,
+      "test_tickets": 10388,
+      "test_coverage": 1.0,
+      "policy": {
+        "gamma": 0.0,
+        "bonus": 0.0,
+        "axis_p": 0.05,
+        "axis_min_odds": 1.0,
+        "axis_min_edge": 0.0,
+        "axis_mode": "value",
+        "partner_mode": "value",
+        "win_ev": 0.9,
+        "pair_n": 1.0,
+        "trio_n": 0.0
+      }
+    }
+  ],
+  "artifacts": {
+    "ensemble_results": "models/experiments/exp_v17c_ensemble_roi120_fast/ensemble_results.csv",
+    "ensemble_results_progress": "models/experiments/exp_v17c_ensemble_roi120_fast/ensemble_results_progress.csv"
+  }
+}

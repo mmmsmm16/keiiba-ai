@@ -1,0 +1,84 @@
+[2026-02-07 14:33:06] Loading data: data/processed/preprocessed_data_v12.parquet
+[2026-02-07 14:33:06] Using 315 columns
+[2026-02-07 14:33:12] rows train=237437 valid=46994 test=47607 holdout=2439
+[2026-02-07 14:33:13] Loaded payout map races=3454 for years=[2024]
+[2026-02-07 14:33:13] Loaded payout map races=3455 for years=[2025]
+[2026-02-07 14:33:13] [Candidate 1/6] lgbm_binary_light_market_value feats=310
+Training until validation scores don't improve for 80 rounds
+Early stopping, best iteration is:
+[1]	valid_0's binary_logloss: 0.319896
+[2026-02-07 14:33:25] [lgbm_binary_light_market_value 1/6] policy search start: 64
+[2026-02-07 14:33:34] [lgbm_binary_light_market_value 1/6] new feasible roi=76.36 hit=0.472 tickets=51810 (1/64)
+[2026-02-07 14:33:41] [lgbm_binary_light_market_value 1/6] new feasible roi=76.40 hit=0.551 tickets=62172 (2/64)
+[2026-02-07 14:34:02] [lgbm_binary_light_market_value 1/6] new feasible roi=77.84 hit=0.412 tickets=31680 (5/64)
+[2026-02-07 14:34:12] [lgbm_binary_light_market_value 1/6] new feasible roi=78.10 hit=0.480 tickets=38016 (6/64)
+[2026-02-07 14:34:29] [lgbm_binary_light_market_value 1/6] new feasible roi=78.27 hit=0.559 tickets=20700 (9/64)
+[2026-02-07 14:34:54] [lgbm_binary_light_market_value 1/6] new feasible roi=80.68 hit=0.512 tickets=10875 (13/64)
+[2026-02-07 14:37:42] [lgbm_binary_light_market_value 1/6] progress 40/64 bestU=78.43
+[2026-02-07 14:40:13] [lgbm_binary_light_market_value 1/6] progress 64/64 bestU=78.43
+[2026-02-07 14:40:18]   valid ROI=80.68 HIT=0.512 tickets=10875 | test ROI=81.22 HIT=0.483 tickets=10078
+[2026-02-07 14:40:18]   best updated -> lgbm_binary_light_market_value
+[2026-02-07 14:40:18] [Candidate 2/6] lgbm_ranker_light_market feats=310
+/usr/local/lib/python3.10/dist-packages/lightgbm/sklearn.py:861: UserWarning: Found 'ndcg_eval_at' in params. Will use it instead of 'eval_at' argument
+  _log_warning(f"Found '{alias}' in params. Will use it instead of 'eval_at' argument")
+Training until validation scores don't improve for 80 rounds
+Early stopping, best iteration is:
+[61]	valid_0's ndcg@1: 0.49654	valid_0's ndcg@3: 0.57438	valid_0's ndcg@5: 0.648664
+/usr/local/lib/python3.10/dist-packages/lightgbm/sklearn.py:861: UserWarning: Found 'ndcg_eval_at' in params. Will use it instead of 'eval_at' argument
+  _log_warning(f"Found '{alias}' in params. Will use it instead of 'eval_at' argument")
+/usr/local/lib/python3.10/dist-packages/lightgbm/sklearn.py:861: UserWarning: Found 'ndcg_eval_at' in params. Will use it instead of 'eval_at' argument
+  _log_warning(f"Found '{alias}' in params. Will use it instead of 'eval_at' argument")
+[2026-02-07 14:40:30] [lgbm_ranker_light_market 2/6] policy search start: 64
+[2026-02-07 14:40:36] [lgbm_ranker_light_market 2/6] new feasible roi=77.86 hit=0.486 tickets=51811 (1/64)
+[2026-02-07 14:40:46] [lgbm_ranker_light_market 2/6] new feasible roi=78.36 hit=0.569 tickets=62173 (2/64)
+[2026-02-07 14:41:00] [lgbm_ranker_light_market 2/6] new feasible roi=78.37 hit=0.569 tickets=62172 (4/64)
+[2026-02-07 14:42:21] [lgbm_ranker_light_market 2/6] new feasible roi=78.95 hit=0.480 tickets=51811 (17/64)
+[2026-02-07 14:42:30] [lgbm_ranker_light_market 2/6] new feasible roi=79.48 hit=0.565 tickets=62173 (18/64)
+[2026-02-07 14:42:42] [lgbm_ranker_light_market 2/6] new feasible roi=79.48 hit=0.565 tickets=62172 (20/64)
+[2026-02-07 14:42:47] [lgbm_ranker_light_market 2/6] new feasible roi=79.86 hit=0.386 tickets=27601 (21/64)
+[2026-02-07 14:42:53] [lgbm_ranker_light_market 2/6] new feasible roi=81.43 hit=0.472 tickets=33121 (22/64)
+[2026-02-07 14:43:08] [lgbm_ranker_light_market 2/6] new feasible roi=81.43 hit=0.472 tickets=33120 (24/64)
+[2026-02-07 14:44:06] [lgbm_ranker_light_market 2/6] new feasible roi=84.38 hit=0.469 tickets=51696 (33/64)
+[2026-02-07 14:44:18] [lgbm_ranker_light_market 2/6] new feasible roi=84.39 hit=0.469 tickets=51690 (35/64)
+[2026-02-07 14:44:50] [lgbm_ranker_light_market 2/6] progress 40/64 bestU=82.06
+[2026-02-07 14:47:33] [lgbm_ranker_light_market 2/6] progress 64/64 bestU=82.06
+[2026-02-07 14:47:39]   valid ROI=84.39 HIT=0.469 tickets=51690 | test ROI=76.21 HIT=0.460 tickets=51600
+[2026-02-07 14:47:39]   best updated -> lgbm_ranker_light_market
+[2026-02-07 14:47:39] [Candidate 3/6] xgb_binary_light_market_value feats=310
+[2026-02-07 14:49:21] [xgb_binary_light_market_value 3/6] policy search start: 64
+[2026-02-07 14:49:28] [xgb_binary_light_market_value 3/6] new feasible roi=80.82 hit=0.486 tickets=52147 (1/64)
+[2026-02-07 14:49:35] [xgb_binary_light_market_value 3/6] new feasible roi=81.07 hit=0.563 tickets=62509 (2/64)
+[2026-02-07 14:49:56] [xgb_binary_light_market_value 3/6] new feasible roi=81.81 hit=0.406 tickets=29496 (5/64)
+[2026-02-07 14:50:01] [xgb_binary_light_market_value 3/6] new feasible roi=82.82 hit=0.478 tickets=35328 (6/64)
+[2026-02-07 14:51:09] [xgb_binary_light_market_value 3/6] new feasible roi=83.34 hit=0.467 tickets=52211 (17/64)
+[2026-02-07 14:52:51] [xgb_binary_light_market_value 3/6] new feasible roi=92.09 hit=0.421 tickets=53014 (33/64)
+[2026-02-07 14:53:17] [xgb_binary_light_market_value 3/6] new feasible roi=94.62 hit=0.359 tickets=37683 (37/64)
+[2026-02-07 14:53:37] [xgb_binary_light_market_value 3/6] progress 40/64 bestU=96.15
+[2026-02-07 14:54:10] [xgb_binary_light_market_value 3/6] new feasible roi=94.85 hit=0.360 tickets=37475 (45/64)
+[2026-02-07 14:56:13] [xgb_binary_light_market_value 3/6] progress 64/64 bestU=96.34
+[2026-02-07 14:56:22]   valid ROI=94.85 HIT=0.360 tickets=37475 | test ROI=87.67 HIT=0.350 tickets=37469
+[2026-02-07 14:56:22]   best updated -> xgb_binary_light_market_value
+[2026-02-07 14:56:23] [Candidate 4/6] xgb_ranker_light_market feats=310
+[2026-02-07 14:58:03] [xgb_ranker_light_market 4/6] policy search start: 64
+[2026-02-07 14:58:10] [xgb_ranker_light_market 4/6] new feasible roi=81.16 hit=0.497 tickets=52260 (1/64)
+[2026-02-07 14:58:16] [xgb_ranker_light_market 4/6] new feasible roi=81.68 hit=0.569 tickets=62622 (2/64)
+[2026-02-07 14:58:42] [xgb_ranker_light_market 4/6] new feasible roi=82.39 hit=0.479 tickets=34877 (6/64)
+[2026-02-07 14:59:51] [xgb_ranker_light_market 4/6] new feasible roi=83.34 hit=0.493 tickets=52268 (17/64)
+[2026-02-07 15:02:20] [xgb_ranker_light_market 4/6] progress 40/64 bestU=80.99
+[2026-02-07 15:03:24] [xgb_ranker_light_market 4/6] new feasible roi=83.48 hit=0.529 tickets=62918 (50/64)
+[2026-02-07 15:04:17] [xgb_ranker_light_market 4/6] new feasible roi=83.62 hit=0.533 tickets=62386 (58/64)
+[2026-02-07 15:04:56] [xgb_ranker_light_market 4/6] progress 64/64 bestU=82.72
+[2026-02-07 15:05:14]   valid ROI=83.62 HIT=0.533 tickets=62386 | test ROI=84.55 HIT=0.516 tickets=61960
+[2026-02-07 15:05:14] [Candidate 5/6] cat_binary_light_market_value feats=310
+[2026-02-07 15:07:54] [cat_binary_light_market_value 5/6] policy search start: 64
+[2026-02-07 15:08:03] [cat_binary_light_market_value 5/6] new feasible roi=78.11 hit=0.487 tickets=51935 (1/64)
+[2026-02-07 15:09:34] [cat_binary_light_market_value 5/6] new feasible roi=79.39 hit=0.478 tickets=51969 (17/64)
+[2026-02-07 15:11:09] [cat_binary_light_market_value 5/6] new feasible roi=86.00 hit=0.420 tickets=52596 (33/64)
+[2026-02-07 15:11:14] [cat_binary_light_market_value 5/6] new feasible roi=86.62 hit=0.498 tickets=62958 (34/64)
+[2026-02-07 15:11:35] [cat_binary_light_market_value 5/6] new feasible roi=89.08 hit=0.357 tickets=36276 (37/64)
+[2026-02-07 15:11:41] [cat_binary_light_market_value 5/6] new feasible roi=89.95 hit=0.420 tickets=43374 (38/64)
+[2026-02-07 15:11:56] [cat_binary_light_market_value 5/6] progress 40/64 bestU=90.59
+[2026-02-07 15:12:34] [cat_binary_light_market_value 5/6] new feasible roi=90.11 hit=0.421 tickets=43298 (46/64)
+[2026-02-07 15:14:28] [cat_binary_light_market_value 5/6] progress 64/64 bestU=90.72
+[2026-02-07 15:14:33]   valid ROI=90.11 HIT=0.421 tickets=43298 | test ROI=85.37 HIT=0.411 tickets=42583
+[2026-02-07 15:14:33] [Candidate 6/6] cat_ranker_light_market feats=310

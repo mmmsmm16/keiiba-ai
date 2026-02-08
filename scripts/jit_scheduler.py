@@ -45,10 +45,23 @@ def run_prediction(race_id, venue_name, race_number, date_str=None):
     """Execute prediction for a single race"""
     logger.info(f"⚡ Triggering Prediction for {venue_name} {race_number}R (ID: {race_id})")
     
-    cmd = ["python", "-u", "scripts/predict_combined_formation.py", "--race_id", str(race_id), "--discord"]
+    # Deployment-ready switch: keep current behavior (BASE) unless env override is provided.
+    model_profile = os.environ.get("MODEL_PROFILE", "BASE").strip().upper() or "BASE"
+    cmd = [
+        "python",
+        "-u",
+        "scripts/predict_combined_formation.py",
+        "--race_id",
+        str(race_id),
+        "--discord",
+        "--model_profile",
+        model_profile,
+    ]
     if date_str:
         cmd.extend(["--date", date_str])
     
+    logger.info(f"Prediction profile: {model_profile}")
+
     # Ensure environment variables are passed (especially DISCORD_WEBHOOK_URL)
     env = os.environ.copy()
     

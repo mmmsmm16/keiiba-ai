@@ -1,0 +1,83 @@
+[2026-02-07 16:19:13] Loading data: data/processed/preprocessed_data_v12.parquet
+[2026-02-07 16:19:13] Using 315 columns
+[2026-02-07 16:19:18] rows train=237437 valid=46994 test=47607 holdout=2439
+[2026-02-07 16:19:18] candidates=1 policy_edges=[0.0, 1.05] axis_modes=['value', 'hybrid'] partner_modes=['value', 'prob'] pair_options=[2] trio_options=[0] policy_max_cases=12
+[2026-02-07 16:19:19] Loaded payout map races=3454 for years=[2024]
+[2026-02-07 16:19:20] Loaded payout map races=3455 for years=[2025]
+[2026-02-07 16:19:20] [Candidate 1/1] lgbm_binary_light_market_value feats=310
+Training until validation scores don't improve for 80 rounds
+Early stopping, best iteration is:
+[1]	valid_0's binary_logloss: 0.319896
+[2026-02-07 16:19:29] [lgbm_binary_light_market_value 1/1] policy search start: 12
+[2026-02-07 16:19:41] [lgbm_binary_light_market_value 1/1] new feasible roi=79.25 hit=0.472 tickets=20724 (1/12)
+[2026-02-07 16:21:34] [lgbm_binary_light_market_value 1/1] progress 12/12 bestU=76.97
+[2026-02-07 16:21:43]   valid ROI=79.25 HIT=0.472 tickets=20724 | test ROI=81.51 HIT=0.462 tickets=20713
+[2026-02-07 16:21:43]   best updated -> lgbm_binary_light_market_value
+/usr/local/lib/python3.10/dist-packages/shap/explainers/_tree.py:586: UserWarning: LightGBM binary classifier with TreeExplainer shap values output has changed to a list of ndarray
+  warnings.warn(
+[2026-02-07 16:21:43] === FINAL RESULT ===
+{
+  "candidate": "lgbm_binary_light_market_value",
+  "algo": "lgbm",
+  "objective": "binary",
+  "feature_mode": "LIGHT_MARKET",
+  "weight_mode": "value",
+  "n_features": 310,
+  "policy_gamma": 0.0,
+  "policy_bonus": 0.0,
+  "policy_axis_p": 0.05,
+  "policy_axis_min_odds": 1.0,
+  "policy_axis_min_edge": 0.0,
+  "policy_axis_mode": "value",
+  "policy_partner_mode": "value",
+  "policy_win_ev": 0.9,
+  "policy_pair_n": 2,
+  "policy_trio_n": 0,
+  "valid_utility": 76.96535417872998,
+  "valid_blended_roi": 79.25110982435824,
+  "valid_blended_hit": 0.47220613781123333,
+  "valid_tickets": 20724,
+  "valid_coverage": 1.0,
+  "test_utility": 79.20607185062704,
+  "test_blended_roi": 81.51209385410128,
+  "test_blended_hit": 0.46236247828604515,
+  "test_tickets": 20713,
+  "test_coverage": 1.0,
+  "valid_win_roi": 0.0,
+  "valid_win_tickets": 0,
+  "valid_win_race_hit": 0.0,
+  "valid_umaren_roi": 81.14070642733063,
+  "valid_umaren_tickets": 6908,
+  "valid_umaren_race_hit": 0.0,
+  "valid_wide_roi": 81.48812970469021,
+  "valid_wide_tickets": 6908,
+  "valid_wide_race_hit": 0.0,
+  "valid_umatan_roi": 75.12449334105385,
+  "valid_umatan_tickets": 6908,
+  "valid_umatan_race_hit": 0.0,
+  "valid_sanrenpuku_roi": 0.0,
+  "valid_sanrenpuku_tickets": 0,
+  "valid_sanrenpuku_race_hit": 0.0,
+  "valid_sanrentan_roi": 0.0,
+  "valid_sanrentan_tickets": 0,
+  "valid_sanrentan_race_hit": 0.0,
+  "test_win_roi": 0.0,
+  "test_win_tickets": 7,
+  "test_win_race_hit": 0.0,
+  "test_umaren_roi": 81.83569979716025,
+  "test_umaren_tickets": 6902,
+  "test_umaren_race_hit": 0.0,
+  "test_wide_roi": 80.6143146913938,
+  "test_wide_tickets": 6902,
+  "test_wide_race_hit": 0.0,
+  "test_umatan_roi": 82.1689365401333,
+  "test_umatan_tickets": 6902,
+  "test_umatan_race_hit": 0.0,
+  "test_sanrenpuku_roi": 0.0,
+  "test_sanrenpuku_tickets": 0,
+  "test_sanrenpuku_race_hit": 0.0,
+  "test_sanrentan_roi": 0.0,
+  "test_sanrentan_tickets": 0,
+  "test_sanrentan_race_hit": 0.0
+}
+[2026-02-07 16:21:43] Saved report: reports/exp_v17a_lgbm_opt_fast.json

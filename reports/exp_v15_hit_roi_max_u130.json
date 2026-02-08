@@ -1,0 +1,414 @@
+{
+  "experiment": "exp_v15_hit_roi_max",
+  "data_path": "data/processed/preprocessed_data_v12.parquet",
+  "split": {
+    "train_end_year": 2023,
+    "valid_year": 2024,
+    "test_year": 2025,
+    "holdout_years_gt_test": true
+  },
+  "constraints": {
+    "min_hit": 0.13,
+    "min_coverage": 0.12,
+    "min_bets": 600
+  },
+  "best_candidate_by_valid": {
+    "candidate": "rank_light_market",
+    "family": "ranker",
+    "feature_mode": "LIGHT_MARKET",
+    "weight_mode": "none",
+    "n_features": 310,
+    "strategy_gamma": 0.75,
+    "strategy_ev_thr": 0.0,
+    "strategy_min_odds": 1.0,
+    "strategy_max_odds": 80.0,
+    "strategy_prob_floor": 0.02,
+    "valid_utility": 94.05,
+    "valid_roi": 94.05,
+    "valid_hit": 0.4025,
+    "valid_bets": 800,
+    "valid_coverage": 0.23161551823972207,
+    "test_utility": 72.6829268292683,
+    "test_roi": 72.6829268292683,
+    "test_hit": 0.38125802310654683,
+    "test_bets": 779,
+    "test_coverage": 0.22553561088592936
+  },
+  "best_spec": {
+    "name": "rank_light_market",
+    "family": "ranker",
+    "feature_mode": "LIGHT_MARKET",
+    "weight_mode": "none"
+  },
+  "best_strategy": {
+    "gamma": 0.75,
+    "min_odds": 1.0,
+    "max_odds": 80.0,
+    "ev_thr": 0.0,
+    "prob_floor": 0.02,
+    "races": 3454,
+    "bets": 800,
+    "wins": 322,
+    "hit_rate": 0.4025,
+    "roi": 94.05,
+    "coverage": 0.23161551823972207,
+    "pop3_rate": 0.8675,
+    "avg_odds": 7.490749999999999,
+    "utility": 94.05,
+    "min_hit_constraint": 0.13,
+    "min_coverage_constraint": 0.12,
+    "min_bets_constraint": 600
+  },
+  "final_test_metrics": {
+    "races": 3454,
+    "bets": 3407,
+    "wins": 514,
+    "hit_rate": 0.15086586439683006,
+    "roi": 89.18990314059289,
+    "coverage": 0.9863925883034164,
+    "pop3_rate": 0.38538303492808923,
+    "avg_odds": 9.407660698561784,
+    "utility": 89.18990314059289
+  },
+  "final_holdout_metrics": {
+    "races": 168,
+    "bets": 164,
+    "wins": 35,
+    "hit_rate": 0.21341463414634146,
+    "roi": 126.03658536585367,
+    "coverage": 0.9761904761904762,
+    "pop3_rate": 0.38414634146341464,
+    "avg_odds": 9.184756097560975,
+    "utility": -353.56341463414634
+  },
+  "artifacts": {
+    "model": "/workspace/models/experiments/exp_v15_hit_roi_max_u130/model.pkl",
+    "features": "/workspace/models/experiments/exp_v15_hit_roi_max_u130/features.csv",
+    "strategy": "/workspace/models/experiments/exp_v15_hit_roi_max_u130/best_strategy.json",
+    "candidate_results": "/workspace/models/experiments/exp_v15_hit_roi_max_u130/candidate_results.csv",
+    "shap_summary": "/workspace/models/experiments/exp_v15_hit_roi_max_u130/shap_summary_top30.csv",
+    "summary": "/workspace/models/experiments/exp_v15_hit_roi_max_u130/summary.json"
+  },
+  "shap_top_features": [
+    {
+      "feature": "log_odds",
+      "mean_abs_shap": 0.8541771725283399
+    },
+    {
+      "feature": "market_prob",
+      "mean_abs_shap": 0.3572229772340222
+    },
+    {
+      "feature": "odds_rank_pre",
+      "mean_abs_shap": 0.03810373641579362
+    },
+    {
+      "feature": "pace_diff_z_ctx",
+      "mean_abs_shap": 0.03463097775406403
+    },
+    {
+      "feature": "field_size",
+      "mean_abs_shap": 0.017020253501224634
+    },
+    {
+      "feature": "bms_count",
+      "mean_abs_shap": 0.01621341102121283
+    },
+    {
+      "feature": "sire_turf_win_rate",
+      "mean_abs_shap": 0.01345076418146017
+    },
+    {
+      "feature": "relative_trainer_win_rate_30d_pct",
+      "mean_abs_shap": 0.013065512629873566
+    },
+    {
+      "feature": "training_time_4f",
+      "mean_abs_shap": 0.01232077554830125
+    },
+    {
+      "feature": "jockey_top3_rate_30d",
+      "mean_abs_shap": 0.01177554674843713
+    },
+    {
+      "feature": "pace_diff",
+      "mean_abs_shap": 0.01175874978001975
+    },
+    {
+      "feature": "weight",
+      "mean_abs_shap": 0.011726176341747968
+    },
+    {
+      "feature": "bias_adversity_score_mean_5",
+      "mean_abs_shap": 0.011629225013306916
+    },
+    {
+      "feature": "inner_frame_win_rate",
+      "mean_abs_shap": 0.011362919664857586
+    },
+    {
+      "feature": "jockey_win_rate_60d",
+      "mean_abs_shap": 0.010420765514222404
+    },
+    {
+      "feature": "rank_ewm_3",
+      "mean_abs_shap": 0.010344888698165548
+    },
+    {
+      "feature": "relative_last_3f_pct",
+      "mean_abs_shap": 0.01003934980513031
+    },
+    {
+      "feature": "weight_volatility_5",
+      "mean_abs_shap": 0.010015694173952705
+    },
+    {
+      "feature": "lag2_rank",
+      "mean_abs_shap": 0.009976622096331246
+    },
+    {
+      "feature": "jt_win_rate_smoothed",
+      "mean_abs_shap": 0.009947562960552162
+    },
+    {
+      "feature": "surface_win_rate",
+      "mean_abs_shap": 0.009781567188802295
+    },
+    {
+      "feature": "distance",
+      "mean_abs_shap": 0.009132092668793603
+    },
+    {
+      "feature": "horse_avg_corner_change",
+      "mean_abs_shap": 0.00912056172244488
+    },
+    {
+      "feature": "horse_elo",
+      "mean_abs_shap": 0.008995380641742533
+    },
+    {
+      "feature": "interval_days",
+      "mean_abs_shap": 0.008879433407841135
+    },
+    {
+      "feature": "training_intensity_score",
+      "mean_abs_shap": 0.008814347843782419
+    },
+    {
+      "feature": "sire_dist_win_rate_decay",
+      "mean_abs_shap": 0.008703844076452343
+    },
+    {
+      "feature": "relative_horse_elo_z",
+      "mean_abs_shap": 0.008676347073041183
+    },
+    {
+      "feature": "time_diff_ewm_3",
+      "mean_abs_shap": 0.00834296132080682
+    },
+    {
+      "feature": "relative_jockey_win_rate_30d_pct",
+      "mean_abs_shap": 0.008312997463478243
+    }
+  ],
+  "top_candidates_valid": [
+    {
+      "candidate": "rank_light_market",
+      "family": "ranker",
+      "feature_mode": "LIGHT_MARKET",
+      "weight_mode": "none",
+      "n_features": 310,
+      "strategy_gamma": 0.75,
+      "strategy_ev_thr": 0.0,
+      "strategy_min_odds": 1.0,
+      "strategy_max_odds": 80.0,
+      "strategy_prob_floor": 0.02,
+      "valid_utility": 94.05,
+      "valid_roi": 94.05,
+      "valid_hit": 0.4025,
+      "valid_bets": 800,
+      "valid_coverage": 0.23161551823972207,
+      "test_utility": 72.6829268292683,
+      "test_roi": 72.6829268292683,
+      "test_hit": 0.38125802310654683,
+      "test_bets": 779,
+      "test_coverage": 0.22553561088592936
+    },
+    {
+      "candidate": "rank_no_market",
+      "family": "ranker",
+      "feature_mode": "NO_MARKET",
+      "weight_mode": "none",
+      "n_features": 307,
+      "strategy_gamma": 0.0,
+      "strategy_ev_thr": 0.9,
+      "strategy_min_odds": 2.0,
+      "strategy_max_odds": 30.0,
+      "strategy_prob_floor": 0.0,
+      "valid_utility": 86.45502645502646,
+      "valid_roi": 86.45502645502646,
+      "valid_hit": 0.167989417989418,
+      "valid_bets": 756,
+      "valid_coverage": 0.21887666473653736,
+      "test_utility": 79.78776529338327,
+      "test_roi": 79.78776529338327,
+      "test_hit": 0.1560549313358302,
+      "test_bets": 801,
+      "test_coverage": 0.2319050376375217
+    },
+    {
+      "candidate": "bin_no_market_valuew",
+      "family": "binary",
+      "feature_mode": "NO_MARKET",
+      "weight_mode": "value",
+      "n_features": 307,
+      "strategy_gamma": 0.0,
+      "strategy_ev_thr": 0.0,
+      "strategy_min_odds": 3.0,
+      "strategy_max_odds": 20.0,
+      "strategy_prob_floor": 0.0,
+      "valid_utility": 81.52428057553956,
+      "valid_roi": 81.52428057553956,
+      "valid_hit": 0.1591726618705036,
+      "valid_bets": 2224,
+      "valid_coverage": 0.6438911407064273,
+      "test_utility": 78.12443642921552,
+      "test_roi": 78.12443642921552,
+      "test_hit": 0.15058611361587015,
+      "test_bets": 2218,
+      "test_coverage": 0.6421540243196294
+    },
+    {
+      "candidate": "bin_light_market_plain",
+      "family": "binary",
+      "feature_mode": "LIGHT_MARKET",
+      "weight_mode": "none",
+      "n_features": 310,
+      "strategy_gamma": 0.15,
+      "strategy_ev_thr": 0.0,
+      "strategy_min_odds": 1.0,
+      "strategy_max_odds": 50.0,
+      "strategy_prob_floor": 0.0,
+      "valid_utility": 81.09791425260718,
+      "valid_roi": 81.09791425260718,
+      "valid_hit": 0.2737543453070684,
+      "valid_bets": 3452,
+      "valid_coverage": 0.9994209612044007,
+      "test_utility": 82.46015647638364,
+      "test_roi": 82.46015647638364,
+      "test_hit": 0.27875977977397853,
+      "test_bets": 3451,
+      "test_coverage": 0.9991314418066011
+    },
+    {
+      "candidate": "rank_balanced_market",
+      "family": "ranker",
+      "feature_mode": "BALANCED_MARKET",
+      "weight_mode": "none",
+      "n_features": 313,
+      "strategy_gamma": 0.0,
+      "strategy_ev_thr": 0.0,
+      "strategy_min_odds": 1.0,
+      "strategy_max_odds": 20.0,
+      "strategy_prob_floor": 0.0,
+      "valid_utility": 80.91488129704689,
+      "valid_roi": 80.91488129704689,
+      "valid_hit": 0.342501447596989,
+      "valid_bets": 3454,
+      "valid_coverage": 1.0,
+      "test_utility": 77.48624384593106,
+      "test_roi": 77.48624384593106,
+      "test_hit": 0.32377642629597453,
+      "test_bets": 3453,
+      "test_coverage": 0.9997104806022004
+    },
+    {
+      "candidate": "bin_balanced_market_plain",
+      "family": "binary",
+      "feature_mode": "BALANCED_MARKET",
+      "weight_mode": "none",
+      "n_features": 313,
+      "strategy_gamma": 0.15,
+      "strategy_ev_thr": 0.0,
+      "strategy_min_odds": 1.0,
+      "strategy_max_odds": 50.0,
+      "strategy_prob_floor": 0.0,
+      "valid_utility": 80.3159420289855,
+      "valid_roi": 80.3159420289855,
+      "valid_hit": 0.27246376811594203,
+      "valid_bets": 3450,
+      "valid_coverage": 0.9988419224088014,
+      "test_utility": 83.03918722786648,
+      "test_roi": 83.03918722786648,
+      "test_hit": 0.2772133526850508,
+      "test_bets": 3445,
+      "test_coverage": 0.9973943254198031
+    },
+    {
+      "candidate": "bin_light_market_valuew",
+      "family": "binary",
+      "feature_mode": "LIGHT_MARKET",
+      "weight_mode": "value",
+      "n_features": 310,
+      "strategy_gamma": 0.0,
+      "strategy_ev_thr": 0.0,
+      "strategy_min_odds": 1.0,
+      "strategy_max_odds": 20.0,
+      "strategy_prob_floor": 0.0,
+      "valid_utility": 80.18239722061378,
+      "valid_roi": 80.18239722061378,
+      "valid_hit": 0.3393167342211928,
+      "valid_bets": 3454,
+      "valid_coverage": 1.0,
+      "test_utility": 79.77990153489719,
+      "test_roi": 79.77990153489719,
+      "test_hit": 0.3298580944106574,
+      "test_bets": 3453,
+      "test_coverage": 0.9997104806022004
+    },
+    {
+      "candidate": "bin_balanced_market_valuew",
+      "family": "binary",
+      "feature_mode": "BALANCED_MARKET",
+      "weight_mode": "value",
+      "n_features": 313,
+      "strategy_gamma": 0.0,
+      "strategy_ev_thr": 0.0,
+      "strategy_min_odds": 1.0,
+      "strategy_max_odds": 20.0,
+      "strategy_prob_floor": 0.0,
+      "valid_utility": 80.18239722061378,
+      "valid_roi": 80.18239722061378,
+      "valid_hit": 0.3393167342211928,
+      "valid_bets": 3454,
+      "valid_coverage": 1.0,
+      "test_utility": 79.77990153489719,
+      "test_roi": 79.77990153489719,
+      "test_hit": 0.3298580944106574,
+      "test_bets": 3453,
+      "test_coverage": 0.9997104806022004
+    },
+    {
+      "candidate": "bin_no_market_plain",
+      "family": "binary",
+      "feature_mode": "NO_MARKET",
+      "weight_mode": "none",
+      "n_features": 307,
+      "strategy_gamma": 0.0,
+      "strategy_ev_thr": 0.0,
+      "strategy_min_odds": 1.0,
+      "strategy_max_odds": 80.0,
+      "strategy_prob_floor": 0.0,
+      "valid_utility": 78.29374275782155,
+      "valid_roi": 78.29374275782155,
+      "valid_hit": 0.26332560834298957,
+      "valid_bets": 3452,
+      "valid_coverage": 0.9994209612044007,
+      "test_utility": 77.77649102489868,
+      "test_roi": 77.77649102489868,
+      "test_hit": 0.25246091488129707,
+      "test_bets": 3454,
+      "test_coverage": 1.0
+    }
+  ]
+}

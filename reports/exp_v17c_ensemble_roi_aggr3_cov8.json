@@ -1,0 +1,187 @@
+{
+  "experiment": "exp_v17c_ensemble_nextgen",
+  "split": {
+    "train_end_year": 2023,
+    "valid_year": 2024,
+    "test_year": 2025
+  },
+  "constraints": {
+    "min_hit": 0.18,
+    "min_coverage": 0.08,
+    "min_tickets": 3000
+  },
+  "model_packs": [
+    {
+      "name": "xgb_no_market",
+      "model_path": "models/experiments/exp_v16_xgb_binary_nomarket_roi120/model.pkl",
+      "feat_path": "models/experiments/exp_v16_xgb_binary_nomarket_roi120/features.csv",
+      "n_features": 307
+    },
+    {
+      "name": "xgb_light",
+      "model_path": "models/experiments/exp_v16_xgb_binary_light_roi120/model.pkl",
+      "feat_path": "models/experiments/exp_v16_xgb_binary_light_roi120/features.csv",
+      "n_features": 310
+    },
+    {
+      "name": "xgb_ranker",
+      "model_path": "models/experiments/exp_v16_xgb_ranker_value_b24/model.pkl",
+      "feat_path": "models/experiments/exp_v16_xgb_ranker_value_b24/features.csv",
+      "n_features": 310
+    }
+  ],
+  "weight_step": 0.1,
+  "n_weight_vectors": 3,
+  "policy_profile": "roi_aggressive",
+  "policy_axis_min_edges": [
+    0.0,
+    1.05,
+    1.15
+  ],
+  "policy_axis_modes": [
+    "value",
+    "hybrid"
+  ],
+  "policy_partner_modes": [
+    "value",
+    "prob"
+  ],
+  "policy_pair_options": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "policy_trio_options": [
+    0,
+    2,
+    3
+  ],
+  "policy_max_cases": 120,
+  "best_candidate_by_valid": {
+    "blend_id": 1,
+    "weights": {
+      "xgb_no_market": 0.4,
+      "xgb_light": 0.4,
+      "xgb_ranker": 0.2
+    },
+    "valid_utility": 128.1313007130563,
+    "valid_blended_roi": 123.13130071305632,
+    "valid_blended_hit": 0.18072289156626506,
+    "valid_tickets": 8134,
+    "valid_coverage": 0.3364215402431963,
+    "test_utility": 92.25075895567699,
+    "test_blended_roi": 87.25075895567699,
+    "test_blended_hit": 0.18659881255301103,
+    "test_tickets": 8235,
+    "test_coverage": 0.3413433700057904,
+    "policy": {
+      "gamma": 0.3,
+      "bonus": 0.2,
+      "axis_p": 0.03,
+      "axis_min_odds": 1.0,
+      "axis_min_edge": 1.05,
+      "axis_mode": "value",
+      "partner_mode": "value",
+      "win_ev": 0.9,
+      "pair_n": 2.0,
+      "trio_n": 0.0
+    }
+  },
+  "top_candidates_valid": [
+    {
+      "blend_id": 1,
+      "weights": {
+        "xgb_no_market": 0.4,
+        "xgb_light": 0.4,
+        "xgb_ranker": 0.2
+      },
+      "valid_utility": 128.1313007130563,
+      "valid_blended_roi": 123.13130071305632,
+      "valid_blended_hit": 0.18072289156626506,
+      "valid_tickets": 8134,
+      "valid_coverage": 0.3364215402431963,
+      "test_utility": 92.25075895567699,
+      "test_blended_roi": 87.25075895567699,
+      "test_blended_hit": 0.18659881255301103,
+      "test_tickets": 8235,
+      "test_coverage": 0.3413433700057904,
+      "policy": {
+        "gamma": 0.3,
+        "bonus": 0.2,
+        "axis_p": 0.03,
+        "axis_min_odds": 1.0,
+        "axis_min_edge": 1.05,
+        "axis_mode": "value",
+        "partner_mode": "value",
+        "win_ev": 0.9,
+        "pair_n": 2.0,
+        "trio_n": 0.0
+      }
+    },
+    {
+      "blend_id": 2,
+      "weights": {
+        "xgb_no_market": 0.4,
+        "xgb_light": 0.3,
+        "xgb_ranker": 0.3
+      },
+      "valid_utility": 126.53123067408782,
+      "valid_blended_roi": 121.53123067408782,
+      "valid_blended_hit": 0.2051948051948052,
+      "valid_tickets": 8085,
+      "valid_coverage": 0.3343949044585987,
+      "test_utility": 99.42926829268292,
+      "test_blended_roi": 94.42926829268292,
+      "test_blended_hit": 0.21294718909710392,
+      "test_tickets": 8200,
+      "test_coverage": 0.33989577301679214,
+      "policy": {
+        "gamma": 0.3,
+        "bonus": 0.2,
+        "axis_p": 0.03,
+        "axis_min_odds": 1.0,
+        "axis_min_edge": 1.15,
+        "axis_mode": "value",
+        "partner_mode": "prob",
+        "win_ev": 0.9,
+        "pair_n": 2.0,
+        "trio_n": 0.0
+      }
+    },
+    {
+      "blend_id": 3,
+      "weights": {
+        "xgb_no_market": 0.4,
+        "xgb_light": 0.2,
+        "xgb_ranker": 0.4
+      },
+      "valid_utility": 118.3348007924279,
+      "valid_blended_roi": 113.3348007924279,
+      "valid_blended_hit": 0.19953775038520802,
+      "valid_tickets": 9086,
+      "valid_coverage": 0.37579617834394907,
+      "test_utility": 90.74040219378428,
+      "test_blended_roi": 85.74040219378428,
+      "test_blended_hit": 0.2066115702479339,
+      "test_tickets": 9299,
+      "test_coverage": 0.3853503184713376,
+      "policy": {
+        "gamma": 0.3,
+        "bonus": 0.2,
+        "axis_p": 0.03,
+        "axis_min_odds": 1.0,
+        "axis_min_edge": 1.15,
+        "axis_mode": "value",
+        "partner_mode": "prob",
+        "win_ev": 0.9,
+        "pair_n": 2.0,
+        "trio_n": 0.0
+      }
+    }
+  ],
+  "artifacts": {
+    "ensemble_results": "models/experiments/exp_v17c_ensemble_roi_aggr3_cov8/ensemble_results.csv",
+    "ensemble_results_progress": "models/experiments/exp_v17c_ensemble_roi_aggr3_cov8/ensemble_results_progress.csv"
+  }
+}

@@ -1,0 +1,541 @@
+{
+  "experiment": "exp_v17c_ensemble_nextgen",
+  "split": {
+    "train_end_year": 2023,
+    "valid_year": 2024,
+    "test_year": 2025
+  },
+  "constraints": {
+    "min_hit": 0.14,
+    "min_coverage": 0.08,
+    "min_tickets": 1200
+  },
+  "model_packs": [
+    {
+      "name": "lgbmA",
+      "model_path": "models/experiments/exp_v17a_lgbm_opt_fast/model.pkl",
+      "feat_path": "models/experiments/exp_v17a_lgbm_opt_fast/features.csv",
+      "n_features": 310
+    },
+    {
+      "name": "mlpB",
+      "model_path": "models/experiments/exp_v17b_nn_tabnet_fast_r2/model.pkl",
+      "feat_path": "models/experiments/exp_v17b_nn_tabnet_fast_r2/features.csv",
+      "n_features": 310
+    },
+    {
+      "name": "xgbPrev",
+      "model_path": "models/experiments/exp_v16_xgb_binary_value_b24/model.pkl",
+      "feat_path": "models/experiments/exp_v16_xgb_binary_value_b24/features.csv",
+      "n_features": 310
+    }
+  ],
+  "weight_step": 0.1,
+  "n_weight_vectors": 15,
+  "policy_profile": "jit_safe",
+  "policy_axis_min_edges": [
+    0.0,
+    1.05
+  ],
+  "policy_axis_modes": [
+    "value",
+    "hybrid"
+  ],
+  "policy_partner_modes": [
+    "value",
+    "prob"
+  ],
+  "policy_pair_options": [
+    2
+  ],
+  "policy_trio_options": [
+    0
+  ],
+  "policy_max_cases": 4,
+  "best_candidate_by_valid": {
+    "blend_id": 12,
+    "weights": {
+      "lgbmA": 0.5,
+      "mlpB": 0.0,
+      "xgbPrev": 0.5
+    },
+    "valid_utility": 98.5083707933052,
+    "valid_blended_roi": 97.20755778517511,
+    "valid_blended_hit": 0.42276422764227645,
+    "valid_tickets": 21329,
+    "valid_coverage": 0.9971048060220035,
+    "test_utility": 91.41158722234091,
+    "test_blended_roi": 89.82622136868237,
+    "test_blended_hit": 0.4096980255516841,
+    "test_tickets": 21349,
+    "test_coverage": 0.9971048060220035,
+    "policy": {
+      "gamma": 0.0,
+      "bonus": 0.0,
+      "axis_p": 0.05,
+      "axis_min_odds": 1.0,
+      "axis_min_edge": 0.0,
+      "axis_mode": "hybrid",
+      "partner_mode": "value",
+      "win_ev": 0.9,
+      "pair_n": 2.0,
+      "trio_n": 0.0
+    }
+  },
+  "top_candidates_valid": [
+    {
+      "blend_id": 12,
+      "weights": {
+        "lgbmA": 0.5,
+        "mlpB": 0.0,
+        "xgbPrev": 0.5
+      },
+      "valid_utility": 98.5083707933052,
+      "valid_blended_roi": 97.20755778517511,
+      "valid_blended_hit": 0.42276422764227645,
+      "valid_tickets": 21329,
+      "valid_coverage": 0.9971048060220035,
+      "test_utility": 91.41158722234091,
+      "test_blended_roi": 89.82622136868237,
+      "test_blended_hit": 0.4096980255516841,
+      "test_tickets": 21349,
+      "test_coverage": 0.9971048060220035,
+      "policy": {
+        "gamma": 0.0,
+        "bonus": 0.0,
+        "axis_p": 0.05,
+        "axis_min_odds": 1.0,
+        "axis_min_edge": 0.0,
+        "axis_mode": "hybrid",
+        "partner_mode": "value",
+        "win_ev": 0.9,
+        "pair_n": 2.0,
+        "trio_n": 0.0
+      }
+    },
+    {
+      "blend_id": 11,
+      "weights": {
+        "lgbmA": 0.5,
+        "mlpB": 0.1,
+        "xgbPrev": 0.4
+      },
+      "valid_utility": 83.39478765576389,
+      "valid_blended_roi": 84.2547296006115,
+      "valid_blended_hit": 0.45573294629898403,
+      "valid_tickets": 20932,
+      "valid_coverage": 0.9973943254198031,
+      "test_utility": 82.24366367910415,
+      "test_blended_roi": 82.93786657765486,
+      "test_blended_hit": 0.4379710144927536,
+      "test_tickets": 20971,
+      "test_coverage": 0.9988419224088014,
+      "policy": {
+        "gamma": 0.0,
+        "bonus": 0.0,
+        "axis_p": 0.05,
+        "axis_min_odds": 1.0,
+        "axis_min_edge": 0.0,
+        "axis_mode": "hybrid",
+        "partner_mode": "value",
+        "win_ev": 0.9,
+        "pair_n": 2.0,
+        "trio_n": 0.0
+      }
+    },
+    {
+      "blend_id": 14,
+      "weights": {
+        "lgbmA": 0.4,
+        "mlpB": 0.1,
+        "xgbPrev": 0.5
+      },
+      "valid_utility": 82.67391130722999,
+      "valid_blended_roi": 85.07836990595611,
+      "valid_blended_hit": 0.4785755645628257,
+      "valid_tickets": 20735,
+      "valid_coverage": 1.0,
+      "test_utility": 79.7894505424552,
+      "test_blended_roi": 82.19101394720332,
+      "test_blended_hit": 0.4626519976838448,
+      "test_tickets": 20721,
+      "test_coverage": 1.0,
+      "policy": {
+        "gamma": 0.0,
+        "bonus": 0.0,
+        "axis_p": 0.05,
+        "axis_min_odds": 1.0,
+        "axis_min_edge": 0.0,
+        "axis_mode": "value",
+        "partner_mode": "value",
+        "win_ev": 0.9,
+        "pair_n": 2.0,
+        "trio_n": 0.0
+      }
+    },
+    {
+      "blend_id": 7,
+      "weights": {
+        "lgbmA": 0.5,
+        "mlpB": 0.5,
+        "xgbPrev": 0.0
+      },
+      "valid_utility": 82.47984448291369,
+      "valid_blended_roi": 84.73085780080599,
+      "valid_blended_hit": 0.46902142443543715,
+      "valid_tickets": 20844,
+      "valid_coverage": 1.0,
+      "test_utility": 80.19393390692493,
+      "test_blended_roi": 82.40730970310327,
+      "test_blended_hit": 0.45309785755645626,
+      "test_tickets": 20849,
+      "test_coverage": 1.0,
+      "policy": {
+        "gamma": 0.0,
+        "bonus": 0.0,
+        "axis_p": 0.05,
+        "axis_min_odds": 1.0,
+        "axis_min_edge": 0.0,
+        "axis_mode": "value",
+        "partner_mode": "value",
+        "win_ev": 0.9,
+        "pair_n": 2.0,
+        "trio_n": 0.0
+      }
+    },
+    {
+      "blend_id": 3,
+      "weights": {
+        "lgbmA": 0.4,
+        "mlpB": 0.2,
+        "xgbPrev": 0.4
+      },
+      "valid_utility": 82.19574995733224,
+      "valid_blended_roi": 83.95458029896513,
+      "valid_blended_hit": 0.47220613781123333,
+      "valid_tickets": 20872,
+      "valid_coverage": 1.0,
+      "test_utility": 82.07339842791983,
+      "test_blended_roi": 83.93356055878259,
+      "test_blended_hit": 0.4559930515344528,
+      "test_tickets": 20831,
+      "test_coverage": 1.0,
+      "policy": {
+        "gamma": 0.0,
+        "bonus": 0.0,
+        "axis_p": 0.05,
+        "axis_min_odds": 1.0,
+        "axis_min_edge": 0.0,
+        "axis_mode": "hybrid",
+        "partner_mode": "value",
+        "win_ev": 0.9,
+        "pair_n": 2.0,
+        "trio_n": 0.0
+      }
+    },
+    {
+      "blend_id": 5,
+      "weights": {
+        "lgbmA": 0.3,
+        "mlpB": 0.3,
+        "xgbPrev": 0.4
+      },
+      "valid_utility": 81.93153482388055,
+      "valid_blended_roi": 83.87565758010521,
+      "valid_blended_hit": 0.4739432541980313,
+      "valid_tickets": 20910,
+      "valid_coverage": 1.0,
+      "test_utility": 83.15468565047374,
+      "test_blended_roi": 85.13934112239035,
+      "test_blended_hit": 0.4609148812970469,
+      "test_tickets": 20884,
+      "test_coverage": 1.0,
+      "policy": {
+        "gamma": 0.0,
+        "bonus": 0.0,
+        "axis_p": 0.05,
+        "axis_min_odds": 1.0,
+        "axis_min_edge": 0.0,
+        "axis_mode": "hybrid",
+        "partner_mode": "value",
+        "win_ev": 0.9,
+        "pair_n": 2.0,
+        "trio_n": 0.0
+      }
+    },
+    {
+      "blend_id": 2,
+      "weights": {
+        "lgbmA": 0.4,
+        "mlpB": 0.3,
+        "xgbPrev": 0.3
+      },
+      "valid_utility": 81.4422988796335,
+      "valid_blended_roi": 83.25324271287033,
+      "valid_blended_hit": 0.46988998262883613,
+      "valid_tickets": 20893,
+      "valid_coverage": 1.0,
+      "test_utility": 83.93526439479571,
+      "test_blended_roi": 85.7809505557685,
+      "test_blended_hit": 0.45888824551244933,
+      "test_tickets": 20872,
+      "test_coverage": 1.0,
+      "policy": {
+        "gamma": 0.0,
+        "bonus": 0.0,
+        "axis_p": 0.05,
+        "axis_min_odds": 1.0,
+        "axis_min_edge": 0.0,
+        "axis_mode": "hybrid",
+        "partner_mode": "value",
+        "win_ev": 0.9,
+        "pair_n": 2.0,
+        "trio_n": 0.0
+      }
+    },
+    {
+      "blend_id": 10,
+      "weights": {
+        "lgbmA": 0.5,
+        "mlpB": 0.2,
+        "xgbPrev": 0.3
+      },
+      "valid_utility": 81.25637196125072,
+      "valid_blended_roi": 83.66083055997684,
+      "valid_blended_hit": 0.4788650839606254,
+      "valid_tickets": 20733,
+      "valid_coverage": 1.0,
+      "test_utility": 81.31936738656599,
+      "test_blended_roi": 83.7151404033581,
+      "test_blended_hit": 0.46496815286624205,
+      "test_tickets": 20726,
+      "test_coverage": 1.0,
+      "policy": {
+        "gamma": 0.0,
+        "bonus": 0.0,
+        "axis_p": 0.05,
+        "axis_min_odds": 1.0,
+        "axis_min_edge": 0.0,
+        "axis_mode": "value",
+        "partner_mode": "value",
+        "win_ev": 0.9,
+        "pair_n": 2.0,
+        "trio_n": 0.0
+      }
+    },
+    {
+      "blend_id": 4,
+      "weights": {
+        "lgbmA": 0.3,
+        "mlpB": 0.4,
+        "xgbPrev": 0.3
+      },
+      "valid_utility": 81.21238044898296,
+      "valid_blended_roi": 83.58209671997311,
+      "valid_blended_hit": 0.4788650839606254,
+      "valid_tickets": 20823,
+      "valid_coverage": 1.0,
+      "test_utility": 81.91877983100431,
+      "test_blended_roi": 84.26533455017051,
+      "test_blended_hit": 0.46496815286624205,
+      "test_tickets": 20819,
+      "test_coverage": 1.0,
+      "policy": {
+        "gamma": 0.0,
+        "bonus": 0.0,
+        "axis_p": 0.05,
+        "axis_min_odds": 1.0,
+        "axis_min_edge": 0.0,
+        "axis_mode": "value",
+        "partner_mode": "value",
+        "win_ev": 0.9,
+        "pair_n": 2.0,
+        "trio_n": 0.0
+      }
+    },
+    {
+      "blend_id": 13,
+      "weights": {
+        "lgbmA": 0.4,
+        "mlpB": 0.5,
+        "xgbPrev": 0.1
+      },
+      "valid_utility": 81.13508011978452,
+      "valid_blended_roi": 83.44399731723675,
+      "valid_blended_hit": 0.4736537348002316,
+      "valid_tickets": 20874,
+      "valid_coverage": 1.0,
+      "test_utility": 81.53120714205,
+      "test_blended_roi": 83.79090604187628,
+      "test_blended_hit": 0.46323103647944414,
+      "test_tickets": 20871,
+      "test_coverage": 1.0,
+      "policy": {
+        "gamma": 0.0,
+        "bonus": 0.0,
+        "axis_p": 0.05,
+        "axis_min_odds": 1.0,
+        "axis_min_edge": 0.0,
+        "axis_mode": "value",
+        "partner_mode": "value",
+        "win_ev": 0.9,
+        "pair_n": 2.0,
+        "trio_n": 0.0
+      }
+    },
+    {
+      "blend_id": 9,
+      "weights": {
+        "lgbmA": 0.5,
+        "mlpB": 0.3,
+        "xgbPrev": 0.2
+      },
+      "valid_utility": 80.45405445999918,
+      "valid_blended_roi": 82.81798034303334,
+      "valid_blended_hit": 0.4768384481760278,
+      "valid_tickets": 20756,
+      "valid_coverage": 1.0,
+      "test_utility": 82.0430919934696,
+      "test_blended_roi": 84.3867515186578,
+      "test_blended_hit": 0.4652576722640417,
+      "test_tickets": 20742,
+      "test_coverage": 1.0,
+      "policy": {
+        "gamma": 0.0,
+        "bonus": 0.0,
+        "axis_p": 0.05,
+        "axis_min_odds": 1.0,
+        "axis_min_edge": 0.0,
+        "axis_mode": "value",
+        "partner_mode": "value",
+        "win_ev": 0.9,
+        "pair_n": 2.0,
+        "trio_n": 0.0
+      }
+    },
+    {
+      "blend_id": 6,
+      "weights": {
+        "lgbmA": 0.2,
+        "mlpB": 0.4,
+        "xgbPrev": 0.4
+      },
+      "valid_utility": 80.38940150786621,
+      "valid_blended_roi": 82.78227933068034,
+      "valid_blended_hit": 0.47944412275622467,
+      "valid_tickets": 20857,
+      "valid_coverage": 1.0,
+      "test_utility": 82.73009860440037,
+      "test_blended_roi": 85.09691968141253,
+      "test_blended_hit": 0.4664157498552403,
+      "test_tickets": 20842,
+      "test_coverage": 1.0,
+      "policy": {
+        "gamma": 0.0,
+        "bonus": 0.0,
+        "axis_p": 0.05,
+        "axis_min_odds": 1.0,
+        "axis_min_edge": 0.0,
+        "axis_mode": "value",
+        "partner_mode": "value",
+        "win_ev": 0.9,
+        "pair_n": 2.0,
+        "trio_n": 0.0
+      }
+    },
+    {
+      "blend_id": 15,
+      "weights": {
+        "lgbmA": 0.3,
+        "mlpB": 0.5,
+        "xgbPrev": 0.2
+      },
+      "valid_utility": 80.1827822072837,
+      "valid_blended_roi": 82.52644173247188,
+      "valid_blended_hit": 0.4748118123914302,
+      "valid_tickets": 20895,
+      "valid_coverage": 1.0,
+      "test_utility": 81.48522335563085,
+      "test_blended_roi": 83.78835016512708,
+      "test_blended_hit": 0.465836711059641,
+      "test_tickets": 20893,
+      "test_coverage": 1.0,
+      "policy": {
+        "gamma": 0.0,
+        "bonus": 0.0,
+        "axis_p": 0.05,
+        "axis_min_odds": 1.0,
+        "axis_min_edge": 0.0,
+        "axis_mode": "value",
+        "partner_mode": "value",
+        "win_ev": 0.9,
+        "pair_n": 2.0,
+        "trio_n": 0.0
+      }
+    },
+    {
+      "blend_id": 8,
+      "weights": {
+        "lgbmA": 0.5,
+        "mlpB": 0.4,
+        "xgbPrev": 0.1
+      },
+      "valid_utility": 80.15557340367391,
+      "valid_blended_roi": 82.47607137703814,
+      "valid_blended_hit": 0.47220613781123333,
+      "valid_tickets": 20791,
+      "valid_coverage": 1.0,
+      "test_utility": 81.62886434046078,
+      "test_blended_roi": 83.90593440415505,
+      "test_blended_hit": 0.46323103647944414,
+      "test_tickets": 20794,
+      "test_coverage": 1.0,
+      "policy": {
+        "gamma": 0.0,
+        "bonus": 0.0,
+        "axis_p": 0.05,
+        "axis_min_odds": 1.0,
+        "axis_min_edge": 0.0,
+        "axis_mode": "value",
+        "partner_mode": "value",
+        "win_ev": 0.9,
+        "pair_n": 2.0,
+        "trio_n": 0.0
+      }
+    },
+    {
+      "blend_id": 1,
+      "weights": {
+        "lgbmA": 0.4,
+        "mlpB": 0.4,
+        "xgbPrev": 0.2
+      },
+      "valid_utility": 79.84356700095414,
+      "valid_blended_roi": 82.20170249603231,
+      "valid_blended_hit": 0.4739432541980313,
+      "valid_tickets": 20793,
+      "valid_coverage": 1.0,
+      "test_utility": 81.46608280254779,
+      "test_blended_roi": 83.775,
+      "test_blended_hit": 0.4643891140706427,
+      "test_tickets": 20800,
+      "test_coverage": 1.0,
+      "policy": {
+        "gamma": 0.0,
+        "bonus": 0.0,
+        "axis_p": 0.05,
+        "axis_min_odds": 1.0,
+        "axis_min_edge": 0.0,
+        "axis_mode": "value",
+        "partner_mode": "value",
+        "win_ev": 0.9,
+        "pair_n": 2.0,
+        "trio_n": 0.0
+      }
+    }
+  ],
+  "artifacts": {
+    "ensemble_results": "models/experiments/exp_v17c_ensemble_fast_r2/ensemble_results.csv",
+    "ensemble_results_progress": "models/experiments/exp_v17c_ensemble_fast_r2/ensemble_results_progress.csv"
+  }
+}

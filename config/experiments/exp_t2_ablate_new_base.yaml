@@ -1,0 +1,96 @@
+experiment_name: "exp_t2_ablate_new_base"
+model_save_path: "models/experiments/exp_t2_ablate_new_base"
+
+dataset:
+  train_start_date: "2020-01-01"
+  test_end_date: "2024-12-31"
+  valid_year: 2023
+  jra_only: true
+  drop_market_data: true
+  binary_target: "win"
+  description: "A/B/C新特徴量アブレーション: BASE(新規列を除外)"
+
+  exclude_features:
+    - horse_id
+    - mare_id
+    - sire_id
+    - jockey_id
+    - trainer_id
+    - nicks_ctx_count
+    - nicks_ctx_win_rate_hier
+    - nicks_ctx_top3_rate_hier
+    - sire_top3_std_50
+    - sire_top3_iqr_50
+    - sire_course_win_rate_decay
+    - sire_dist_win_rate_decay
+    - sire_surface_win_rate_decay
+    - sire_win_rate_std_50
+    - sire_win_rate_iqr_50
+    - sire_variant_pref
+    - blood_variant_fit
+    - pace_diff_z_ctx
+    - horse_pace_elasticity_20
+    - pace_high_prob
+    - pace_fit_expected
+    - front_congestion_idx
+    - nige_score
+    - race_nige_pressure_score_sum
+    - race_nige_count_weighted
+    - nige_score_interaction
+    - track_variant_robust
+    - track_variant_uncertainty
+    - track_variant_confidence
+    - going_shift
+    - going_shift_up_top3_rate
+    - going_shift_down_top3_rate
+    - rest_success_rate_smoothed
+    - rest_success_rate_decay
+    - rest_optimality_score
+    - rotation_stress
+    - horse_variant_pref
+    - horse_variant_match
+
+  categorical_features:
+    - sex
+    - grade_code
+    - kyoso_joken_code
+    - surface
+    - venue
+    - dist_change_category
+    - interval_category
+    - weather_code
+    - going_code
+
+features:
+  - base_attributes
+  - history_stats
+  - jockey_stats
+  - pace_stats
+  - bloodline_stats
+  - burden_stats
+  - changes_stats
+  - speed_index_stats
+  - runstyle_fit
+  - pace_pressure_stats
+  - race_conditions
+  - race_structure
+  - rest_pattern
+  - bloodline_detail
+  - sire_aptitude
+  - pace_features
+  - track_aptitude
+
+model_params:
+  model_type: "lightgbm"
+  objective: "binary"
+  metric: "auc"
+  learning_rate: 0.05
+  num_leaves: 63
+  feature_fraction: 0.8
+  bagging_fraction: 0.8
+  bagging_freq: 5
+  early_stopping_rounds: 50
+  n_estimators: 1200
+  verbose: -1
+  seed: 42
+

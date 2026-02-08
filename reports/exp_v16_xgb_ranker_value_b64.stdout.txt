@@ -1,0 +1,83 @@
+[2026-02-07 16:13:19] Loading data: data/processed/preprocessed_data_v12.parquet
+[2026-02-07 16:13:19] Using 315 columns
+[2026-02-07 16:13:26] rows train=237437 valid=46994 test=47607 holdout=2439
+[2026-02-07 16:13:26] candidates=1 policy_edges=[0.0] axis_modes=['value'] partner_modes=['value'] pair_options=default trio_options=default policy_max_cases=64
+[2026-02-07 16:13:27] Loaded payout map races=3454 for years=[2024]
+[2026-02-07 16:13:28] Loaded payout map races=3455 for years=[2025]
+[2026-02-07 16:13:28] [Candidate 1/1] xgb_ranker_light_market feats=310
+[2026-02-07 16:14:33] [xgb_ranker_light_market 1/1] policy search start: 64
+[2026-02-07 16:14:49] [xgb_ranker_light_market 1/1] new feasible roi=81.26 hit=0.495 tickets=52241 (1/64)
+[2026-02-07 16:17:48] [xgb_ranker_light_market 1/1] new feasible roi=81.57 hit=0.491 tickets=52248 (17/64)
+[2026-02-07 16:21:23] [xgb_ranker_light_market 1/1] progress 40/64 bestU=79.15
+[2026-02-07 16:22:44] [xgb_ranker_light_market 1/1] new feasible roi=84.39 hit=0.470 tickets=52320 (49/64)
+[2026-02-07 16:23:05] [xgb_ranker_light_market 1/1] new feasible roi=85.16 hit=0.552 tickets=62655 (50/64)
+[2026-02-07 16:25:06] [xgb_ranker_light_market 1/1] new feasible roi=85.58 hit=0.555 tickets=62332 (58/64)
+[2026-02-07 16:26:43] [xgb_ranker_light_market 1/1] progress 64/64 bestU=83.77
+[2026-02-07 16:26:54]   valid ROI=85.58 HIT=0.555 tickets=62332 | test ROI=80.73 HIT=0.524 tickets=62150
+[2026-02-07 16:26:54]   best updated -> xgb_ranker_light_market
+[2026-02-07 16:26:55] === FINAL RESULT ===
+{
+  "candidate": "xgb_ranker_light_market",
+  "algo": "xgb",
+  "objective": "ranker",
+  "feature_mode": "LIGHT_MARKET",
+  "weight_mode": "none",
+  "n_features": 310,
+  "policy_gamma": 0.4,
+  "policy_bonus": 0.3,
+  "policy_axis_p": 0.08,
+  "policy_axis_min_odds": 1.0,
+  "policy_axis_min_edge": 0.0,
+  "policy_axis_mode": "value",
+  "policy_partner_mode": "value",
+  "policy_win_ev": 0.9,
+  "policy_pair_n": 3,
+  "policy_trio_n": 3,
+  "valid_utility": 83.76530002963015,
+  "valid_blended_roi": 85.58268626066867,
+  "valid_blended_hit": 0.5548424737456242,
+  "valid_tickets": 62332,
+  "valid_coverage": 0.9924724956572091,
+  "test_utility": 78.99428387393843,
+  "test_blended_roi": 80.72550281576831,
+  "test_blended_hit": 0.5235311312481731,
+  "test_tickets": 62150,
+  "test_coverage": 0.9904458598726115,
+  "valid_win_roi": 93.2484076433121,
+  "valid_win_tickets": 628,
+  "valid_win_race_hit": 0.27070063694267515,
+  "valid_umaren_roi": 90.69136522753793,
+  "valid_umaren_tickets": 10284,
+  "valid_umaren_race_hit": 0.0,
+  "valid_wide_roi": 86.41190198366394,
+  "valid_wide_tickets": 10284,
+  "valid_wide_race_hit": 0.0,
+  "valid_umatan_roi": 83.60657331777519,
+  "valid_umatan_tickets": 10284,
+  "valid_umatan_race_hit": 0.0,
+  "valid_sanrenpuku_roi": 88.69603267211203,
+  "valid_sanrenpuku_tickets": 10284,
+  "valid_sanrenpuku_race_hit": 0.1834889148191365,
+  "valid_sanrentan_roi": 81.81106573317776,
+  "valid_sanrentan_tickets": 20568,
+  "valid_sanrentan_race_hit": 0.08984830805134189,
+  "test_win_roi": 86.19122257053291,
+  "test_win_tickets": 638,
+  "test_win_race_hit": 0.26959247648902823,
+  "test_umaren_roi": 83.37852335901688,
+  "test_umaren_tickets": 10253,
+  "test_umaren_race_hit": 0.0,
+  "test_wide_roi": 82.0959719106603,
+  "test_wide_tickets": 10253,
+  "test_wide_race_hit": 0.0,
+  "test_umatan_roi": 79.1699990246757,
+  "test_umatan_tickets": 10253,
+  "test_umatan_race_hit": 0.0,
+  "test_sanrenpuku_roi": 81.2896302799727,
+  "test_sanrenpuku_tickets": 10251,
+  "test_sanrenpuku_race_hit": 0.18115305823822067,
+  "test_sanrentan_roi": 79.0391181348161,
+  "test_sanrentan_tickets": 20502,
+  "test_sanrentan_race_hit": 0.09043020193151888
+}
+[2026-02-07 16:26:55] Saved report: reports/exp_v16_xgb_ranker_value_b64.json

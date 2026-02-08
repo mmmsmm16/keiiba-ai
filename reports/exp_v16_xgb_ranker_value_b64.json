@@ -1,0 +1,293 @@
+{
+  "experiment": "exp_v16_multi_bet_max",
+  "split": {
+    "train_end_year": 2023,
+    "valid_year": 2024,
+    "test_year": 2025
+  },
+  "constraints": {
+    "min_hit": 0.15,
+    "min_coverage": 0.1,
+    "min_tickets": 1200
+  },
+  "policy_profile": "jit_safe",
+  "policy_axis_min_edges": [
+    0.0
+  ],
+  "policy_axis_modes": [
+    "value"
+  ],
+  "policy_partner_modes": [
+    "value"
+  ],
+  "policy_pair_options": [],
+  "policy_trio_options": [],
+  "policy_max_cases": 64,
+  "skip_cat_ranker": false,
+  "best_candidate_by_valid": {
+    "candidate": "xgb_ranker_light_market",
+    "algo": "xgb",
+    "objective": "ranker",
+    "feature_mode": "LIGHT_MARKET",
+    "weight_mode": "none",
+    "n_features": 310,
+    "policy_gamma": 0.4,
+    "policy_bonus": 0.3,
+    "policy_axis_p": 0.08,
+    "policy_axis_min_odds": 1.0,
+    "policy_axis_min_edge": 0.0,
+    "policy_axis_mode": "value",
+    "policy_partner_mode": "value",
+    "policy_win_ev": 0.9,
+    "policy_pair_n": 3,
+    "policy_trio_n": 3,
+    "valid_utility": 83.76530002963015,
+    "valid_blended_roi": 85.58268626066867,
+    "valid_blended_hit": 0.5548424737456242,
+    "valid_tickets": 62332,
+    "valid_coverage": 0.9924724956572091,
+    "test_utility": 78.99428387393843,
+    "test_blended_roi": 80.72550281576831,
+    "test_blended_hit": 0.5235311312481731,
+    "test_tickets": 62150,
+    "test_coverage": 0.9904458598726115,
+    "valid_win_roi": 93.2484076433121,
+    "valid_win_tickets": 628,
+    "valid_win_race_hit": 0.27070063694267515,
+    "valid_umaren_roi": 90.69136522753793,
+    "valid_umaren_tickets": 10284,
+    "valid_umaren_race_hit": 0.0,
+    "valid_wide_roi": 86.41190198366394,
+    "valid_wide_tickets": 10284,
+    "valid_wide_race_hit": 0.0,
+    "valid_umatan_roi": 83.60657331777519,
+    "valid_umatan_tickets": 10284,
+    "valid_umatan_race_hit": 0.0,
+    "valid_sanrenpuku_roi": 88.69603267211203,
+    "valid_sanrenpuku_tickets": 10284,
+    "valid_sanrenpuku_race_hit": 0.1834889148191365,
+    "valid_sanrentan_roi": 81.81106573317776,
+    "valid_sanrentan_tickets": 20568,
+    "valid_sanrentan_race_hit": 0.08984830805134189,
+    "test_win_roi": 86.19122257053291,
+    "test_win_tickets": 638,
+    "test_win_race_hit": 0.26959247648902823,
+    "test_umaren_roi": 83.37852335901688,
+    "test_umaren_tickets": 10253,
+    "test_umaren_race_hit": 0.0,
+    "test_wide_roi": 82.0959719106603,
+    "test_wide_tickets": 10253,
+    "test_wide_race_hit": 0.0,
+    "test_umatan_roi": 79.1699990246757,
+    "test_umatan_tickets": 10253,
+    "test_umatan_race_hit": 0.0,
+    "test_sanrenpuku_roi": 81.2896302799727,
+    "test_sanrenpuku_tickets": 10251,
+    "test_sanrenpuku_race_hit": 0.18115305823822067,
+    "test_sanrentan_roi": 79.0391181348161,
+    "test_sanrentan_tickets": 20502,
+    "test_sanrentan_race_hit": 0.09043020193151888
+  },
+  "best_spec": {
+    "name": "xgb_ranker_light_market",
+    "algo": "xgb",
+    "objective": "ranker",
+    "mode": "LIGHT_MARKET",
+    "wmode": "none"
+  },
+  "artifacts": {
+    "model": "models/experiments/exp_v16_xgb_ranker_value_b64/model.pkl",
+    "features": "models/experiments/exp_v16_xgb_ranker_value_b64/features.csv",
+    "candidate_results": "models/experiments/exp_v16_xgb_ranker_value_b64/candidate_results.csv",
+    "shap_summary": "models/experiments/exp_v16_xgb_ranker_value_b64/shap_summary_top30.csv"
+  },
+  "shap_top_features": [
+    {
+      "feature": "log_odds",
+      "mean_abs_shap": 0.6811376810073853
+    },
+    {
+      "feature": "market_prob",
+      "mean_abs_shap": 0.6588847041130066
+    },
+    {
+      "feature": "distance",
+      "mean_abs_shap": 0.024909792467951775
+    },
+    {
+      "feature": "odds_rank_pre",
+      "mean_abs_shap": 0.02416313625872135
+    },
+    {
+      "feature": "yoso_juni",
+      "mean_abs_shap": 0.01724935695528984
+    },
+    {
+      "feature": "pace_diff_z_ctx",
+      "mean_abs_shap": 0.017192255705595016
+    },
+    {
+      "feature": "sire_turf_win_rate",
+      "mean_abs_shap": 0.012127092108130455
+    },
+    {
+      "feature": "rank_ewm_5",
+      "mean_abs_shap": 0.010841388255357742
+    },
+    {
+      "feature": "time_diff_ewm_3",
+      "mean_abs_shap": 0.009959104470908642
+    },
+    {
+      "feature": "sire_dist_win_rate_decay",
+      "mean_abs_shap": 0.009744549170136452
+    },
+    {
+      "feature": "sire_n_races",
+      "mean_abs_shap": 0.009543219581246376
+    },
+    {
+      "feature": "relative_trainer_win_rate_30d_pct",
+      "mean_abs_shap": 0.009475837461650372
+    },
+    {
+      "feature": "relative_jockey_win_rate_30d_z",
+      "mean_abs_shap": 0.00945131853222847
+    },
+    {
+      "feature": "mean_rank_5",
+      "mean_abs_shap": 0.009125341661274433
+    },
+    {
+      "feature": "elo_gap_to_top",
+      "mean_abs_shap": 0.009053612127900124
+    },
+    {
+      "feature": "lag2_rank",
+      "mean_abs_shap": 0.009003287181258202
+    },
+    {
+      "feature": "rank_ewm_3",
+      "mean_abs_shap": 0.008895074017345905
+    },
+    {
+      "feature": "relative_horse_elo_z",
+      "mean_abs_shap": 0.00873289443552494
+    },
+    {
+      "feature": "relative_speed_index_pct",
+      "mean_abs_shap": 0.008632833138108253
+    },
+    {
+      "feature": "jockey_top3_rate_180d",
+      "mean_abs_shap": 0.008623518981039524
+    },
+    {
+      "feature": "jt_win_rate_smoothed",
+      "mean_abs_shap": 0.008445202372968197
+    },
+    {
+      "feature": "nicks_count",
+      "mean_abs_shap": 0.008337113074958324
+    },
+    {
+      "feature": "jockey_avg_rank",
+      "mean_abs_shap": 0.008018558844923973
+    },
+    {
+      "feature": "race_impost_std",
+      "mean_abs_shap": 0.007658641319721937
+    },
+    {
+      "feature": "rotation_stress",
+      "mean_abs_shap": 0.007313738577067852
+    },
+    {
+      "feature": "weight",
+      "mean_abs_shap": 0.007221887819468975
+    },
+    {
+      "feature": "bias_adversity_score_mean_5",
+      "mean_abs_shap": 0.0071779885329306126
+    },
+    {
+      "feature": "weight_impact_score",
+      "mean_abs_shap": 0.00711993919685483
+    },
+    {
+      "feature": "training_intensity_score",
+      "mean_abs_shap": 0.006868759635835886
+    },
+    {
+      "feature": "sire_surface_win_rate",
+      "mean_abs_shap": 0.00681734923273325
+    }
+  ],
+  "top_candidates_valid": [
+    {
+      "candidate": "xgb_ranker_light_market",
+      "algo": "xgb",
+      "objective": "ranker",
+      "feature_mode": "LIGHT_MARKET",
+      "weight_mode": "none",
+      "n_features": 310,
+      "policy_gamma": 0.4,
+      "policy_bonus": 0.3,
+      "policy_axis_p": 0.08,
+      "policy_axis_min_odds": 1.0,
+      "policy_axis_min_edge": 0.0,
+      "policy_axis_mode": "value",
+      "policy_partner_mode": "value",
+      "policy_win_ev": 0.9,
+      "policy_pair_n": 3,
+      "policy_trio_n": 3,
+      "valid_utility": 83.76530002963015,
+      "valid_blended_roi": 85.58268626066867,
+      "valid_blended_hit": 0.5548424737456242,
+      "valid_tickets": 62332,
+      "valid_coverage": 0.9924724956572091,
+      "test_utility": 78.99428387393843,
+      "test_blended_roi": 80.72550281576831,
+      "test_blended_hit": 0.5235311312481731,
+      "test_tickets": 62150,
+      "test_coverage": 0.9904458598726115,
+      "valid_win_roi": 93.2484076433121,
+      "valid_win_tickets": 628,
+      "valid_win_race_hit": 0.27070063694267515,
+      "valid_umaren_roi": 90.69136522753793,
+      "valid_umaren_tickets": 10284,
+      "valid_umaren_race_hit": 0.0,
+      "valid_wide_roi": 86.41190198366394,
+      "valid_wide_tickets": 10284,
+      "valid_wide_race_hit": 0.0,
+      "valid_umatan_roi": 83.60657331777519,
+      "valid_umatan_tickets": 10284,
+      "valid_umatan_race_hit": 0.0,
+      "valid_sanrenpuku_roi": 88.69603267211203,
+      "valid_sanrenpuku_tickets": 10284,
+      "valid_sanrenpuku_race_hit": 0.1834889148191365,
+      "valid_sanrentan_roi": 81.81106573317776,
+      "valid_sanrentan_tickets": 20568,
+      "valid_sanrentan_race_hit": 0.08984830805134189,
+      "test_win_roi": 86.19122257053291,
+      "test_win_tickets": 638,
+      "test_win_race_hit": 0.26959247648902823,
+      "test_umaren_roi": 83.37852335901688,
+      "test_umaren_tickets": 10253,
+      "test_umaren_race_hit": 0.0,
+      "test_wide_roi": 82.0959719106603,
+      "test_wide_tickets": 10253,
+      "test_wide_race_hit": 0.0,
+      "test_umatan_roi": 79.1699990246757,
+      "test_umatan_tickets": 10253,
+      "test_umatan_race_hit": 0.0,
+      "test_sanrenpuku_roi": 81.2896302799727,
+      "test_sanrenpuku_tickets": 10251,
+      "test_sanrenpuku_race_hit": 0.18115305823822067,
+      "test_sanrentan_roi": 79.0391181348161,
+      "test_sanrentan_tickets": 20502,
+      "test_sanrentan_race_hit": 0.09043020193151888
+    }
+  ],
+  "failed_candidates": []
+}

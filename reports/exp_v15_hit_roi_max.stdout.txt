@@ -1,0 +1,181 @@
+[2026-02-07 13:06:13] Loading data: data/processed/preprocessed_data_v12.parquet
+[2026-02-07 13:06:13] Using 316 columns (minimal read).
+[2026-02-07 13:06:23] Split rows -> train: 237437, valid: 46994, test: 47607, holdout: 2439
+[2026-02-07 13:06:23] Split races -> train: 17273, valid: 3454, test: 3454, holdout: 168
+[2026-02-07 13:06:23] Feature counts:
+[2026-02-07 13:06:23]   NO_MARKET: 307
+[2026-02-07 13:06:23]   LIGHT_MARKET: 310
+[2026-02-07 13:06:23]   BALANCED_MARKET: 313
+[2026-02-07 13:06:23] [Candidate 1/9] bin_no_market_plain family=binary mode=NO_MARKET features=307
+[2026-02-07 13:06:28] [bin_no_market_plain 1/9] iter 1/1400 valid_0.binary_logloss=0.25760
+Training until validation scores don't improve for 80 rounds
+[2026-02-07 13:06:31] [bin_no_market_plain 1/9] iter 50/1400 valid_0.binary_logloss=0.44833
+Early stopping, best iteration is:
+[2]	valid_0's binary_logloss: 0.255985
+[2026-02-07 13:06:34] [bin_no_market_plain 1/9] strategy search start: 2688 combinations
+[2026-02-07 13:06:34] [bin_no_market_plain 1/9] new best utility=77.85 roi=77.85 hit=0.268 bets=3394 (step 1/2688)
+[2026-02-07 13:06:34] [bin_no_market_plain 1/9] new best utility=78.29 roi=78.29 hit=0.263 bets=3452 (step 85/2688)
+[2026-02-07 13:06:34] [bin_no_market_plain 1/9] strategy progress 300/2688 (11.2%), best_utility=78.29
+[2026-02-07 13:06:35] [bin_no_market_plain 1/9] strategy progress 600/2688 (22.3%), best_utility=78.29
+[2026-02-07 13:06:35] [bin_no_market_plain 1/9] strategy progress 900/2688 (33.5%), best_utility=78.29
+[2026-02-07 13:06:35] [bin_no_market_plain 1/9] strategy progress 1200/2688 (44.6%), best_utility=78.29
+[2026-02-07 13:06:36] [bin_no_market_plain 1/9] strategy progress 1500/2688 (55.8%), best_utility=78.29
+[2026-02-07 13:06:36] [bin_no_market_plain 1/9] strategy progress 1800/2688 (67.0%), best_utility=78.29
+[2026-02-07 13:06:36] [bin_no_market_plain 1/9] strategy progress 2100/2688 (78.1%), best_utility=78.29
+[2026-02-07 13:06:37] [bin_no_market_plain 1/9] strategy progress 2400/2688 (89.3%), best_utility=78.29
+[2026-02-07 13:06:37] [bin_no_market_plain 1/9] strategy progress 2688/2688 (100.0%), best_utility=78.29
+[2026-02-07 13:06:37]   valid ROI=78.29 HIT=0.263 bets=3452 | test ROI=77.78 HIT=0.252 bets=3454
+[2026-02-07 13:06:37]   progress saved: /workspace/models/experiments/exp_v15_hit_roi_max/candidate_results_progress.csv (1/9)
+[2026-02-07 13:06:37]   candidate best updated -> bin_no_market_plain (valid utility=78.29)
+[2026-02-07 13:06:37] [Candidate 2/9] bin_no_market_valuew family=binary mode=NO_MARKET features=307
+[2026-02-07 13:06:41] [bin_no_market_valuew 2/9] iter 1/1400 valid_0.binary_logloss=0.32396
+Training until validation scores don't improve for 80 rounds
+[2026-02-07 13:06:43] [bin_no_market_valuew 2/9] iter 50/1400 valid_0.binary_logloss=0.77307
+Early stopping, best iteration is:
+[1]	valid_0's binary_logloss: 0.323964
+[2026-02-07 13:06:45] [bin_no_market_valuew 2/9] strategy search start: 2688 combinations
+[2026-02-07 13:06:45] [bin_no_market_valuew 2/9] new best utility=78.74 roi=78.74 hit=0.232 bets=3287 (step 1/2688)
+[2026-02-07 13:06:45] [bin_no_market_valuew 2/9] new best utility=81.52 roi=81.52 hit=0.159 bets=2224 (step 225/2688)
+[2026-02-07 13:06:45] [bin_no_market_valuew 2/9] strategy progress 300/2688 (11.2%), best_utility=81.52
+[2026-02-07 13:06:46] [bin_no_market_valuew 2/9] strategy progress 600/2688 (22.3%), best_utility=81.52
+[2026-02-07 13:06:46] [bin_no_market_valuew 2/9] strategy progress 900/2688 (33.5%), best_utility=81.52
+[2026-02-07 13:06:46] [bin_no_market_valuew 2/9] strategy progress 1200/2688 (44.6%), best_utility=81.52
+[2026-02-07 13:06:46] [bin_no_market_valuew 2/9] strategy progress 1500/2688 (55.8%), best_utility=81.52
+[2026-02-07 13:06:47] [bin_no_market_valuew 2/9] strategy progress 1800/2688 (67.0%), best_utility=81.52
+[2026-02-07 13:06:47] [bin_no_market_valuew 2/9] strategy progress 2100/2688 (78.1%), best_utility=81.52
+[2026-02-07 13:06:47] [bin_no_market_valuew 2/9] strategy progress 2400/2688 (89.3%), best_utility=81.52
+[2026-02-07 13:06:47] [bin_no_market_valuew 2/9] strategy progress 2688/2688 (100.0%), best_utility=81.52
+[2026-02-07 13:06:47]   valid ROI=81.52 HIT=0.159 bets=2224 | test ROI=78.12 HIT=0.151 bets=2218
+[2026-02-07 13:06:47]   progress saved: /workspace/models/experiments/exp_v15_hit_roi_max/candidate_results_progress.csv (2/9)
+[2026-02-07 13:06:47]   candidate best updated -> bin_no_market_valuew (valid utility=81.52)
+[2026-02-07 13:06:47] [Candidate 3/9] rank_no_market family=ranker mode=NO_MARKET features=307
+/usr/local/lib/python3.10/dist-packages/lightgbm/sklearn.py:861: UserWarning: Found 'ndcg_eval_at' in params. Will use it instead of 'eval_at' argument
+  _log_warning(f"Found '{alias}' in params. Will use it instead of 'eval_at' argument")
+[2026-02-07 13:06:54] [rank_no_market 3/9] iter 1/1200 valid_0.ndcg@1=0.34974, valid_0.ndcg@3=0.44503, valid_0.ndcg@5=0.53639
+Training until validation scores don't improve for 80 rounds
+[2026-02-07 13:06:57] [rank_no_market 3/9] iter 50/1200 valid_0.ndcg@1=0.38101, valid_0.ndcg@3=0.48326, valid_0.ndcg@5=0.57471
+[2026-02-07 13:07:00] [rank_no_market 3/9] iter 100/1200 valid_0.ndcg@1=0.38895, valid_0.ndcg@3=0.49033, valid_0.ndcg@5=0.58153
+[2026-02-07 13:07:02] [rank_no_market 3/9] iter 150/1200 valid_0.ndcg@1=0.39428, valid_0.ndcg@3=0.49471, valid_0.ndcg@5=0.58483
+[2026-02-07 13:07:04] [rank_no_market 3/9] iter 200/1200 valid_0.ndcg@1=0.39557, valid_0.ndcg@3=0.49757, valid_0.ndcg@5=0.58675
+[2026-02-07 13:07:06] [rank_no_market 3/9] iter 250/1200 valid_0.ndcg@1=0.40057, valid_0.ndcg@3=0.50165, valid_0.ndcg@5=0.58981
+[2026-02-07 13:07:08] [rank_no_market 3/9] iter 300/1200 valid_0.ndcg@1=0.40326, valid_0.ndcg@3=0.50159, valid_0.ndcg@5=0.59145
+[2026-02-07 13:07:10] [rank_no_market 3/9] iter 350/1200 valid_0.ndcg@1=0.40359, valid_0.ndcg@3=0.50343, valid_0.ndcg@5=0.59342
+/usr/local/lib/python3.10/dist-packages/lightgbm/sklearn.py:861: UserWarning: Found 'ndcg_eval_at' in params. Will use it instead of 'eval_at' argument
+  _log_warning(f"Found '{alias}' in params. Will use it instead of 'eval_at' argument")
+/usr/local/lib/python3.10/dist-packages/lightgbm/sklearn.py:861: UserWarning: Found 'ndcg_eval_at' in params. Will use it instead of 'eval_at' argument
+  _log_warning(f"Found '{alias}' in params. Will use it instead of 'eval_at' argument")
+Early stopping, best iteration is:
+[309]	valid_0's ndcg@1: 0.404955	valid_0's ndcg@3: 0.502542	valid_0's ndcg@5: 0.59182
+[2026-02-07 13:07:12] [rank_no_market 3/9] strategy search start: 2688 combinations
+[2026-02-07 13:07:12] [rank_no_market 3/9] new best utility=80.62 roi=80.62 hit=0.306 bets=3440 (step 1/2688)
+[2026-02-07 13:07:12] [rank_no_market 3/9] new best utility=84.51 roi=84.51 hit=0.169 bets=747 (step 5/2688)
+[2026-02-07 13:07:12] [rank_no_market 3/9] new best utility=86.34 roi=86.34 hit=0.168 bets=757 (step 33/2688)
+[2026-02-07 13:07:12] [rank_no_market 3/9] new best utility=86.46 roi=86.46 hit=0.168 bets=756 (step 145/2688)
+[2026-02-07 13:07:12] [rank_no_market 3/9] strategy progress 300/2688 (11.2%), best_utility=86.46
+[2026-02-07 13:07:13] [rank_no_market 3/9] strategy progress 600/2688 (22.3%), best_utility=86.46
+[2026-02-07 13:07:13] [rank_no_market 3/9] strategy progress 900/2688 (33.5%), best_utility=86.46
+[2026-02-07 13:07:13] [rank_no_market 3/9] strategy progress 1200/2688 (44.6%), best_utility=86.46
+[2026-02-07 13:07:14] [rank_no_market 3/9] strategy progress 1500/2688 (55.8%), best_utility=86.46
+[2026-02-07 13:07:14] [rank_no_market 3/9] strategy progress 1800/2688 (67.0%), best_utility=86.46
+[2026-02-07 13:07:14] [rank_no_market 3/9] strategy progress 2100/2688 (78.1%), best_utility=86.46
+[2026-02-07 13:07:14] [rank_no_market 3/9] strategy progress 2400/2688 (89.3%), best_utility=86.46
+[2026-02-07 13:07:15] [rank_no_market 3/9] strategy progress 2688/2688 (100.0%), best_utility=86.46
+[2026-02-07 13:07:15]   valid ROI=86.46 HIT=0.168 bets=756 | test ROI=79.79 HIT=0.156 bets=801
+[2026-02-07 13:07:15]   progress saved: /workspace/models/experiments/exp_v15_hit_roi_max/candidate_results_progress.csv (3/9)
+[2026-02-07 13:07:15]   candidate best updated -> rank_no_market (valid utility=86.46)
+[2026-02-07 13:07:15] [Candidate 4/9] bin_light_market_plain family=binary mode=LIGHT_MARKET features=310
+[2026-02-07 13:07:18] [bin_light_market_plain 4/9] iter 1/1400 valid_0.binary_logloss=0.25293
+Training until validation scores don't improve for 80 rounds
+[2026-02-07 13:07:21] [bin_light_market_plain 4/9] iter 50/1400 valid_0.binary_logloss=0.38532
+Early stopping, best iteration is:
+[5]	valid_0's binary_logloss: 0.243385
+[2026-02-07 13:07:27] [bin_light_market_plain 4/9] strategy search start: 2688 combinations
+[2026-02-07 13:07:27] [bin_light_market_plain 4/9] new best utility=80.25 roi=80.25 hit=0.347 bets=3454 (step 1/2688)
+[2026-02-07 13:07:27] [bin_light_market_plain 4/9] strategy progress 300/2688 (11.2%), best_utility=80.25
+[2026-02-07 13:07:27] [bin_light_market_plain 4/9] new best utility=81.10 roi=81.10 hit=0.274 bets=3452 (step 505/2688)
+[2026-02-07 13:07:27] [bin_light_market_plain 4/9] strategy progress 600/2688 (22.3%), best_utility=81.10
+[2026-02-07 13:07:27] [bin_light_market_plain 4/9] strategy progress 900/2688 (33.5%), best_utility=81.10
+[2026-02-07 13:07:28] [bin_light_market_plain 4/9] strategy progress 1200/2688 (44.6%), best_utility=81.10
+[2026-02-07 13:07:28] [bin_light_market_plain 4/9] strategy progress 1500/2688 (55.8%), best_utility=81.10
+[2026-02-07 13:07:28] [bin_light_market_plain 4/9] strategy progress 1800/2688 (67.0%), best_utility=81.10
+[2026-02-07 13:07:29] [bin_light_market_plain 4/9] strategy progress 2100/2688 (78.1%), best_utility=81.10
+[2026-02-07 13:07:29] [bin_light_market_plain 4/9] strategy progress 2400/2688 (89.3%), best_utility=81.10
+[2026-02-07 13:07:29] [bin_light_market_plain 4/9] strategy progress 2688/2688 (100.0%), best_utility=81.10
+[2026-02-07 13:07:29]   valid ROI=81.10 HIT=0.274 bets=3452 | test ROI=82.46 HIT=0.279 bets=3451
+[2026-02-07 13:07:29]   progress saved: /workspace/models/experiments/exp_v15_hit_roi_max/candidate_results_progress.csv (4/9)
+[2026-02-07 13:07:29] [Candidate 5/9] bin_light_market_valuew family=binary mode=LIGHT_MARKET features=310
+[2026-02-07 13:07:33] [bin_light_market_valuew 5/9] iter 1/1400 valid_0.binary_logloss=0.31954
+Training until validation scores don't improve for 80 rounds
+[2026-02-07 13:07:36] [bin_light_market_valuew 5/9] iter 50/1400 valid_0.binary_logloss=0.64674
+Early stopping, best iteration is:
+[1]	valid_0's binary_logloss: 0.319536
+[2026-02-07 13:07:37] [bin_light_market_valuew 5/9] strategy search start: 2688 combinations
+[2026-02-07 13:07:37] [bin_light_market_valuew 5/9] new best utility=80.18 roi=80.18 hit=0.339 bets=3454 (step 1/2688)
+[2026-02-07 13:07:38] [bin_light_market_valuew 5/9] strategy progress 300/2688 (11.2%), best_utility=80.18
+[2026-02-07 13:07:38] [bin_light_market_valuew 5/9] strategy progress 600/2688 (22.3%), best_utility=80.18
+[2026-02-07 13:07:38] [bin_light_market_valuew 5/9] strategy progress 900/2688 (33.5%), best_utility=80.18
+[2026-02-07 13:07:38] [bin_light_market_valuew 5/9] strategy progress 1200/2688 (44.6%), best_utility=80.18
+[2026-02-07 13:07:39] [bin_light_market_valuew 5/9] strategy progress 1500/2688 (55.8%), best_utility=80.18
+[2026-02-07 13:07:39] [bin_light_market_valuew 5/9] strategy progress 1800/2688 (67.0%), best_utility=80.18
+[2026-02-07 13:07:39] [bin_light_market_valuew 5/9] strategy progress 2100/2688 (78.1%), best_utility=80.18
+[2026-02-07 13:07:40] [bin_light_market_valuew 5/9] strategy progress 2400/2688 (89.3%), best_utility=80.18
+[2026-02-07 13:07:40] [bin_light_market_valuew 5/9] strategy progress 2688/2688 (100.0%), best_utility=80.18
+[2026-02-07 13:07:40]   valid ROI=80.18 HIT=0.339 bets=3454 | test ROI=79.78 HIT=0.330 bets=3453
+[2026-02-07 13:07:40]   progress saved: /workspace/models/experiments/exp_v15_hit_roi_max/candidate_results_progress.csv (5/9)
+[2026-02-07 13:07:40] [Candidate 6/9] rank_light_market family=ranker mode=LIGHT_MARKET features=310
+/usr/local/lib/python3.10/dist-packages/lightgbm/sklearn.py:861: UserWarning: Found 'ndcg_eval_at' in params. Will use it instead of 'eval_at' argument
+  _log_warning(f"Found '{alias}' in params. Will use it instead of 'eval_at' argument")
+[2026-02-07 13:07:43] [rank_light_market 6/9] iter 1/1200 valid_0.ndcg@1=0.44276, valid_0.ndcg@3=0.54213, valid_0.ndcg@5=0.62743
+Training until validation scores don't improve for 80 rounds
+[2026-02-07 13:07:46] [rank_light_market 6/9] iter 50/1200 valid_0.ndcg@1=0.45074, valid_0.ndcg@3=0.54840, valid_0.ndcg@5=0.63393
+[2026-02-07 13:07:48] [rank_light_market 6/9] iter 100/1200 valid_0.ndcg@1=0.45206, valid_0.ndcg@3=0.54963, valid_0.ndcg@5=0.63564
+[2026-02-07 13:07:50] [rank_light_market 6/9] iter 150/1200 valid_0.ndcg@1=0.44933, valid_0.ndcg@3=0.54816, valid_0.ndcg@5=0.63543
+/usr/local/lib/python3.10/dist-packages/lightgbm/sklearn.py:861: UserWarning: Found 'ndcg_eval_at' in params. Will use it instead of 'eval_at' argument
+  _log_warning(f"Found '{alias}' in params. Will use it instead of 'eval_at' argument")
+/usr/local/lib/python3.10/dist-packages/lightgbm/sklearn.py:861: UserWarning: Found 'ndcg_eval_at' in params. Will use it instead of 'eval_at' argument
+  _log_warning(f"Found '{alias}' in params. Will use it instead of 'eval_at' argument")
+Early stopping, best iteration is:
+[77]	valid_0's ndcg@1: 0.456034	valid_0's ndcg@3: 0.55105	valid_0's ndcg@5: 0.636925
+[2026-02-07 13:07:50] [rank_light_market 6/9] strategy search start: 2688 combinations
+[2026-02-07 13:07:50] [rank_light_market 6/9] new best utility=84.41 roi=84.41 hit=0.351 bets=3454 (step 1/2688)
+[2026-02-07 13:07:50] [rank_light_market 6/9] new best utility=84.82 roi=84.82 hit=0.292 bets=2567 (step 113/2688)
+[2026-02-07 13:07:51] [rank_light_market 6/9] new best utility=88.36 roi=88.36 hit=0.237 bets=1198 (step 225/2688)
+[2026-02-07 13:07:51] [rank_light_market 6/9] strategy progress 300/2688 (11.2%), best_utility=88.36
+[2026-02-07 13:07:51] [rank_light_market 6/9] strategy progress 600/2688 (22.3%), best_utility=88.36
+[2026-02-07 13:07:51] [rank_light_market 6/9] strategy progress 900/2688 (33.5%), best_utility=88.36
+[2026-02-07 13:07:51] [rank_light_market 6/9] strategy progress 1200/2688 (44.6%), best_utility=88.36
+[2026-02-07 13:07:52] [rank_light_market 6/9] strategy progress 1500/2688 (55.8%), best_utility=88.36
+[2026-02-07 13:07:52] [rank_light_market 6/9] strategy progress 1800/2688 (67.0%), best_utility=88.36
+[2026-02-07 13:07:52] [rank_light_market 6/9] strategy progress 2100/2688 (78.1%), best_utility=88.36
+[2026-02-07 13:07:52] [rank_light_market 6/9] new best utility=89.56 roi=89.56 hit=0.427 bets=751 (step 2297/2688)
+[2026-02-07 13:07:53] [rank_light_market 6/9] new best utility=93.93 roi=93.93 hit=0.402 bets=801 (step 2325/2688)
+[2026-02-07 13:07:53] [rank_light_market 6/9] new best utility=94.05 roi=94.05 hit=0.403 bets=800 (step 2326/2688)
+[2026-02-07 13:07:53] [rank_light_market 6/9] strategy progress 2400/2688 (89.3%), best_utility=94.05
+[2026-02-07 13:07:53] [rank_light_market 6/9] strategy progress 2688/2688 (100.0%), best_utility=94.05
+[2026-02-07 13:07:53]   valid ROI=94.05 HIT=0.403 bets=800 | test ROI=72.68 HIT=0.381 bets=779
+[2026-02-07 13:07:53]   progress saved: /workspace/models/experiments/exp_v15_hit_roi_max/candidate_results_progress.csv (6/9)
+[2026-02-07 13:07:53]   candidate best updated -> rank_light_market (valid utility=94.05)
+[2026-02-07 13:07:53] [Candidate 7/9] bin_balanced_market_plain family=binary mode=BALANCED_MARKET features=313
+[2026-02-07 13:08:00] [bin_balanced_market_plain 7/9] iter 1/1400 valid_0.binary_logloss=0.25296
+Training until validation scores don't improve for 80 rounds
+[2026-02-07 13:08:02] [bin_balanced_market_plain 7/9] iter 50/1400 valid_0.binary_logloss=0.38559
+Early stopping, best iteration is:
+[5]	valid_0's binary_logloss: 0.243567
+[2026-02-07 13:08:05] [bin_balanced_market_plain 7/9] strategy search start: 2688 combinations
+[2026-02-07 13:08:05] [bin_balanced_market_plain 7/9] new best utility=80.25 roi=80.25 hit=0.347 bets=3454 (step 1/2688)
+[2026-02-07 13:08:05] [bin_balanced_market_plain 7/9] strategy progress 300/2688 (11.2%), best_utility=80.25
+[2026-02-07 13:08:05] [bin_balanced_market_plain 7/9] new best utility=80.32 roi=80.32 hit=0.272 bets=3450 (step 505/2688)
+[2026-02-07 13:08:05] [bin_balanced_market_plain 7/9] strategy progress 600/2688 (22.3%), best_utility=80.32
+[2026-02-07 13:08:05] [bin_balanced_market_plain 7/9] strategy progress 900/2688 (33.5%), best_utility=80.32
+[2026-02-07 13:08:06] [bin_balanced_market_plain 7/9] strategy progress 1200/2688 (44.6%), best_utility=80.32
+[2026-02-07 13:08:06] [bin_balanced_market_plain 7/9] strategy progress 1500/2688 (55.8%), best_utility=80.32
+[2026-02-07 13:08:06] [bin_balanced_market_plain 7/9] strategy progress 1800/2688 (67.0%), best_utility=80.32
+[2026-02-07 13:08:07] [bin_balanced_market_plain 7/9] strategy progress 2100/2688 (78.1%), best_utility=80.32
+[2026-02-07 13:08:07] [bin_balanced_market_plain 7/9] strategy progress 2400/2688 (89.3%), best_utility=80.32
+[2026-02-07 13:08:07] [bin_balanced_market_plain 7/9] strategy progress 2688/2688 (100.0%), best_utility=80.32
+[2026-02-07 13:08:07]   valid ROI=80.32 HIT=0.272 bets=3450 | test ROI=83.04 HIT=0.277 bets=3445
+[2026-02-07 13:08:07]   progress saved: /workspace/models/experiments/exp_v15_hit_roi_max/candidate_results_progress.csv (7/9)
+[2026-02-07 13:08:07] [Candidate 8/9] bin_balanced_market_valuew family=binary mode=BALANCED_MARKET features=313
+[2026-02-07 13:08:11] [bin_balanced_market_valuew 8/9] iter 1/1400 valid_0.binary_logloss=0.31966
+Training until validation scores don't improve for 80 rounds
+[2026-02-07 13:08:13] [bin_balanced_market_valuew 8/9] iter 50/1400 valid_0.binary_logloss=0.64732

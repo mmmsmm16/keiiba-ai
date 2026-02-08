@@ -1,0 +1,72 @@
+{
+  "v13": {
+    "BASE": {
+      "races": 3454,
+      "top1_hit_rate": 0.3109438332368269,
+      "top1_win_roi": 77.47249565720904,
+      "top3_win_roi": 78.54468249372708,
+      "top1_pop3_rate": 1.0,
+      "top1_avg_odds": 2.8833526346265197
+    },
+    "ENHANCED": {
+      "races": 3454,
+      "top1_hit_rate": 0.26056745801968734,
+      "top1_win_roi": 72.51013317892298,
+      "top3_win_roi": 74.75776877050761,
+      "top1_pop3_rate": 0.8702953097857556,
+      "top1_avg_odds": 4.214678633468442
+    },
+    "DELTA_ENH_MINUS_BASE": {
+      "races": 0.0,
+      "top1_hit_rate": -0.05037637521713956,
+      "top1_win_roi": -4.962362478286053,
+      "top3_win_roi": -3.7869137232194703,
+      "top1_pop3_rate": -0.12970469021424436,
+      "top1_avg_odds": 1.3313259988419226
+    }
+  },
+  "v14": {
+    "split": {
+      "test_start": "2024-09-29",
+      "test_end": "2024-12-28",
+      "rows": 11785,
+      "races": 861
+    },
+    "BASE": {
+      "races": 861,
+      "top1_hit_rate": 0.0545876887340302,
+      "top1_win_roi": 42.68292682926828,
+      "top3_win_roi": 60.317460317460316,
+      "top1_pop3_rate": 0.18931475029036005,
+      "top1_avg_odds": 88.18048780487804,
+      "top1_avg_odds_10min": 55.048780487804876,
+      "target_picks": 1006,
+      "target_place_hit_rate": 0.14214711729622267,
+      "rmse_gap_score": 4.433911008118073
+    },
+    "ENHANCED": {
+      "races": 861,
+      "top1_hit_rate": 0.05807200929152149,
+      "top1_win_roi": 70.18583042973286,
+      "top3_win_roi": 60.522648083623686,
+      "top1_pop3_rate": 0.18583042973286876,
+      "top1_avg_odds": 66.08002322880371,
+      "top1_avg_odds_10min": 42.97468060394889,
+      "target_picks": 1172,
+      "target_place_hit_rate": 0.1766211604095563,
+      "rmse_gap_score": 4.5310660562035165
+    },
+    "DELTA_ENH_MINUS_BASE": {
+      "races": 0.0,
+      "top1_hit_rate": 0.0034843205574912883,
+      "top1_win_roi": 27.502903600464577,
+      "top3_win_roi": 0.20518776616336964,
+      "top1_pop3_rate": -0.0034843205574912883,
+      "top1_avg_odds": -22.10046457607433,
+      "top1_avg_odds_10min": -12.074099883855986,
+      "target_picks": 166.0,
+      "target_place_hit_rate": 0.03447404311333363,
+      "rmse_gap_score": 0.09715504808544395
+    }
+  }
+}

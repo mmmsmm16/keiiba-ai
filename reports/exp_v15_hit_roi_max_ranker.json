@@ -1,0 +1,282 @@
+{
+  "experiment": "exp_v15_hit_roi_max",
+  "data_path": "data/processed/preprocessed_data_v12.parquet",
+  "split": {
+    "train_end_year": 2023,
+    "valid_year": 2024,
+    "test_year": 2025,
+    "holdout_years_gt_test": true
+  },
+  "constraints": {
+    "min_hit": 0.12,
+    "min_coverage": 0.05,
+    "min_bets": 300
+  },
+  "best_candidate_by_valid": {
+    "candidate": "rank_light_market",
+    "family": "ranker",
+    "feature_mode": "LIGHT_MARKET",
+    "weight_mode": "none",
+    "n_features": 310,
+    "strategy_gamma": 0.3,
+    "strategy_ev_thr": 0.0,
+    "strategy_min_odds": 5.0,
+    "strategy_max_odds": 20.0,
+    "strategy_prob_floor": 0.0,
+    "valid_utility": 85.78125,
+    "valid_roi": 85.78125,
+    "valid_hit": 0.14583333333333334,
+    "valid_bets": 384,
+    "valid_coverage": 0.11117544875506659,
+    "test_utility": 45.68656716417911,
+    "test_roi": 57.985074626865675,
+    "test_hit": 0.09950248756218906,
+    "test_bets": 402,
+    "test_coverage": 0.11638679791546033
+  },
+  "best_spec": {
+    "name": "rank_light_market",
+    "family": "ranker",
+    "feature_mode": "LIGHT_MARKET",
+    "weight_mode": "none"
+  },
+  "best_strategy": {
+    "gamma": 0.3,
+    "min_odds": 5.0,
+    "max_odds": 20.0,
+    "ev_thr": 0.0,
+    "prob_floor": 0.0,
+    "races": 3454,
+    "bets": 384,
+    "wins": 56,
+    "hit_rate": 0.14583333333333334,
+    "roi": 85.78125,
+    "coverage": 0.11117544875506659,
+    "pop3_rate": 0.7057291666666666,
+    "avg_odds": 6.043489583333333,
+    "utility": 85.78125,
+    "min_hit_constraint": 0.12,
+    "min_coverage_constraint": 0.05,
+    "min_bets_constraint": 300
+  },
+  "final_test_metrics": {
+    "races": 3454,
+    "bets": 920,
+    "wins": 113,
+    "hit_rate": 0.12282608695652174,
+    "roi": 92.60869565217392,
+    "coverage": 0.26635784597568035,
+    "pop3_rate": 0.35,
+    "avg_odds": 8.151630434782609,
+    "utility": 92.60869565217392
+  },
+  "final_holdout_metrics": {
+    "races": 168,
+    "bets": 44,
+    "wins": 5,
+    "hit_rate": 0.11363636363636363,
+    "roi": 70.45454545454545,
+    "coverage": 0.2619047619047619,
+    "pop3_rate": 0.2727272727272727,
+    "avg_odds": 7.8931818181818185,
+    "utility": -214.9636363636364
+  },
+  "artifacts": {
+    "model": "models/experiments/exp_v15_hit_roi_max_ranker/model.pkl",
+    "features": "models/experiments/exp_v15_hit_roi_max_ranker/features.csv",
+    "strategy": "models/experiments/exp_v15_hit_roi_max_ranker/best_strategy.json",
+    "candidate_results": "models/experiments/exp_v15_hit_roi_max_ranker/candidate_results.csv",
+    "shap_summary": "models/experiments/exp_v15_hit_roi_max_ranker/shap_summary_top30.csv",
+    "summary": "models/experiments/exp_v15_hit_roi_max_ranker/summary.json"
+  },
+  "shap_top_features": [
+    {
+      "feature": "log_odds",
+      "mean_abs_shap": 0.659692415186857
+    },
+    {
+      "feature": "market_prob",
+      "mean_abs_shap": 0.5402768166655995
+    },
+    {
+      "feature": "odds_rank_pre",
+      "mean_abs_shap": 0.043729413442281685
+    },
+    {
+      "feature": "pace_diff_z_ctx",
+      "mean_abs_shap": 0.03135283442305087
+    },
+    {
+      "feature": "bms_count",
+      "mean_abs_shap": 0.01582963183567265
+    },
+    {
+      "feature": "training_time_4f",
+      "mean_abs_shap": 0.013249720560094333
+    },
+    {
+      "feature": "sire_turf_win_rate",
+      "mean_abs_shap": 0.013237845411422538
+    },
+    {
+      "feature": "relative_trainer_win_rate_30d_pct",
+      "mean_abs_shap": 0.013212246833656984
+    },
+    {
+      "feature": "inner_frame_win_rate",
+      "mean_abs_shap": 0.013111578985225587
+    },
+    {
+      "feature": "jockey_top3_rate_30d",
+      "mean_abs_shap": 0.012784595253663949
+    },
+    {
+      "feature": "weight",
+      "mean_abs_shap": 0.01252574237749771
+    },
+    {
+      "feature": "pace_diff",
+      "mean_abs_shap": 0.012289512047414393
+    },
+    {
+      "feature": "weight_volatility_5",
+      "mean_abs_shap": 0.01151757792709856
+    },
+    {
+      "feature": "field_size",
+      "mean_abs_shap": 0.011164092934876652
+    },
+    {
+      "feature": "mean_rank_5",
+      "mean_abs_shap": 0.010454766275356344
+    },
+    {
+      "feature": "training_accel_score",
+      "mean_abs_shap": 0.010253262020684379
+    },
+    {
+      "feature": "relative_3f_score",
+      "mean_abs_shap": 0.010228837134174076
+    },
+    {
+      "feature": "bias_adversity_score_mean_5",
+      "mean_abs_shap": 0.01013443226044397
+    },
+    {
+      "feature": "relative_last_3f_pct",
+      "mean_abs_shap": 0.010124404648799904
+    },
+    {
+      "feature": "rank_ewm_3",
+      "mean_abs_shap": 0.009673495949883622
+    },
+    {
+      "feature": "avg_speed_index",
+      "mean_abs_shap": 0.009526841053176215
+    },
+    {
+      "feature": "horse_elo",
+      "mean_abs_shap": 0.009443524028279781
+    },
+    {
+      "feature": "relative_horse_elo_z",
+      "mean_abs_shap": 0.009395751794021315
+    },
+    {
+      "feature": "interval_days",
+      "mean_abs_shap": 0.009367995210962743
+    },
+    {
+      "feature": "surface_win_rate",
+      "mean_abs_shap": 0.009309226406833156
+    },
+    {
+      "feature": "trainer_win_rate_momentum",
+      "mean_abs_shap": 0.00909724804631207
+    },
+    {
+      "feature": "time_diff_ewm_3",
+      "mean_abs_shap": 0.008894511326468176
+    },
+    {
+      "feature": "lag2_rank",
+      "mean_abs_shap": 0.008727469768785474
+    },
+    {
+      "feature": "sire_dist_win_rate_decay",
+      "mean_abs_shap": 0.008621663723636794
+    },
+    {
+      "feature": "horse_avg_corner_change",
+      "mean_abs_shap": 0.008611649928926329
+    }
+  ],
+  "top_candidates_valid": [
+    {
+      "candidate": "rank_light_market",
+      "family": "ranker",
+      "feature_mode": "LIGHT_MARKET",
+      "weight_mode": "none",
+      "n_features": 310,
+      "strategy_gamma": 0.3,
+      "strategy_ev_thr": 0.0,
+      "strategy_min_odds": 5.0,
+      "strategy_max_odds": 20.0,
+      "strategy_prob_floor": 0.0,
+      "valid_utility": 85.78125,
+      "valid_roi": 85.78125,
+      "valid_hit": 0.14583333333333334,
+      "valid_bets": 384,
+      "valid_coverage": 0.11117544875506659,
+      "test_utility": 45.68656716417911,
+      "test_roi": 57.985074626865675,
+      "test_hit": 0.09950248756218906,
+      "test_bets": 402,
+      "test_coverage": 0.11638679791546033
+    },
+    {
+      "candidate": "rank_no_market",
+      "family": "ranker",
+      "feature_mode": "NO_MARKET",
+      "weight_mode": "none",
+      "n_features": 307,
+      "strategy_gamma": 0.0,
+      "strategy_ev_thr": 0.9,
+      "strategy_min_odds": 3.0,
+      "strategy_max_odds": 80.0,
+      "strategy_prob_floor": 0.0,
+      "valid_utility": 84.92836676217765,
+      "valid_roi": 84.92836676217765,
+      "valid_hit": 0.15329512893982808,
+      "valid_bets": 698,
+      "valid_coverage": 0.2020845396641575,
+      "test_utility": 78.68115942028984,
+      "test_roi": 78.68115942028984,
+      "test_hit": 0.1289855072463768,
+      "test_bets": 690,
+      "test_coverage": 0.1997683844817603
+    },
+    {
+      "candidate": "rank_balanced_market",
+      "family": "ranker",
+      "feature_mode": "BALANCED_MARKET",
+      "weight_mode": "none",
+      "n_features": 313,
+      "strategy_gamma": 0.0,
+      "strategy_ev_thr": 0.0,
+      "strategy_min_odds": 1.0,
+      "strategy_max_odds": 20.0,
+      "strategy_prob_floor": 0.0,
+      "valid_utility": 80.73537927041112,
+      "valid_roi": 80.73537927041112,
+      "valid_hit": 0.34337000579038796,
+      "valid_bets": 3454,
+      "valid_coverage": 1.0,
+      "test_utility": 78.41297422531132,
+      "test_roi": 78.41297422531132,
+      "test_hit": 0.3278308717057631,
+      "test_bets": 3453,
+      "test_coverage": 0.9997104806022004
+    }
+  ]
+}

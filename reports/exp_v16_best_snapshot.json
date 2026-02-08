@@ -1,0 +1,20 @@
+{
+  "best": {
+    "report": "reports/exp_v16_xgb_binary_betoff_b4_cov3.json",
+    "candidate": "xgb_binary_light_market_value",
+    "algo": "xgb",
+    "objective": "binary",
+    "policy_axis_mode": "value",
+    "policy_partner_mode": "prob",
+    "policy_pair_n": 0,
+    "policy_trio_n": 0,
+    "valid_roi": 105.24691358024691,
+    "valid_hit": 0.19753086419753085,
+    "valid_coverage": 0.046902142443543716,
+    "valid_tickets": 162,
+    "test_roi": 110.15037593984962,
+    "test_hit": 0.19548872180451127,
+    "test_coverage": 0.038506079907353795,
+    "test_tickets": 133
+  }
+}

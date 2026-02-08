@@ -1,0 +1,20 @@
+{
+  "best_practical": {
+    "report": "reports/exp_v16_xgb_binary_value_pair1_trio2.json",
+    "candidate": "xgb_binary_light_market_value",
+    "algo": "xgb",
+    "objective": "binary",
+    "axis_mode": "value",
+    "partner_mode": "value",
+    "pair_n": 1,
+    "trio_n": 2,
+    "test_roi": 90.07771338250792,
+    "test_hit": 0.2300587741393786,
+    "test_cov": 0.6896352055587724,
+    "test_tickets": 15184,
+    "valid_roi": 93.76137249805043,
+    "valid_hit": 0.2495840266222961,
+    "valid_cov": 0.6960046323103648,
+    "valid_tickets": 15388
+  }
+}

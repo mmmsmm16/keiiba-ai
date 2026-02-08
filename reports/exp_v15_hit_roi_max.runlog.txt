@@ -1,0 +1,9 @@
+[2026-02-07 13:05:02] Loading data: data/processed/preprocessed_data_v12.parquet
+[2026-02-07 13:05:02] Using 316 columns (minimal read).
+[2026-02-07 13:05:13] Split rows -> train: 237437, valid: 46994, test: 47607, holdout: 2439
+[2026-02-07 13:05:13] Split races -> train: 17273, valid: 3454, test: 3454, holdout: 168
+[2026-02-07 13:05:13] Feature counts:
+[2026-02-07 13:05:13]   NO_MARKET: 307
+[2026-02-07 13:05:13]   LIGHT_MARKET: 310
+[2026-02-07 13:05:13]   BALANCED_MARKET: 313
+[2026-02-07 13:05:13] [Candidate 1/9] bin_no_market_plain family=binary mode=NO_MARKET features=307

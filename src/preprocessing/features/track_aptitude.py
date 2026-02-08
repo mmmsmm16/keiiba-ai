@@ -11,6 +11,7 @@ class TrackAptitudeFeatureGenerator:
         
         # 1. Sort by date to ensure expanding window is correct
         df_sorted = df.sort_values('date').copy()
+        df_sorted['going_code'] = pd.to_numeric(df_sorted.get('going_code', 0), errors='coerce').fillna(0).astype(int)
         
         # 2. Pivot / Grouping
         # We need historical stats for the *current* race's going_code.
@@ -40,9 +41,9 @@ class TrackAptitudeFeatureGenerator:
         
         start_cols = []
         for code in [1, 2, 3, 4]:
-            df_sorted[f'cum_runs_{code}'] = grp[f'is_going_{code}'].cumsum().shift(1).fillna(0)
-            df_sorted[f'cum_wins_{code}'] = grp[f'win_going_{code}'].cumsum().shift(1).fillna(0)
-            df_sorted[f'cum_top3_{code}'] = grp[f'top3_going_{code}'].cumsum().shift(1).fillna(0)
+            df_sorted[f'cum_runs_{code}'] = grp[f'is_going_{code}'].transform(lambda x: x.cumsum().shift(1)).fillna(0)
+            df_sorted[f'cum_wins_{code}'] = grp[f'win_going_{code}'].transform(lambda x: x.cumsum().shift(1)).fillna(0)
+            df_sorted[f'cum_top3_{code}'] = grp[f'top3_going_{code}'].transform(lambda x: x.cumsum().shift(1)).fillna(0)
             start_cols.extend([f'cum_runs_{code}', f'cum_wins_{code}', f'cum_top3_{code}'])
 
         # 3. Retrieve feature for Current Race
@@ -96,7 +97,25 @@ class TrackAptitudeFeatureGenerator:
             1, 0
         )
 
-        out_cols = ['race_id', 'horse_number', 'horse_id', 'horse_going_count', 'horse_going_win_rate', 'horse_going_top3_rate', 'is_proven_mudder']
+        # Going shift adaptability
+        df_sorted['prev_going_code'] = grp['going_code'].shift(1).fillna(0).astype(int)
+        df_sorted['going_shift'] = (df_sorted['going_code'] - df_sorted['prev_going_code']).astype(int)
+        df_sorted['is_shift_up'] = (df_sorted['going_shift'] >= 1).astype(int)
+        df_sorted['is_shift_down'] = (df_sorted['going_shift'] <= -1).astype(int)
+        df_sorted['is_top3_shift_up_obs'] = np.where(df_sorted['is_shift_up'] == 1, df_sorted['is_top3'], np.nan)
+        df_sorted['is_top3_shift_down_obs'] = np.where(df_sorted['is_shift_down'] == 1, df_sorted['is_top3'], np.nan)
+        df_sorted['going_shift_up_top3_rate'] = grp['is_top3_shift_up_obs'].transform(
+            lambda x: x.expanding().mean().shift(1)
+        ).fillna(0.0)
+        df_sorted['going_shift_down_top3_rate'] = grp['is_top3_shift_down_obs'].transform(
+            lambda x: x.expanding().mean().shift(1)
+        ).fillna(0.0)
+        
+        out_cols = [
+            'race_id', 'horse_number', 'horse_id',
+            'horse_going_count', 'horse_going_win_rate', 'horse_going_top3_rate',
+            'is_proven_mudder', 'going_shift', 'going_shift_up_top3_rate', 'going_shift_down_top3_rate'
+        ]
         
         # Align index back to original if needed, but Pipeline usually expects dataframe with matching index or sort handling.
         # FeatureGenerator usually returns dataframe matching input length/index.

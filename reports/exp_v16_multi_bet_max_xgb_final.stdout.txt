@@ -1,0 +1,7 @@
+[2026-02-07 15:29:32] Loading data: data/processed/preprocessed_data_v12.parquet
+[2026-02-07 15:29:32] Using 315 columns
+[2026-02-07 15:29:41] rows train=237437 valid=46994 test=47607 holdout=2439
+[2026-02-07 15:29:41] candidates=1 policy_edges=[0.0, 1.05] axis_modes=['value', 'hybrid'] partner_modes=['value', 'prob']
+[2026-02-07 15:29:42] Loaded payout map races=3454 for years=[2024]
+[2026-02-07 15:29:43] Loaded payout map races=3455 for years=[2025]
+[2026-02-07 15:29:43] [Candidate 1/1] xgb_binary_light_market_value feats=310

@@ -1,0 +1,2 @@
+[2026-02-07 15:29:55] Loading data: data/processed/preprocessed_data_v12.parquet
+[2026-02-07 15:29:55] Using 315 columns

@@ -1,0 +1,615 @@
+{
+  "v13": {
+    "BASE": {
+      "n_rows_used": 12000,
+      "top20_mean_abs_contrib": [
+        {
+          "feature": "is_high_odds",
+          "mean_abs_contrib": 0.30629169692271324,
+          "rank": 1
+        },
+        {
+          "feature": "odds_rank_vs_elo",
+          "mean_abs_contrib": 0.127886809429127,
+          "rank": 2
+        },
+        {
+          "feature": "relative_horse_elo_pct",
+          "mean_abs_contrib": 0.09041263343299276,
+          "rank": 3
+        },
+        {
+          "feature": "relative_horse_elo_z",
+          "mean_abs_contrib": 0.04629008102615816,
+          "rank": 4
+        },
+        {
+          "feature": "horse_elo",
+          "mean_abs_contrib": 0.04256710205607177,
+          "rank": 5
+        },
+        {
+          "feature": "is_mid_odds",
+          "mean_abs_contrib": 0.02632216113846691,
+          "rank": 6
+        },
+        {
+          "feature": "jockey_avg_rank",
+          "mean_abs_contrib": 0.022226451029496403,
+          "rank": 7
+        },
+        {
+          "feature": "distance",
+          "mean_abs_contrib": 0.01016870732143164,
+          "rank": 8
+        },
+        {
+          "feature": "hc_top3_rate_365d",
+          "mean_abs_contrib": 0.008980204083590598,
+          "rank": 9
+        },
+        {
+          "feature": "rank_ewm_5",
+          "mean_abs_contrib": 0.006209610343644463,
+          "rank": 10
+        },
+        {
+          "feature": "rank_ewm_3",
+          "mean_abs_contrib": 0.005253783288891127,
+          "rank": 11
+        },
+        {
+          "feature": "collapse_rate_10",
+          "mean_abs_contrib": 0.004804746610929593,
+          "rank": 12
+        },
+        {
+          "feature": "jockey_top3_rate_60d",
+          "mean_abs_contrib": 0.004728476067226016,
+          "rank": 13
+        },
+        {
+          "feature": "jockey_apt_rot_top3",
+          "mean_abs_contrib": 0.004410022058412388,
+          "rank": 14
+        },
+        {
+          "feature": "trainer_top3_rate_180d",
+          "mean_abs_contrib": 0.0039920722838160515,
+          "rank": 15
+        },
+        {
+          "feature": "relative_last_3f_diff",
+          "mean_abs_contrib": 0.003861141072561437,
+          "rank": 16
+        },
+        {
+          "feature": "horse_going_win_rate",
+          "mean_abs_contrib": 0.003834222363553423,
+          "rank": 17
+        },
+        {
+          "feature": "time_diff_ewm_5",
+          "mean_abs_contrib": 0.0037410876212090535,
+          "rank": 18
+        },
+        {
+          "feature": "avg_speed_index",
+          "mean_abs_contrib": 0.0035704069075383434,
+          "rank": 19
+        },
+        {
+          "feature": "pace_diff",
+          "mean_abs_contrib": 0.0034992646807623664,
+          "rank": 20
+        }
+      ],
+      "new_feature_summary": [],
+      "new_feature_direction": []
+    },
+    "ENHANCED": {
+      "n_rows_used": 12000,
+      "top20_mean_abs_contrib": [
+        {
+          "feature": "relative_horse_elo_pct",
+          "mean_abs_contrib": 0.09771886494979759,
+          "rank": 1
+        },
+        {
+          "feature": "hc_top3_rate_365d",
+          "mean_abs_contrib": 0.09106140918896923,
+          "rank": 2
+        },
+        {
+          "feature": "lag1_rank",
+          "mean_abs_contrib": 0.07184238792655828,
+          "rank": 3
+        },
+        {
+          "feature": "jockey_avg_rank",
+          "mean_abs_contrib": 0.07139391307410363,
+          "rank": 4
+        },
+        {
+          "feature": "lag1_time_diff",
+          "mean_abs_contrib": 0.06528190804656575,
+          "rank": 5
+        },
+        {
+          "feature": "jockey_top3_rate_180d",
+          "mean_abs_contrib": 0.053788463226972824,
+          "rank": 6
+        },
+        {
+          "feature": "relative_horse_elo_z",
+          "mean_abs_contrib": 0.05361221260622892,
+          "rank": 7
+        },
+        {
+          "feature": "relative_speed_index_pct",
+          "mean_abs_contrib": 0.03701982024086263,
+          "rank": 8
+        },
+        {
+          "feature": "vs_rival_win_rate",
+          "mean_abs_contrib": 0.0313014485212043,
+          "rank": 9
+        },
+        {
+          "feature": "weight",
+          "mean_abs_contrib": 0.021366767287084455,
+          "rank": 10
+        },
+        {
+          "feature": "distance",
+          "mean_abs_contrib": 0.0213537231444152,
+          "rank": 11
+        },
+        {
+          "feature": "field_elo_mean",
+          "mean_abs_contrib": 0.019888719961563404,
+          "rank": 12
+        },
+        {
+          "feature": "sire_surface_win_rate",
+          "mean_abs_contrib": 0.01780975246246875,
+          "rank": 13
+        },
+        {
+          "feature": "time_diff_ewm_5",
+          "mean_abs_contrib": 0.01657480043321174,
+          "rank": 14
+        },
+        {
+          "feature": "run_count",
+          "mean_abs_contrib": 0.016501350250426403,
+          "rank": 15
+        },
+        {
+          "feature": "rank_ewm_3",
+          "mean_abs_contrib": 0.015069926878215635,
+          "rank": 16
+        },
+        {
+          "feature": "collapse_rate_10",
+          "mean_abs_contrib": 0.015060677940511979,
+          "rank": 17
+        },
+        {
+          "feature": "jockey_top3_rate_365d_relative_z",
+          "mean_abs_contrib": 0.014390157769276109,
+          "rank": 18
+        },
+        {
+          "feature": "trainer_top3_rate_365d",
+          "mean_abs_contrib": 0.013417429327224013,
+          "rank": 19
+        },
+        {
+          "feature": "horse_going_count",
+          "mean_abs_contrib": 0.01280626006102082,
+          "rank": 20
+        }
+      ],
+      "new_feature_summary": [],
+      "new_feature_direction": []
+    }
+  },
+  "v14": {
+    "split": {
+      "test_start": "2024-09-29",
+      "test_end": "2024-12-28",
+      "rows": 11785,
+      "races": 861
+    },
+    "analysis": {
+      "BASE": {
+        "n_rows_used": 11785,
+        "top20_mean_abs_contrib": [
+          {
+            "feature": "lag1_bad_luck_proxy",
+            "mean_abs_contrib": 2.543939831109803,
+            "rank": 1
+          },
+          {
+            "feature": "relative_jockey_win_rate_30d_pct",
+            "mean_abs_contrib": 1.0587039941031577,
+            "rank": 2
+          },
+          {
+            "feature": "training_acceleration",
+            "mean_abs_contrib": 0.40157846156796856,
+            "rank": 3
+          },
+          {
+            "feature": "sire_apt_slp",
+            "mean_abs_contrib": 0.382827923990807,
+            "rank": 4
+          },
+          {
+            "feature": "field_size",
+            "mean_abs_contrib": 0.15319849981439676,
+            "rank": 5
+          },
+          {
+            "feature": "jockey_win_rate_smoothed",
+            "mean_abs_contrib": 0.14843446761483817,
+            "rank": 6
+          },
+          {
+            "feature": "relative_rank_slope_5_z",
+            "mean_abs_contrib": 0.10732689515773454,
+            "rank": 7
+          },
+          {
+            "feature": "n_other_nige",
+            "mean_abs_contrib": 0.0789413708881038,
+            "rank": 8
+          },
+          {
+            "feature": "sire_apt_str",
+            "mean_abs_contrib": 0.07410345527343914,
+            "rank": 9
+          },
+          {
+            "feature": "time_diff_ewm_3",
+            "mean_abs_contrib": 0.06752879328047201,
+            "rank": 10
+          },
+          {
+            "feature": "relative_track_variant_pct",
+            "mean_abs_contrib": 0.06368210250809368,
+            "rank": 11
+          },
+          {
+            "feature": "jockey_id_is_top3_sum_180d",
+            "mean_abs_contrib": 0.062054358036772825,
+            "rank": 12
+          },
+          {
+            "feature": "run_count",
+            "mean_abs_contrib": 0.05741209816342762,
+            "rank": 13
+          },
+          {
+            "feature": "avg_speed_index",
+            "mean_abs_contrib": 0.05403254902644604,
+            "rank": 14
+          },
+          {
+            "feature": "lag2_distance",
+            "mean_abs_contrib": 0.052591912136181675,
+            "rank": 15
+          },
+          {
+            "feature": "trainer_win_rate_365d_smoothed",
+            "mean_abs_contrib": 0.05219778938147196,
+            "rank": 16
+          },
+          {
+            "feature": "frame_cond_win_rate",
+            "mean_abs_contrib": 0.040878611421554335,
+            "rank": 17
+          },
+          {
+            "feature": "hc_n_races_365d",
+            "mean_abs_contrib": 0.036878808759219575,
+            "rank": 18
+          },
+          {
+            "feature": "relative_jockey_win_rate_30d_z",
+            "mean_abs_contrib": 0.036605066699442856,
+            "rank": 19
+          },
+          {
+            "feature": "class_trend_3",
+            "mean_abs_contrib": 0.03448616604947443,
+            "rank": 20
+          }
+        ],
+        "new_feature_summary": [],
+        "new_feature_direction": []
+      },
+      "ENHANCED": {
+        "n_rows_used": 11785,
+        "top20_mean_abs_contrib": [
+          {
+            "feature": "fit_sashi_long",
+            "mean_abs_contrib": 2.239672901325005,
+            "rank": 1
+          },
+          {
+            "feature": "avg_first_corner_norm",
+            "mean_abs_contrib": 1.4456407872390737,
+            "rank": 2
+          },
+          {
+            "feature": "odds_10min",
+            "mean_abs_contrib": 0.6611398216791068,
+            "rank": 3
+          },
+          {
+            "feature": "is_first_str",
+            "mean_abs_contrib": 0.5805030045327974,
+            "rank": 4
+          },
+          {
+            "feature": "jockey_n_races_365d",
+            "mean_abs_contrib": 0.4255784561343455,
+            "rank": 5
+          },
+          {
+            "feature": "relative_rank_slope_5_z",
+            "mean_abs_contrib": 0.16915547741052717,
+            "rank": 6
+          },
+          {
+            "feature": "impost",
+            "mean_abs_contrib": 0.1355221147266465,
+            "rank": 7
+          },
+          {
+            "feature": "jockey_class_diff",
+            "mean_abs_contrib": 0.11978516298511274,
+            "rank": 8
+          },
+          {
+            "feature": "rank_slope_5",
+            "mean_abs_contrib": 0.11387485555787939,
+            "rank": 9
+          },
+          {
+            "feature": "lag1_winner_level",
+            "mean_abs_contrib": 0.10362990976568412,
+            "rank": 10
+          },
+          {
+            "feature": "lag1_bad_luck_proxy",
+            "mean_abs_contrib": 0.09750323666177102,
+            "rank": 11
+          },
+          {
+            "feature": "pace_type",
+            "mean_abs_contrib": 0.09213748981944117,
+            "rank": 12
+          },
+          {
+            "feature": "relative_nige_rate_pct",
+            "mean_abs_contrib": 0.08756788106616033,
+            "rank": 13
+          },
+          {
+            "feature": "horse_going_count",
+            "mean_abs_contrib": 0.07536592899961819,
+            "rank": 14
+          },
+          {
+            "feature": "lag3_distance",
+            "mean_abs_contrib": 0.06662059275193004,
+            "rank": 15
+          },
+          {
+            "feature": "relative_jockey_win_rate_30d_pct",
+            "mean_abs_contrib": 0.06001869035001633,
+            "rank": 16
+          },
+          {
+            "feature": "field_size",
+            "mean_abs_contrib": 0.05747697592983278,
+            "rank": 17
+          },
+          {
+            "feature": "yoso_time_diff",
+            "mean_abs_contrib": 0.05727710333994855,
+            "rank": 18
+          },
+          {
+            "feature": "lag4_winner_level",
+            "mean_abs_contrib": 0.055299064299930825,
+            "rank": 19
+          },
+          {
+            "feature": "lag1_race_level",
+            "mean_abs_contrib": 0.05118871325102387,
+            "rank": 20
+          }
+        ],
+        "new_feature_summary": [
+          {
+            "feature": "nige_score_interaction",
+            "mean_abs_contrib": 0.031926090943245826,
+            "rank": 39
+          },
+          {
+            "feature": "sire_top3_iqr_50",
+            "mean_abs_contrib": 0.02733438895495373,
+            "rank": 45
+          },
+          {
+            "feature": "going_shift",
+            "mean_abs_contrib": 0.021531069206412345,
+            "rank": 53
+          },
+          {
+            "feature": "sire_top3_std_50",
+            "mean_abs_contrib": 0.020168035550950265,
+            "rank": 54
+          },
+          {
+            "feature": "pace_diff_z_ctx",
+            "mean_abs_contrib": 0.01820720495964137,
+            "rank": 57
+          },
+          {
+            "feature": "track_variant_uncertainty",
+            "mean_abs_contrib": 0.011447909944208098,
+            "rank": 78
+          },
+          {
+            "feature": "nicks_ctx_count",
+            "mean_abs_contrib": 0.010883576465584705,
+            "rank": 83
+          },
+          {
+            "feature": "sire_win_rate_iqr_50",
+            "mean_abs_contrib": 0.006471883935663863,
+            "rank": 107
+          },
+          {
+            "feature": "pace_high_prob",
+            "mean_abs_contrib": 0.004822338518330413,
+            "rank": 113
+          },
+          {
+            "feature": "front_congestion_idx",
+            "mean_abs_contrib": 0.004415992916430946,
+            "rank": 119
+          },
+          {
+            "feature": "sire_surface_win_rate_decay",
+            "mean_abs_contrib": 0.004254946760226665,
+            "rank": 121
+          },
+          {
+            "feature": "rest_success_rate_smoothed",
+            "mean_abs_contrib": 0.002764473200884589,
+            "rank": 145
+          },
+          {
+            "feature": "rest_success_rate_decay",
+            "mean_abs_contrib": 0.002458357152521145,
+            "rank": 150
+          },
+          {
+            "feature": "nicks_ctx_top3_rate_hier",
+            "mean_abs_contrib": 0.0018226948657407039,
+            "rank": 164
+          },
+          {
+            "feature": "nige_score",
+            "mean_abs_contrib": 0.001295169313902773,
+            "rank": 174
+          },
+          {
+            "feature": "track_variant_confidence",
+            "mean_abs_contrib": 0.0008223844264661503,
+            "rank": 185
+          },
+          {
+            "feature": "nicks_ctx_win_rate_hier",
+            "mean_abs_contrib": 0.0007315415390512301,
+            "rank": 187
+          },
+          {
+            "feature": "going_shift_up_top3_rate",
+            "mean_abs_contrib": 0.0005174118529037914,
+            "rank": 192
+          },
+          {
+            "feature": "sire_dist_win_rate_decay",
+            "mean_abs_contrib": 0.0004514745512010799,
+            "rank": 196
+          },
+          {
+            "feature": "sire_course_win_rate_decay",
+            "mean_abs_contrib": 0.00034349570643869197,
+            "rank": 199
+          }
+        ],
+        "new_feature_direction": [
+          {
+            "feature": "nige_score_interaction",
+            "corr_feature_vs_contrib": 0.0321423772714517,
+            "quartile_mean_contrib": {
+              "(-0.001, 1.243]": -0.03190332887927532
+            }
+          },
+          {
+            "feature": "sire_top3_iqr_50",
+            "corr_feature_vs_contrib": -0.5903769560371216,
+            "quartile_mean_contrib": {
+              "(-0.001, 0.75]": 0.020672975777049612,
+              "(0.75, 1.0]": -0.015200966475242023
+            }
+          },
+          {
+            "feature": "going_shift",
+            "corr_feature_vs_contrib": 0.7310257488794566,
+            "quartile_mean_contrib": {
+              "(-4.001, 0.0]": -0.0292120794283634,
+              "(0.0, 1.0]": -0.0007029674985660811,
+              "(1.0, 4.0]": -0.000887569819017544
+            }
+          },
+          {
+            "feature": "sire_top3_std_50",
+            "corr_feature_vs_contrib": 0.17371028179328432,
+            "quartile_mean_contrib": {
+              "(-0.001, 0.404]": 0.018518697898657482,
+              "(0.404, 0.443]": 0.0193317473164315,
+              "(0.443, 0.471]": 0.021800143299330225,
+              "(0.471, 0.548]": 0.02108699047374236
+            }
+          },
+          {
+            "feature": "pace_diff_z_ctx",
+            "corr_feature_vs_contrib": -0.6813076329158386,
+            "quartile_mean_contrib": {
+              "(-0.613, 0.029]": 0.0018040896155950832,
+              "(-3.9619999999999997, -0.613]": 0.0017106331762150391,
+              "(0.029, 0.677]": -0.029935445224905276,
+              "(0.677, 4.669]": -0.03922874563763658
+            }
+          },
+          {
+            "feature": "track_variant_uncertainty",
+            "corr_feature_vs_contrib": 0.631926035728716,
+            "quartile_mean_contrib": {
+              "(-0.001, 0.32]": -0.005043077418873035,
+              "(0.32, 0.401]": 0.005699790140708391,
+              "(0.401, 0.506]": 0.011193379652494652,
+              "(0.506, 1.59]": 0.016486644072996243
+            }
+          },
+          {
+            "feature": "nicks_ctx_count",
+            "corr_feature_vs_contrib": -0.12689498641483637,
+            "quartile_mean_contrib": {
+              "(-0.001, 12.0]": -0.009671969630881565,
+              "(12.0, 39.0]": -0.01130621998180397,
+              "(39.0, 88.0]": -0.01124073290875528,
+              "(88.0, 261.0]": -0.011197991276460722
+            }
+          },
+          {
+            "feature": "sire_win_rate_iqr_50",
+            "corr_feature_vs_contrib": 0.08233475525032546,
+            "quartile_mean_contrib": {
+              "(-0.001, 1.0]": 0.0029365296178615794
+            }
+          }
+        ]
+      }
+    }
+  }
+}

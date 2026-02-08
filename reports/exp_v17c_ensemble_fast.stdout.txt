@@ -1,0 +1,34 @@
+[2026-02-07 16:33:10] Loading data: data/processed/preprocessed_data_v12.parquet
+[2026-02-07 16:33:10] Using 315 columns
+[2026-02-07 16:33:15] rows train=237437 valid=46994 test=47607
+[2026-02-07 16:33:15] Loaded payout map races=3454 for years=[2024]
+[2026-02-07 16:33:16] Loaded payout map races=3455 for years=[2025]
+[2026-02-07 16:33:16] [1/3] loading model lgbmA
+[2026-02-07 16:33:16] [2/3] loading model mlpB
+[2026-02-07 16:33:17] [3/3] loading model xgbPrev
+[2026-02-07 16:33:18] weight vectors=66
+[2026-02-07 16:33:18] [blend 1/66] policy search start: 4
+[2026-02-07 16:33:24] [blend 1/66] new feasible roi=82.20 hit=0.474 tickets=20793 (1/4)
+[2026-02-07 16:33:50] [blend 1/66] progress 4/4 bestU=79.84
+[2026-02-07 16:33:57] best update blend=1 validROI=82.20 testROI=83.78
+[2026-02-07 16:33:57] [blend 2/66] policy search start: 4
+[2026-02-07 16:34:07] [blend 2/66] new feasible roi=82.86 hit=0.478 tickets=20757 (1/4)
+[2026-02-07 16:34:21] [blend 2/66] new feasible roi=83.25 hit=0.470 tickets=20893 (3/4)
+[2026-02-07 16:34:28] [blend 2/66] progress 4/4 bestU=81.44
+[2026-02-07 16:34:36] best update blend=2 validROI=83.25 testROI=85.78
+[2026-02-07 16:34:36] [blend 3/66] policy search start: 4
+[2026-02-07 16:34:46] [blend 3/66] new feasible roi=83.92 hit=0.478 tickets=20739 (1/4)
+[2026-02-07 16:35:00] [blend 3/66] new feasible roi=83.95 hit=0.472 tickets=20872 (3/4)
+[2026-02-07 16:35:08] [blend 3/66] progress 4/4 bestU=82.20
+[2026-02-07 16:35:19] best update blend=3 validROI=83.95 testROI=83.93
+[2026-02-07 16:35:19] [blend 4/66] policy search start: 4
+[2026-02-07 16:35:26] [blend 4/66] new feasible roi=83.58 hit=0.479 tickets=20823 (1/4)
+[2026-02-07 16:35:51] [blend 4/66] progress 4/4 bestU=81.21
+[2026-02-07 16:35:58] [blend 5/66] policy search start: 4
+[2026-02-07 16:36:04] [blend 5/66] new feasible roi=83.45 hit=0.480 tickets=20777 (1/4)
+[2026-02-07 16:36:22] [blend 5/66] new feasible roi=83.88 hit=0.474 tickets=20910 (3/4)
+[2026-02-07 16:36:30] [blend 5/66] progress 4/4 bestU=81.93
+[2026-02-07 16:36:39] progress 5/66
+[2026-02-07 16:36:39] [blend 6/66] policy search start: 4
+[2026-02-07 16:36:47] [blend 6/66] new feasible roi=82.78 hit=0.479 tickets=20857 (1/4)
+[2026-02-07 16:37:14] [blend 6/66] progress 4/4 bestU=80.39

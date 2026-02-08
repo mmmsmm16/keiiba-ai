@@ -71,8 +71,30 @@ def compute(df: pd.DataFrame) -> pd.DataFrame:
         # Variant = Rolling - Longterm
         df_top3['track_variant'] = df_top3['rolling_time_10'] - df_top3['longterm_time']
         
+        # Robust Variant (median-based)
+        df_top3['rolling_time_med_10'] = grp['race_avg_time'].transform(
+            lambda x: x.shift(1).rolling(10, min_periods=2).median()
+        )
+        df_top3['longterm_time_med_50'] = grp['race_avg_time'].transform(
+            lambda x: x.shift(1).rolling(50, min_periods=5).median()
+        )
+        df_top3['track_variant_robust'] = df_top3['rolling_time_med_10'] - df_top3['longterm_time_med_50']
+        
+        # Uncertainty of recent condition
+        df_top3['variant_recent_std'] = grp['race_avg_time'].transform(
+            lambda x: x.shift(1).rolling(10, min_periods=3).std()
+        )
+        df_top3['variant_recent_n'] = grp['race_avg_time'].transform(
+            lambda x: x.shift(1).rolling(10, min_periods=1).count()
+        )
+        df_top3['track_variant_uncertainty'] = df_top3['variant_recent_std'] / np.sqrt(df_top3['variant_recent_n'].clip(lower=1))
+        df_top3['track_variant_confidence'] = 1.0 / (1.0 + df_top3['track_variant_uncertainty'].fillna(1.0))
+        
         # [Fix] Apply fallback if null
         df_top3['track_variant'] = df_top3['track_variant'].fillna(df_top3['broad_variant']).fillna(0)
+        df_top3['track_variant_robust'] = df_top3['track_variant_robust'].fillna(df_top3['track_variant']).fillna(0)
+        df_top3['track_variant_uncertainty'] = df_top3['track_variant_uncertainty'].fillna(0.0)
+        df_top3['track_variant_confidence'] = df_top3['track_variant_confidence'].fillna(0.5)
         
         # [Fix] For JIT prediction, we need to map the "last known" variant to the target race.
         # df_top3 has the chronological variants.
@@ -90,22 +112,56 @@ def compute(df: pd.DataFrame) -> pd.DataFrame:
 
         # [Fix] Map back to df
         variant_map = df_top3.set_index('race_id')['track_variant'].to_dict()
+        variant_robust_map = df_top3.set_index('race_id')['track_variant_robust'].to_dict()
+        variant_unc_map = df_top3.set_index('race_id')['track_variant_uncertainty'].to_dict()
+        variant_conf_map = df_top3.set_index('race_id')['track_variant_confidence'].to_dict()
 
-        def get_variant(row):
+        latest_robust = {}
+        latest_unc = {}
+        latest_conf = {}
+        for _, r in df_top3.sort_values('date').iterrows():
+            key = (r['venue'], r['surface'], r['distance'])
+            latest_robust[key] = r['track_variant_robust']
+            latest_unc[key] = r['track_variant_uncertainty']
+            latest_conf[key] = r['track_variant_confidence']
+        latest_robust_broad = {}
+        latest_unc_broad = {}
+        latest_conf_broad = {}
+        for _, r in df_top3.sort_values('date').iterrows():
+            key_b = (r['venue'], r['surface'])
+            latest_robust_broad[key_b] = r['track_variant_robust']
+            latest_unc_broad[key_b] = r['track_variant_uncertainty']
+            latest_conf_broad[key_b] = r['track_variant_confidence']
+
+        def get_variant_like(row, base_map, latest_exact, latest_b, default=0.0):
             rid = row['race_id']
-            if rid in variant_map:
-                return variant_map[rid]
+            if rid in base_map:
+                return base_map[rid]
             
             # Fallback for target race (prediction)
             key = (row.get('venue'), row.get('surface'), row.get('distance'))
-            if key in latest_variants:
-                return latest_variants[key]
+            if key in latest_exact:
+                return latest_exact[key]
             
             key_b = (row.get('venue'), row.get('surface'))
-            return latest_broad.get(key_b, 0)
+            return latest_b.get(key_b, default)
 
-        df_sorted['track_variant'] = df_sorted.apply(get_variant, axis=1)
+        df_sorted['track_variant'] = df_sorted.apply(
+            lambda r: get_variant_like(r, variant_map, latest_variants, latest_broad, 0.0), axis=1
+        )
+        df_sorted['track_variant_robust'] = df_sorted.apply(
+            lambda r: get_variant_like(r, variant_robust_map, latest_robust, latest_robust_broad, 0.0), axis=1
+        )
+        df_sorted['track_variant_uncertainty'] = df_sorted.apply(
+            lambda r: get_variant_like(r, variant_unc_map, latest_unc, latest_unc_broad, 0.0), axis=1
+        )
+        df_sorted['track_variant_confidence'] = df_sorted.apply(
+            lambda r: get_variant_like(r, variant_conf_map, latest_conf, latest_conf_broad, 0.5), axis=1
+        )
         
         out_cols.append('track_variant')
+        out_cols.append('track_variant_robust')
+        out_cols.append('track_variant_uncertainty')
+        out_cols.append('track_variant_confidence')
 
     return df_sorted[cols + out_cols].copy()

@@ -738,6 +738,15 @@ class FeaturePipeline:
         grp_horse = df_sorted.groupby('horse_id')
         df_sorted['last_nige_rate'] = grp_horse['is_nige'].transform(lambda x: x.shift(1).rolling(5, min_periods=1).mean())
         df_sorted['last_nige_rate'] = df_sorted['last_nige_rate'].fillna(0.0)
+        df_sorted['nige_experience_n'] = grp_horse['is_nige'].transform(
+            lambda x: x.shift(1).rolling(20, min_periods=1).count()
+        ).fillna(0.0)
+        
+        # Reliability-weighted nige score (threshold-free core)
+        c = 5.0
+        df_sorted['nige_score'] = df_sorted['last_nige_rate'] * np.sqrt(
+            df_sorted['nige_experience_n'] / (df_sorted['nige_experience_n'] + c)
+        )
         
         # 3. Race集計: レース内の逃げ圧力総和
         # last_nige_rate は "当該レース以前" の情報なので、レース内で集計してもリークしない。
@@ -752,6 +761,10 @@ class FeaturePipeline:
         # transform でレースごとの総和を各行に付与
         df_sorted['race_nige_count_bin'] = grp_race['is_candidate'].transform('sum')
         df_sorted['race_nige_pressure_sum'] = grp_race['last_nige_rate'].transform('sum')
+        df_sorted['race_nige_pressure_score_sum'] = grp_race['nige_score'].transform('sum')
+        
+        df_sorted['is_candidate_weighted'] = (df_sorted['nige_score'] > 0.15).astype(int)
+        df_sorted['race_nige_count_weighted'] = grp_race['is_candidate_weighted'].transform('sum')
         
         # 4. Self Exclusion (自分を除く)
         df_sorted['race_nige_count_excl'] = df_sorted['race_nige_count_bin'] - df_sorted['is_candidate']
@@ -759,11 +772,15 @@ class FeaturePipeline:
         
         df_sorted['race_pressure_excl'] = df_sorted['race_nige_pressure_sum'] - df_sorted['last_nige_rate']
         df_sorted['nige_pressure_interaction'] = df_sorted['last_nige_rate'] * df_sorted['race_pressure_excl']
+        df_sorted['race_pressure_score_excl'] = df_sorted['race_nige_pressure_score_sum'] - df_sorted['nige_score']
+        df_sorted['nige_score_interaction'] = df_sorted['nige_score'] * df_sorted['race_pressure_score_excl']
         
         feats = [
             # 'last_nige_rate', # Computed in pace_stats. Don't overwrite.
             'race_nige_count_bin', 'race_nige_pressure_sum',
-            'is_nige_interaction', 'nige_pressure_interaction'
+            'is_nige_interaction', 'nige_pressure_interaction',
+            'nige_score', 'race_nige_pressure_score_sum',
+            'race_nige_count_weighted', 'nige_score_interaction'
         ]
         
 

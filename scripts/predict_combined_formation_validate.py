@@ -16,11 +16,22 @@ sys.path.append('/workspace')
 from src.preprocessing.loader import JraVanDataLoader
 from src.preprocessing.feature_pipeline import FeaturePipeline
 
-V13_MODEL_PATH = 'models/experiments/exp_lambdarank_hard_weighted/model.pkl'
-V13_FEATS_PATH = 'models/experiments/exp_lambdarank_hard_weighted/features.csv'
-V14_MODEL_PATH = 'models/experiments/exp_gap_v14_production/model_v14.pkl'
-V14_FEATS_PATH = 'models/experiments/exp_gap_v14_production/features.csv'
-CACHE_DIR = 'data/features_v14/prod_cache'
+MODEL_PROFILES = {
+    "BASE": {
+        "v13_model_path": "models/experiments/exp_lambdarank_hard_weighted/model.pkl",
+        "v13_feats_path": "models/experiments/exp_lambdarank_hard_weighted/features.csv",
+        "v14_model_path": "models/experiments/exp_gap_v14_production/model_v14.pkl",
+        "v14_feats_path": "models/experiments/exp_gap_v14_production/features.csv",
+        "cache_dir": "data/features_v14/prod_cache",
+    },
+    "ENHANCED": {
+        "v13_model_path": "models/experiments/exp_lambdarank_hard_weighted_enhanced/model.pkl",
+        "v13_feats_path": "models/experiments/exp_lambdarank_hard_weighted_enhanced/features.csv",
+        "v14_model_path": "models/experiments/exp_gap_v14_production_enhanced/model_v14.pkl",
+        "v14_feats_path": "models/experiments/exp_gap_v14_production_enhanced/features.csv",
+        "cache_dir": "data/features_v14/prod_cache_enhanced",
+    },
+}
 
 
 def load_feature_list(path, logger):
@@ -143,6 +154,13 @@ def main():
     parser.add_argument('--date', type=str, help='YYYYMMDD')
     parser.add_argument('--race_id', type=str, help='Specific Race ID')
     parser.add_argument('--force', action='store_true', help='Force recompute features')
+    parser.add_argument(
+        '--model_profile',
+        type=str,
+        default='BASE',
+        choices=['BASE', 'ENHANCED', 'base', 'enhanced'],
+        help='Model profile to validate: BASE (current v13/v14) or ENHANCED (new v13/v14).'
+    )
     args = parser.parse_args()
 
     date_str = args.date or (datetime.utcnow() + timedelta(hours=9)).strftime("%Y%m%d")
@@ -150,6 +168,16 @@ def main():
 
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     logger = logging.getLogger(__name__)
+
+    profile_key = args.model_profile.upper()
+    profile = MODEL_PROFILES.get(profile_key, MODEL_PROFILES['BASE'])
+    V13_FEATS_PATH = profile['v13_feats_path']
+    V14_FEATS_PATH = profile['v14_feats_path']
+    CACHE_DIR = profile['cache_dir']
+
+    logger.info(f"Model profile: {profile_key}")
+    logger.info(f"  V13 features: {V13_FEATS_PATH}")
+    logger.info(f"  V14 features: {V14_FEATS_PATH}")
 
     feats_v13 = load_feature_list(V13_FEATS_PATH, logger)
     feats_v14 = load_feature_list(V14_FEATS_PATH, logger)

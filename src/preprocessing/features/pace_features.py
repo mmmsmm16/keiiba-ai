@@ -77,14 +77,17 @@ class PaceFeatureGenerator:
         if pace_df.empty:
             df['pace_diff'] = 0.0
             df['pace_type'] = 1
+            df['pace_diff_z_ctx'] = 0.0
             df['horse_fast_pace_count'] = 0
             df['horse_slow_pace_count'] = 0
             df['horse_avg_pace_diff'] = 0.0
             df['horse_pace_versatility'] = 0.0
+            df['horse_pace_elasticity_20'] = 0.0
             return df[['race_id', 'horse_number', 'horse_id', 
-                       'pace_diff', 'pace_type', 
+                       'pace_diff', 'pace_type', 'pace_diff_z_ctx',
                        'horse_fast_pace_count', 'horse_slow_pace_count',
-                       'horse_avg_pace_diff', 'horse_pace_versatility']]
+                       'horse_avg_pace_diff', 'horse_pace_versatility',
+                       'horse_pace_elasticity_20']]
         
         # Merge current race pace
         df['race_id'] = df['race_id'].astype(str)
@@ -92,6 +95,31 @@ class PaceFeatureGenerator:
         df = df.merge(pace_df, on='race_id', how='left')
         df['pace_diff'] = df['pace_diff'].fillna(0.0)
         df['pace_type'] = df['pace_type'].fillna(1).astype(int)
+
+        # Context-normalized pace (distance/venue/surface)
+        if {'date', 'venue', 'surface', 'distance'}.issubset(df.columns):
+            race_ctx = df[['race_id', 'date', 'venue', 'surface', 'distance', 'pace_diff']].drop_duplicates('race_id').copy()
+            race_ctx['date'] = pd.to_datetime(race_ctx['date'])
+            race_ctx = race_ctx.sort_values('date')
+            ctx_cols = ['venue', 'surface', 'distance']
+            grp_ctx = race_ctx.groupby(ctx_cols)
+            race_ctx['ctx_mean'] = grp_ctx['pace_diff'].transform(
+                lambda x: x.shift(1).rolling(50, min_periods=10).mean()
+            )
+            race_ctx['ctx_std'] = grp_ctx['pace_diff'].transform(
+                lambda x: x.shift(1).rolling(50, min_periods=10).std()
+            )
+            race_ctx['global_mean'] = race_ctx['pace_diff'].expanding(min_periods=1).mean().shift(1).fillna(0.0)
+            race_ctx['global_std'] = race_ctx['pace_diff'].expanding(min_periods=5).std().shift(1).fillna(1.0)
+            mean_ref = race_ctx['ctx_mean'].fillna(race_ctx['global_mean'])
+            std_ref = race_ctx['ctx_std'].fillna(race_ctx['global_std']).replace(0, 1.0)
+            race_ctx['pace_diff_z_ctx'] = (race_ctx['pace_diff'] - mean_ref) / std_ref
+            pace_z_map = race_ctx.set_index('race_id')['pace_diff_z_ctx'].to_dict()
+            df['pace_diff_z_ctx'] = df['race_id'].map(pace_z_map).fillna(0.0)
+        else:
+            global_mean = df['pace_diff'].mean()
+            global_std = df['pace_diff'].std() if df['pace_diff'].std() > 0 else 1.0
+            df['pace_diff_z_ctx'] = ((df['pace_diff'] - global_mean) / global_std).fillna(0.0)
         
         # Historical pace experience
         # Need to compute for each horse based on PAST races only
@@ -104,6 +132,13 @@ class PaceFeatureGenerator:
             # Shift to only include past races
             past_pace = group['pace_diff'].shift(1)
             past_pace_type = group['pace_type'].shift(1)
+            if 'rank' in group.columns:
+                rank_num = pd.to_numeric(group['rank'], errors='coerce')
+                past_top3 = (rank_num <= 3).astype(float).shift(1)
+            elif 'is_top3' in group.columns:
+                past_top3 = pd.to_numeric(group['is_top3'], errors='coerce').fillna(0.0).shift(1)
+            else:
+                past_top3 = pd.Series(0.0, index=group.index)
             
             # Expanding mean/std (past only)
             group['horse_avg_pace_diff'] = past_pace.expanding(min_periods=1).mean().fillna(0.0)
@@ -112,6 +147,12 @@ class PaceFeatureGenerator:
             # Cumulative counts
             group['horse_fast_pace_count'] = (past_pace_type == 2).expanding().sum().fillna(0).astype(int)
             group['horse_slow_pace_count'] = (past_pace_type == 0).expanding().sum().fillna(0).astype(int)
+
+            # Pace elasticity: cov(pace, performance) / var(pace), rolling 20
+            cov20 = past_pace.rolling(20, min_periods=5).cov(past_top3)
+            var20 = past_pace.rolling(20, min_periods=5).var()
+            elasticity = cov20 / (var20 + 1e-6)
+            group['horse_pace_elasticity_20'] = elasticity.replace([np.inf, -np.inf], np.nan).fillna(0.0)
             
             return group
         
@@ -121,9 +162,10 @@ class PaceFeatureGenerator:
         # Output columns
         output_cols = [
             'race_id', 'horse_number', 'horse_id',
-            'pace_diff', 'pace_type',
+            'pace_diff', 'pace_type', 'pace_diff_z_ctx',
             'horse_fast_pace_count', 'horse_slow_pace_count',
-            'horse_avg_pace_diff', 'horse_pace_versatility'
+            'horse_avg_pace_diff', 'horse_pace_versatility',
+            'horse_pace_elasticity_20'
         ]
         
         return df[[c for c in output_cols if c in df.columns]]
